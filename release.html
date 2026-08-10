@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="时间景观 v3.0 — 星空旅行、AI 解读星空历法、3D 天文时空沙盘">
+<meta property="og:title" content="时间景观 v3.0 · 版本发布说明">
+<meta property="og:description" content="星空旅行 · AI 解读星空历法 · 地球换肤 · 操作引导 · 性能优化">
+<meta property="og:image" content="icon-512.png">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://timeview.site/timeview/release">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="时间景观 v3.0">
+<meta name="twitter:description" content="星空旅行 · AI 解读星空历法 · 3D 天文时空沙盘">
+<meta name="twitter:image" content="https://timeview.site/timeview/icon-512.png">
+<title>时间景观 · v3.0 版本发布说明</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050a18;color:#c8daf0;font-family:-apple-system,"SF Pro Text","Helvetica Neue","PingFang SC",sans-serif;line-height:1.8;padding-bottom:80px;-webkit-font-smoothing:antialiased}
+.hero{background:linear-gradient(180deg,#0a1832 0%,#050a18 100%);text-align:center;padding:60px 20px 40px;border-bottom:1px solid rgba(95,214,240,.12)}
+.hero h1{font-size:28px;font-weight:800;color:#eaf6ff;text-shadow:0 0 20px rgba(95,214,240,.5)}
+.hero .ver{display:inline-block;margin-top:10px;padding:4px 16px;border-radius:20px;font-size:14px;font-weight:700;color:#5fd6f0;border:1px solid rgba(95,214,240,.4);background:rgba(95,214,240,.08)}
+.hero .date{margin-top:8px;font-size:13px;color:#6a8ea8}
+.container{max-width:720px;margin:0 auto;padding:0 20px}
+h2{font-size:20px;font-weight:800;color:#eaf6ff;margin:40px 0 16px;padding-bottom:8px;border-bottom:1px solid rgba(95,214,240,.15)}
+h2 .icon{margin-right:6px}
+h3{font-size:15px;font-weight:700;color:#5fd6f0;margin:20px 0 8px}
+ul{margin:8px 0 8px 20px}
+li{margin-bottom:6px;font-size:14px;color:#b0c8e0}
+li strong{color:#dff0fb}
+.card{background:rgba(8,20,36,.8);border:1px solid rgba(95,214,240,.18);border-radius:10px;padding:18px 20px;margin:16px 0}
+.card p{font-size:14px;color:#9fc6dd}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;margin-right:6px;margin-bottom:4px}
+.tag-new{color:#5fd6f0;border:1px solid rgba(95,214,240,.4);background:rgba(95,214,240,.08)}
+.tag-perf{color:#a8e4b8;border:1px solid rgba(100,210,140,.4);background:rgba(100,210,140,.08)}
+.tag-fix{color:#ffd24a;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.08)}
+.roadmap{margin:20px 0}
+.roadmap-item{display:flex;gap:14px;margin-bottom:16px;padding:14px 16px;background:rgba(8,20,36,.6);border:1px solid rgba(95,214,240,.12);border-radius:8px}
+.roadmap-date{flex-shrink:0;min-width:80px;font-size:13px;font-weight:700;color:#5fd6f0;padding-top:2px}
+.roadmap-body{flex:1}
+.roadmap-body .title{font-size:15px;font-weight:700;color:#eaf6ff;margin-bottom:4px}
+.roadmap-body .desc{font-size:13px;color:#8aa8c0;line-height:1.6}
+.platforms{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.platform{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(95,214,240,.3);color:#bfe4f5;background:rgba(95,214,240,.06)}
+.footer{text-align:center;margin-top:50px;padding:20px;border-top:1px solid rgba(95,214,240,.1);font-size:12px;color:#4a6a80}
+.footer a{color:#5fd6f0;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>时间景观 · 版本发布说明</h1>
+  <span class="ver">v3.0</span>
+  <div class="date">2026 年 7 月 3 日</div>
+</div>
+
+<div class="container">
+
+<h2><span class="icon">🚀</span>全新功能：星空旅行</h2>
+<p style="font-size:14px;color:#9fc6dd;margin-bottom:12px">第一人称飞船视角，从地球轨道出发，穿越太阳系、飞向近邻恒星、跨越星系。</p>
+<ul>
+  <li><strong>12 个真实目的地</strong>：从火星到仙女星系（253 万光年），含比邻星 b、三体星（半人马座α，三星系统）、TRAPPIST-1、Kepler-186f 等系外行星</li>
+  <li><strong>真实航线</strong>：沿途掠过 26 个真实天体（恒星/星团/星云/星系），按真实距离排序，每个天体都有「接近 → 掠过 → 远去」的完整过程</li>
+  <li><strong>物理引擎</strong>：速度/距离/时间严格一致（距离 = 速度 × 时间积分），从第一宇宙速度（7.9 km/s）到百万倍光速逐级加速</li>
+  <li><strong>速度阶梯</strong>：20 档递进 — km/s → 光速 → 曲速 10c/100c/…/百万 c，底部减速/加速按钮逐档切换</li>
+  <li><strong>抵达报告</strong>：自动弹出航行报告卡（总用时、航行距离、平均/最大速度）</li>
+  <li><strong>天体信息卡</strong>：飞行中点击任意天体查看名称、光谱型、距离、简介</li>
+</ul>
+
+<h2><span class="icon">🔮</span>全新功能：解读星空历法</h2>
+<p style="font-size:14px;color:#9fc6dd;margin-bottom:12px">AI 大模型实时解读当前时间点的天文与历法知识，流式输出。</p>
+<ul>
+  <li><strong>点击 🔮 按钮</strong>，基于当前选中的日期、时辰、星象数据，AI 逐字生成天文历法科普报告</li>
+  <li><strong>解读内容</strong>：太阳与节气、月相讲解、行星位置、星空看点、历法文化，紧扣具体天文数据，科学准确</li>
+  <li><strong>流式体验</strong>：文字逐字涌现，实时滚动，无需等待全部生成</li>
+  <li><strong>服务端代理</strong>：API Key 仅存于服务端，客户端零暴露；通过独立服务安全调用</li>
+</ul>
+
+<h2><span class="icon">🌍</span>地球视角全面升级</h2>
+<ul>
+  <li><strong>地球换肤</strong>：右栏 🌐 按钮弹出菜单，可选卫星/行政/地形三种地图风格</li>
+  <li><strong>月球真实化</strong>：去除黄色光晕，纹理去色消除暖色偏；临边昏暗模拟球体光照；支持真实月球照片</li>
+  <li><strong>南极城市精准定位</strong>：南半球城市以东京为基准逆时针定位，6 个城市准确落位</li>
+  <li><strong>缩放平移</strong>：双指捏合缩放（0.6× ~ 8×），放大后单指拖动平移，双击复位</li>
+  <li><strong>月球信息卡</strong>：点击月球弹出详情（月相/月龄/照亮%/月地距/直径）</li>
+</ul>
+
+<h2><span class="icon">🎓</span>操作引导</h2>
+<div class="card">
+  <p>首次启动自动弹出 4 步分步引导，高亮对应区域并说明操作方式。右栏 <strong>?</strong> 按钮随时可重看。</p>
+</div>
+
+<h2><span class="icon">⚡</span>性能优化</h2>
+<ul>
+  <li><strong>setData 去重</strong>：日期/月相/节气读数仅在数值变化时提交，消除无意义的逻辑层→渲染层通信</li>
+  <li><strong>空闲降帧</strong>：暂停 + 无交互时 3D 渲染降至 30fps、2D 表盘跳过重绘，省电省 GPU</li>
+  <li><strong>后台暂停</strong>：页面进入后台完全停止渲染循环</li>
+  <li><strong>内存泄漏修复</strong>：命理流式定时器在页面卸载时正确清除</li>
+</ul>
+
+<h2><span class="icon">🔧</span>其他改进</h2>
+<ul>
+  <li>全应用中英文切换（行星/星座/节气/时区等完整双语）</li>
+  <li>横屏自适应布局，控制台自动压缩为一行</li>
+  <li>农历时辰跳转（年/月含闰月/日/时辰四列联动）</li>
+  <li>8 时区支持（UTC/北京/东京/印度/中欧/伦敦/纽约/洛杉矶）</li>
+  <li>时间精确到秒，进度条 ±10 ~ ±10000 年跨度可调</li>
+  <li>宇宙环境音（空灵冥想风无缝循环）</li>
+  <li>20 个星座可选显示（黄道 12 宫 + 8 个知名星座）</li>
+  <li>太阳系季节俯视（上夏至/下冬至/左秋分/右春分）</li>
+</ul>
+
+<h2><span class="icon">🗺️</span>后续计划</h2>
+<div class="roadmap">
+  <div class="roadmap-item">
+    <div class="roadmap-date">7 月中旬</div>
+    <div class="roadmap-body">
+      <div class="title">APP 正式版发布</div>
+      <div class="desc">时间景观小程序升级为独立 APP，覆盖主流移动平台</div>
+      <div class="platforms">
+        <span class="platform">🤖 Android</span>
+        <span class="platform">🍎 iOS</span>
+      </div>
+    </div>
+  </div>
+  <div class="roadmap-item">
+    <div class="roadmap-date">7 月底</div>
+    <div class="roadmap-body">
+      <div class="title">鸿蒙原生版</div>
+      <div class="desc">适配 HarmonyOS NEXT，原生 ArkUI 渲染，充分利用鸿蒙分布式能力</div>
+      <div class="platforms">
+        <span class="platform">🪟 HarmonyOS</span>
+      </div>
+    </div>
+  </div>
+  <div class="roadmap-item">
+    <div class="roadmap-date">8 月中旬</div>
+    <div class="roadmap-body">
+      <div class="title">HTML 网页版</div>
+      <div class="desc">无需安装，浏览器直接访问，支持 PC 与移动端自适应</div>
+      <div class="platforms">
+        <span class="platform">🌐 Web</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 打开小程序 -->
+<h2><span class="icon">📱</span>打开小程序</h2>
+<div class="card" style="text-align:center">
+  <img src="qr.png" alt="时间景观小程序" style="width:180px;height:180px;border-radius:8px;background:#fff;padding:8px">
+  <div style="margin-top:10px;font-size:13px;color:#8aa8c0">微信扫描二维码 · 或搜索「<strong style="color:#5fd6f0">时间景观</strong>」</div>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(95,214,240,.15)">
+    <a href="wallpaper" style="color:#5fd6f0;font-size:13px;text-decoration:none">📲 下载 Android 动态壁纸 APK</a>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <p>时间景观 · <a href="app">进入应用</a> · <a href="https://timeview.site/timeview/">timeview.site</a></p>
+  <p style="margin-top:8px">
+    <a href="javascript:void(0)" onclick="copyLink()" style="color:#5fd6f0;text-decoration:none;font-size:13px">📋 复制链接分享</a>
+  </p>
+  <p style="margin-top:4px">包体积 ≈ 700KB · 个人主体即可发布 · 无需域名备案</p>
+</div>
+
+<script>
+function copyLink(){
+  var url=location.href;
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){alert('链接已复制')})}
+  else{var t=document.createElement('textarea');t.value=url;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);alert('链接已复制')}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# 服务器端 .gitignore
+node_modules/
+data/
+*.tar
+timeview.env
+*.log
+.DS_Store
