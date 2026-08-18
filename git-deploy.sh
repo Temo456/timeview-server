@@ -11,6 +11,8 @@ echo ">>> 重新构建 Docker 镜像..."
 docker compose build --no-cache
 
 echo ">>> 重启容器..."
+docker stop timeview 2>/dev/null || true
+docker rm timeview 2>/dev/null || true
 docker compose up -d
 
 echo ">>> 等待启动..."
