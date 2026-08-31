@@ -16,37 +16,10 @@ canvas{display:block;width:100%;height:100%}
 .slab-c{font-size:12px;color:#5fd6f0;font-weight:800;text-shadow:0 0 10px rgba(95,214,240,.7)}
 .slab-d{width:4px;height:4px;border-radius:50%;background:rgba(255,210,74,.45);font-size:0}
 .axlabel{position:absolute;font-size:11px;font-weight:700;pointer-events:none;text-shadow:0 0 4px rgba(0,0,0,.8);z-index:6}
-
-/* 顶栏 */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;gap:8px;padding:6px 12px;background:linear-gradient(180deg,rgba(3,5,12,.9),transparent);pointer-events:none}
-.topbar>*{pointer-events:auto}
-.brand{font-size:14px;font-weight:800;color:#eaf6ff;text-shadow:0 0 10px rgba(95,214,240,.5)}
-.top-date{flex:1;font-size:12px;font-weight:700;color:#eaf6ff;text-align:right;white-space:nowrap}
-.top-tz{font-size:11px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:10px;padding:3px 8px;background:rgba(10,24,42,.5);cursor:pointer}
-
-/* 右侧视角栏 */
-.sidebar{position:fixed;right:8px;top:50%;transform:translateY(-50%);z-index:10;display:flex;flex-direction:column;gap:6px}
-.sb-btn{width:36px;height:36px;border-radius:8px;border:1px solid rgba(95,214,240,.3);background:rgba(8,20,36,.7);color:#7fa8c4;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.sb-btn:active{background:rgba(95,214,240,.2)}
-.sb-btn.on{color:#5fd6f0;border-color:rgba(95,214,240,.6)}
-
-/* 底部操作栏 */
-.bottombar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:10;display:flex;align-items:center;gap:5px;padding:6px 14px;background:rgba(8,20,36,.88);border:1px solid rgba(95,214,240,.28);border-radius:28px;backdrop-filter:blur(10px)}
-.bb-btn{font-size:12px;color:#7fa8c4;cursor:pointer;padding:5px 10px;border-radius:14px;white-space:nowrap;border:1px solid transparent}
-.bb-btn:active{background:rgba(95,214,240,.15)}
-.bb-earth{color:#5fd6f0;font-weight:600;text-decoration:none;border:1px solid rgba(95,214,240,.4);border-radius:14px}
-.bb-sep{width:1px;height:18px;background:rgba(95,214,240,.15)}
-.bb-play{width:36px;height:36px;border-radius:50%;border:none;background:linear-gradient(135deg,#2aa9c8,#1c7fa0);color:#fff;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.bb-play:active{transform:scale(.92)}
-.bb-spd{font-size:11px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:14px;padding:5px 10px;background:rgba(10,24,42,.5);cursor:pointer;white-space:nowrap}
-
-/* 速度弹窗 */
-.spd-popup{display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:15;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px}
-.spd-popup .row{display:flex;gap:6px}
-.spd-opt{padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;border:1px solid rgba(95,214,240,.3);background:rgba(10,24,42,.55);color:#dff0fb;cursor:pointer}
-.spd-opt.on{background:linear-gradient(90deg,#5fd6f0,#2aa9c8);color:#04121c;border-color:transparent}
-
-/* 信息卡 */
+.ctrl{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10}
+.ctrl button{min-width:36px;height:30px;border-radius:6px;border:1px solid rgba(95,214,240,.3);background:rgba(8,20,36,.7);color:#7fa8c4;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ctrl button:active{background:rgba(95,214,240,.2)}
+.ctrl button.on{color:#5fd6f0;border-color:rgba(95,214,240,.6)}
 .card-mask{position:fixed;inset:0;z-index:20;background:rgba(2,5,12,.5);display:flex;align-items:center;justify-content:center}
 .card{width:78vw;max-width:300px;border-radius:8px;padding:14px 16px;background:rgba(8,20,36,.95);border:1px solid rgba(95,214,240,.7);box-shadow:0 12px 40px rgba(0,0,0,.6)}
 .card .hdr{display:flex;align-items:center;margin-bottom:8px}
@@ -55,55 +28,20 @@ canvas{display:block;width:100%;height:100%}
 .card .hdr .close{color:#7fa8c4;font-size:20px;cursor:pointer;padding:0 4px}
 .card .row{display:flex;justify-content:space-between;font-size:12.5px;color:#7fa8c4;padding:4px 0;border-bottom:1px solid rgba(95,214,240,.08)}
 .card .row .v{color:#dff0fb}
-.god-banner{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:10;background:linear-gradient(90deg,rgba(245,196,81,.15),rgba(95,214,240,.15));border:1px solid rgba(245,196,81,.55);border-radius:16px;padding:6px 16px;font-size:13px;font-weight:700;color:#ffe7a8;display:none;pointer-events:none;white-space:nowrap;box-shadow:0 0 20px rgba(245,196,81,.25)}
+.god-banner{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:10;background:linear-gradient(90deg,rgba(245,196,81,.15),rgba(95,214,240,.15));border:1px solid rgba(245,196,81,.55);border-radius:16px;padding:6px 16px;font-size:13px;font-weight:700;color:#ffe7a8;display:none;pointer-events:none;white-space:nowrap;box-shadow:0 0 20px rgba(245,196,81,.25)}
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
 <div class="god-banner" id="godBanner"></div>
 <div id="labels"></div>
-
-<!-- 顶栏：品牌 + 日期 + 时区 -->
-<div class="topbar">
-  <span class="brand">时间景观 · 太阳系</span>
-  <a href="index.html?from=solar" id="earthLink" style="font-size:11px;color:#5fd6f0;text-decoration:none;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px">🌍 地球</a>
-  <div class="top-date" id="dateText"></div>
-  <div class="top-tz" id="tzBtn">🕓 UTC+8</div>
+<div class="ctrl">
+  <button id="bTop" title="季节俯视">⊕</button>
+  <button id="bReset" title="45°视角">⌖</button>
+  <button id="bGod" title="上帝俯视">👁</button>
+  <button id="bLabels" class="on" title="行星标签">🏷</button>
+  <button id="bOrbit" class="on" title="轨道线">◷</button>
 </div>
-
-<!-- 右侧视角栏 -->
-<div class="sidebar">
-  <div class="sb-btn" id="bTop" title="季节俯视">⊕</div>
-  <div class="sb-btn" id="bReset" title="45°视角">⌖</div>
-  <div class="sb-btn" id="bGod" title="上帝俯视">👁</div>
-  <div class="sb-btn on" id="bLabels" title="行星标签">🏷</div>
-  <div class="sb-btn on" id="bOrbit" title="轨道线">◷</div>
-</div>
-
-<!-- 底部操作栏 -->
-<div class="bottombar">
-  <div class="bb-btn" id="pPrev" title="退30天">‹‹</div>
-  <div class="bb-btn" id="pSlow" title="减速">◀◀</div>
-  <div class="bb-play" id="pPlay" title="播放/暂停">❚❚</div>
-  <div class="bb-btn" id="pFast" title="加速">▶▶</div>
-  <div class="bb-btn" id="pNext" title="进30天">››</div>
-  <div class="bb-sep"></div>
-  <div class="bb-btn" id="pNow" style="color:#f5c451">现在</div>
-  <div class="bb-spd" id="spdBtn">⚡ 日/秒 ▾</div>
-  <div class="bb-sep"></div>
-  <input type="date" id="jumpDate" style="font-size:11px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:10px;padding:4px 8px;background:rgba(10,24,42,.6);width:120px">
-  <input type="time" id="jumpTime" value="12:00" step="1" style="font-size:11px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:10px;padding:4px 8px;background:rgba(10,24,42,.6);width:70px">
-</div>
-
-<!-- 速度弹窗 -->
-<div class="spd-popup" id="spdPopup">
-  <div class="row">
-    <div class="spd-opt" data-u="sec">秒/秒</div><div class="spd-opt" data-u="hour">时/秒</div>
-    <div class="spd-opt" data-u="day">日/秒</div><div class="spd-opt" data-u="month">月/秒</div><div class="spd-opt" data-u="year">年/秒</div>
-  </div>
-</div>
-
-<!-- 信息卡 -->
 <div class="card-mask" id="cardMask" style="display:none">
   <div class="card">
     <div class="hdr"><span class="bar" id="cardBar"></span><span class="title" id="cardTitle"></span><span class="close" id="cardClose">×</span></div>
@@ -111,7 +49,7 @@ canvas{display:block;width:100%;height:100%}
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const RAD = Math.PI / 180;
 const J2000 = Date.UTC(2000, 0, 1, 12, 0, 0);
@@ -375,12 +313,10 @@ let lastT = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;
-  // 时间推进：播放时按速度推进，停止时追到真实时间
-  if (state.playing) { dispT += state.spd * dt; }
   if (inertia && !drag) { dispT += inertia * dt; inertia *= Math.exp(-1.4 * dt); if (Math.abs(inertia) < 1000) inertia = 0; }
+  else { dispT += (Date.now() - dispT) * 0.05; }
   const d = dnum(dispT);
   updateSolar(d, dt);
-  updateDateDisplay(now);
 }
 
 // ===== 拾取 =====
@@ -503,157 +439,7 @@ document.getElementById('bOrbit').onclick = function() {
   scene.children.forEach(c => { if (c instanceof THREE.Line && c.material.color.getHex() === 0x1a3050) c.visible = orbitOn; });
 };
 
-// ===== 时间控制 =====
-const p2 = n => String(n).padStart(2, '0');
-const SPD = { sec: 1000, hour: 3600e3, day: 86400e3, month: 86400e3 * 30, year: 86400e3 * 365.25 };
-const SPD_LABELS = { sec: '秒/秒', hour: '时/秒', day: '日/秒', month: '月/秒', year: '年/秒' };
-let state = { playing: true, spd: 86400e3 };
-let curUnit = 'day';
-
-document.getElementById('pPlay').onclick = () => {
-  state.playing = !state.playing;
-  document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
-};
-document.getElementById('pNow').onclick = () => {
-  dispT = Date.now(); state.playing = true; curUnit = 'day'; state.spd = SPD.day;
-  document.getElementById('pPlay').textContent = '❚❚';
-  document.getElementById('spdBtn').textContent = '⚡ 日/秒 ▾';
-};
-document.getElementById('pPrev').onclick = () => { dispT -= 30 * 86400e3; };
-document.getElementById('pNext').onclick = () => { dispT += 30 * 86400e3; };
-document.getElementById('pSlow').onclick = () => {
-  const u = ['sec','hour','day','month','year']; const i = u.indexOf(curUnit);
-  if (i > 0) { curUnit = u[i-1]; state.spd = SPD[curUnit]; state.playing = true;
-    document.getElementById('pPlay').textContent = '❚❚';
-    document.getElementById('spdBtn').textContent = '⚡ ' + SPD_LABELS[curUnit] + ' ▾'; }
-};
-document.getElementById('pFast').onclick = () => {
-  const u = ['sec','hour','day','month','year']; const i = u.indexOf(curUnit);
-  if (i < u.length - 1) { curUnit = u[i+1]; state.spd = SPD[curUnit]; state.playing = true;
-    document.getElementById('pPlay').textContent = '❚❚';
-    document.getElementById('spdBtn').textContent = '⚡ ' + SPD_LABELS[curUnit] + ' ▾'; }
-};
-document.getElementById('jumpDate').onchange = function() {
-  const m = /^(\d+)-(\d+)-(\d+)$/.exec(this.value); if (!m) return;
-  const base = Date.UTC(+m[1], +m[2]-1, +m[3], 0, 0, 0);
-  dispT = base + 12 * 3600000; state.playing = false;
-  document.getElementById('pPlay').textContent = '▶';
-};
-document.getElementById('jumpTime').onchange = function() {
-  const hm = this.value.split(':');
-  const base = new Date(dispT); base.setUTCHours(+hm[0]||0, +hm[1]||0, 0, 0);
-  dispT = base.getTime(); state.playing = false;
-  document.getElementById('pPlay').textContent = '▶';
-};
-
-const TIMEZONES = [
-  { label: 'UTC+8 北京', min: 480 }, { label: 'UTC+0 伦敦', min: 0 },
-  { label: 'UTC+9 东京', min: 540 }, { label: 'UTC-5 纽约', min: -300 }, { label: 'UTC-8 洛杉矶', min: -480 }
-];
-let tz = TIMEZONES[0];
-document.getElementById('tzBtn').onclick = () => {
-  const idx = (TIMEZONES.indexOf(tz) + 1) % TIMEZONES.length;
-  tz = TIMEZONES[idx];
-  document.getElementById('tzBtn').textContent = '🕓 ' + tz.label;
-};
-const today = new Date();
-document.getElementById('jumpDate').value = today.getFullYear() + '-' + p2(today.getMonth()+1) + '-' + p2(today.getDate());
-
-// 速度选择弹窗
-document.getElementById('spdBtn').onclick = () => {
-  const popup = document.getElementById('spdPopup');
-  popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
-};
-document.querySelectorAll('.spd-opt').forEach(el => {
-  el.onclick = () => {
-    const u = el.dataset.u; curUnit = u; state.spd = SPD[u]; state.playing = true;
-    document.getElementById('pPlay').textContent = '❚❚';
-    document.getElementById('spdBtn').textContent = '⚡ ' + SPD_LABELS[u] + ' ▾';
-    document.querySelectorAll('.spd-opt').forEach(o => o.classList.toggle('on', o.dataset.u === u));
-    document.getElementById('spdPopup').style.display = 'none';
-  };
-});
-// 点击空白关闭速度弹窗
-document.addEventListener('click', e => {
-  const popup = document.getElementById('spdPopup');
-  if (popup && popup.style.display !== 'none' && !e.target.closest('#spdBtn') && !e.target.closest('#spdPopup')) {
-    popup.style.display = 'none';
-  }
-});
-
-
-let _hudT = 0;
-function updateDateDisplay(now) {
-  if (now - _hudT < 200) return; _hudT = now;
-  const local = new Date(dispT + tz.min * 60000);
-  document.getElementById('dateText').textContent =
-    local.getUTCFullYear() + '-' + p2(local.getUTCMonth()+1) + '-' + p2(local.getUTCDate()) + ' '
-    + p2(local.getUTCHours()) + ':' + p2(local.getUTCMinutes()) + ':' + p2(local.getUTCSeconds()) + ' ' + tz.label;
-}
-
 requestAnimationFrame(frame);
-
-// ===== 加载地球图片（用于退出过场动画）=====
-const _transImg = new Image();
-_transImg.src = 'textures/earth-north-pole.png';
-
-// ===== 退出动画：太阳系→地球（用真实图片放大）=====
-function transitionToEarth(href) {
-  const tc = document.createElement('canvas');
-  tc.style.cssText = 'position:fixed;inset:0;z-index:100;pointer-events:none';
-  document.body.appendChild(tc);
-  const tctx = tc.getContext('2d');
-  const DPR2 = Math.min(window.devicePixelRatio || 1, 2);
-  const W2 = window.innerWidth, H2 = window.innerHeight;
-  tc.width = W2 * DPR2; tc.height = H2 * DPR2;
-  tc.style.width = W2 + 'px'; tc.style.height = H2 + 'px';
-  tctx.setTransform(DPR2, 0, 0, DPR2, 0, 0);
-
-  // 地球在太阳系中的屏幕位置（轨道上的小地球）
-  let earthX = W2 / 2, earthY = H2 * 0.4;
-  if (typeof project !== 'undefined' && planetGroups && planetGroups[2]) {
-    const s = project(planetGroups[2].position);
-    if (s.vis) { earthX = s.x; earthY = s.y; }
-  }
-
-  let startTime = null, duration = 1000;
-
-  function animate(ts) {
-    if (!startTime) startTime = ts;
-    const progress = Math.min((ts - startTime) / duration, 1);
-    const ease = 1 - Math.pow(1 - progress, 2.5);
-
-    tctx.clearRect(0, 0, W2, H2);
-
-    // 暗色背景：前半段透明（太阳系可见），后半段淡入覆盖
-    const bgAlpha = Math.max(0, (progress - 0.3) / 0.7);
-    tctx.fillStyle = 'rgba(3,5,12,' + bgAlpha + ')';
-    tctx.fillRect(0, 0, W2, H2);
-
-    // 地球从轨道位置的小圆点（4px）放大到全屏
-    const cx = earthX + (W2 / 2 - earthX) * ease;
-    const cy = earthY + (H2 / 2 - earthY) * ease;
-    const r = 4 + (Math.max(W2, H2) * 0.55 - 4) * ease;
-
-    tctx.save();
-    tctx.beginPath(); tctx.arc(cx, cy, r, 0, Math.PI * 2); tctx.clip();
-    if (_transImg.complete && _transImg.naturalWidth) {
-      tctx.drawImage(_transImg, cx - r, cy - r, r * 2, r * 2);
-    } else {
-      tctx.fillStyle = '#1a4a7a'; tctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-    }
-    tctx.restore();
-
-    if (progress < 1) requestAnimationFrame(animate);
-    else location.href = href;
-  }
-  requestAnimationFrame(animate);
-}
-
-document.getElementById('earthLink').addEventListener('click', function(e) {
-  e.preventDefault();
-  transitionToEarth(this.href);
-});
 </script>
 </body>
 </html>

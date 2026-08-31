@@ -11,7 +11,9 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
   if (req.url.indexOf("/api/") >= 0) return;
-  if (!req.url.startsWith("http")) return; // 忽略 chrome-extension 等非 http 协议
+  if (!req.url.startsWith("http")) return;
+  // 本地开发不缓存，直接走网络
+  if (req.url.indexOf("localhost") >= 0 || req.url.indexOf("127.0.0.1") >= 0) return;
   e.respondWith(
     caches.match(req).then(r => r || fetch(req).then(resp => {
       try { const cp = resp.clone(); caches.open(C).then(c => c.put(req, cp)); } catch (_) {}

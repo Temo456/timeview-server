@@ -401,7 +401,7 @@ const server = http.createServer(async (req, res) => {
   if (!fp.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
   fs.readFile(fp, (err, data) => {
     if (err) return sendHtml(res, LANDING);
-    res.writeHead(200, { "content-type": MIME[path.extname(fp).toLowerCase()] || "application/octet-stream", "access-control-allow-origin": "*" });
+    res.writeHead(200, { "content-type": MIME[path.extname(fp).toLowerCase()] || "application/octet-stream", "access-control-allow-origin": "*", "cache-control": "no-cache, no-store, must-revalidate" });
     res.end(data);
   });
 });

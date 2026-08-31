@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>太阳系 3D · 黄道俯视图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#03050c;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#c8daf0;-webkit-font-smoothing:antialiased;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+/* 行星标签 */
+.plab{position:absolute;transform:translate(-50%,-100%);z-index:5;background:rgba(7,18,34,.78);border:1px solid rgba(95,214,240,.3);border-radius:3px;padding:3px 7px;font-size:11px;color:#eaf6ff;white-space:nowrap;pointer-events:none}
+.plab .nm{font-weight:700}.plab .au{color:#5fd6f0;margin-left:5px;font-size:10px}
+.plab::before{content:"";position:absolute;left:50%;bottom:-7px;width:1px;height:7px;background:rgba(95,214,240,.3)}
+/* 节气标签：主节气金字 / 普通小圆点 / 当前高亮青色 */
+.slab{position:absolute;transform:translate(-50%,-50%);font-size:9px;color:rgba(255,210,74,.6);pointer-events:none;text-shadow:0 0 6px rgba(0,0,0,.9);letter-spacing:1px;white-space:nowrap;z-index:4}
+.slab-m{font-size:11px;color:#ffd24a;font-weight:700}
+.slab-c{font-size:12px;color:#5fd6f0;font-weight:800;text-shadow:0 0 10px rgba(95,214,240,.7)}
+.slab-d{width:4px;height:4px;border-radius:50%;background:rgba(255,210,74,.45);font-size:0}
+/* 坐标轴标签 */
+.axlabel{position:absolute;font-size:11px;font-weight:700;pointer-events:none;text-shadow:0 0 4px rgba(0,0,0,.9);z-index:6;white-space:nowrap}
+/* 底部控制 */
+.ctrl{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10}
+.ctrl button{min-width:36px;height:30px;border-radius:6px;border:1px solid rgba(95,214,240,.3);background:rgba(8,20,36,.7);color:#7fa8c4;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ctrl button:active{background:rgba(95,214,240,.2)}
+.ctrl button.on{color:#5fd6f0;border-color:rgba(95,214,240,.6)}
+/* 信息卡 */
+.card-mask{position:fixed;inset:0;z-index:20;background:rgba(2,5,12,.5);display:flex;align-items:center;justify-content:center}
+.card{width:78vw;max-width:300px;border-radius:8px;padding:14px 16px;background:rgba(8,20,36,.95);border:1px solid rgba(95,214,240,.7);box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.card .hdr{display:flex;align-items:center;margin-bottom:8px}
+.card .hdr .bar{width:3px;height:16px;background:#f5c451;border-radius:2px;margin-right:8px}
+.card .hdr .title{font-size:17px;font-weight:800;color:#fff;flex:1}
+.card .hdr .close{color:#7fa8c4;font-size:20px;cursor:pointer;padding:0 4px;line-height:1}
+.card .row{display:flex;justify-content:space-between;font-size:12.5px;color:#7fa8c4;padding:5px 0;border-bottom:1px solid rgba(95,214,240,.08)}
+.card .row:last-child{border-bottom:none}
+.card .row .v{color:#dff0fb}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="labels"></div>
+<div class="ctrl">
+  <button id="bTop" title="季节俯视（垂直俯瞰）">⊕</button>
+  <button id="bReset" title="重置视角（45°倾斜）">⌖</button>
+  <button id="bGod" title="上帝俯视（远距离俯瞰）">👁</button>
+  <button id="bLabels" class="on" title="行星标签">🏷</button>
+</div>
+<div class="card-mask" id="cardMask" style="display:none">
+  <div class="card">
+    <div class="hdr"><span class="bar"></span><span class="title" id="cardTitle"></span><span class="close" id="cardClose">×</span></div>
+    <div id="cardBody"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===== 常量与工具 =====
+const RAD = Math.PI / 180;
+const J2000 = Date.UTC(2000, 0, 1, 12, 0, 0);
+const rev = x => { x %= 360; return x < 0 ? x + 360 : x; };
+const dnum = ms => (ms - J2000) / 86400e3;
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+
+// 相机约束
+const PHI_MIN = 0.01, PHI_MAX = 1.45;
+const TR_MIN = 30, TR_MAX = 340;
+const SMOOTH = 0.12;          // 相机平滑插值系数
+const SHAKE_AMP = 0.5;        // 上帝之手震动幅度
+const GOD_SCALE = 1.3;        // 上帝之手放大倍数
+
+// ===== 天文：太阳黄经 + 24 节气 =====
+function sunLon(d) {
+  d += 1.5;
+  const w = 282.9404 + 4.70935e-5 * d, e = 0.016709 - 1.151e-9 * d;
+  const M = rev(356.0470 + 0.9856002585 * d), Mr = M * RAD;
+  const E = M + (e / RAD) * Math.sin(Mr) * (1 + e * Math.cos(Mr)), Er = E * RAD;
+  return rev(Math.atan2(Math.sqrt(1 - e * e) * Math.sin(Er), Math.cos(Er) - e) / RAD + w);
+}
+// 每 15° 黄经一个节气，0°=春分
+const TERMS = ['春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至','小寒','大寒','立春','雨水','惊蛰'];
+function solarTermIdx(d) { return Math.floor(sunLon(d) / 15) % 24; }
+
+// ===== 行星数据（a=半长轴AU，P=公转周期年，sz=显示半径，rot=自转周期天，负为逆行）=====
+const PLANETS = [
+  { n:'水星',   a:0.387,  P:0.241,  sz:1.8, dia:'4,879 km',   temp:'-173~427°C', type:'类地行星',  moons:'0',   rot:58.6,  tex:'mercury' },
+  { n:'金星',   a:0.723,  P:0.615,  sz:2.4, dia:'12,104 km',  temp:'462°C',      type:'类地行星',  moons:'0',   rot:-243,  tex:'venus' },
+  { n:'地球',   a:1.000,  P:1.000,  sz:2.6, dia:'12,742 km',  temp:'15°C',       type:'类地行星',  moons:'1',   rot:1.0,   tex:'earth' },
+  { n:'火星',   a:1.524,  P:1.881,  sz:2.0, dia:'6,779 km',   temp:'-63°C',      type:'类地行星',  moons:'2',   rot:1.03,  tex:'mars' },
+  { n:'木星',   a:5.203,  P:11.86,  sz:6.0, dia:'139,820 km', temp:'-108°C',     type:'气态巨行星', moons:'95',  rot:0.41,  tex:'jupiter' },
+  { n:'土星',   a:9.537,  P:29.46,  sz:5.2, dia:'116,460 km', temp:'-139°C',     type:'气态巨行星', moons:'146', rot:0.44,  tex:'saturn' },
+  { n:'天王星', a:19.19,  P:84.01,  sz:3.8, dia:'50,724 km',  temp:'-197°C',     type:'冰巨星',    moons:'28',  rot:-0.72, tex:'uranus' },
+  { n:'海王星', a:30.07,  P:164.8,  sz:3.6, dia:'49,244 km',  temp:'-201°C',     type:'冰巨星',    moons:'16',  rot:0.67,  tex:'neptune' },
+  { n:'冥王星', a:39.48,  P:248.0,  sz:1.2, dia:'2,377 km',   temp:'-230°C',     type:'矮行星',    moons:'5',   rot:6.39,  tex:'pluto' }
+];
+const SUN = { n:'太阳', dia:'1,392,700 km', temp:'5,505°C', type:'恒星' };
+
+function SCALE(a) { return 8 + Math.pow(a, 0.55) * 28; }
+function planetLon(p, d) { return rev(360 * d / (p.P * 365.25)); }
+
+// ===== 状态 =====
+let W = 0, H = 0, DPR = 1;
+let renderer, scene, cam, sunMesh, sunGlow;
+let planetMeshes = [], planetGroups = [];
+let labelsOn = true;
+let dispT = Date.now();               // 可被上帝之手“搓动”的时间
+let camS = { r: 200, th: 0, ph: 0.01, tr: 200, tth: 0, tph: 0.01 };
+let drag = null, inertia = 0, scrubVel = 0;
+let shakePl = null;                   // 上帝之手当前抓住的行星下标
+let lastDom = 0;                      // DOM 标签节流（60ms）
+
+// ===== 贴图加载：fetch → blob → FileReader → Image → THREE.Texture =====
+const TEXBASE = 'textures/';          // 相对路径，本地/线上均可；按需可改为绝对 URL
+function loadTex(mat, filename) {
+  fetch(TEXBASE + filename).then(r => r.blob()).then(blob => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const tex = new THREE.Texture(img);
+          tex.generateMipmaps = false;
+          tex.minFilter = THREE.LinearFilter;
+          tex.wrapS = THREE.RepeatWrapping;
+          tex.wrapT = THREE.RepeatWrapping;
+          tex.needsUpdate = true;
+          mat.map = tex;
+          mat.color.set(0xffffff);
+          mat.needsUpdate = true;
+        } catch (e) {}
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(blob);
+  }).catch(() => { /* 加载失败保持灰色默认材质，不崩溃 */ });
+}
+
+// ===== 3D 初始化 =====
+function initThree() {
+  const gl = document.getElementById('gl');
+  renderer = new THREE.WebGL1Renderer({ canvas: gl, antialias: true, alpha: false });
+  renderer.setPixelRatio(DPR);
+  renderer.setSize(W, H, false);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x03050c);
+  cam = new THREE.PerspectiveCamera(50, W / H, 0.1, 5000);
+  cam.up.set(0, 1, 0);
+  cam.position.set(0, 0, 200);
+
+  // 灯光（让灰色默认材质与贴图可见）
+  scene.add(new THREE.AmbientLight(0x8890a0, 0.7));
+  scene.add(new THREE.PointLight(0xffffff, 1.3, 0, 0)); // decay=0，无距离衰减
+
+  // 星空背景：3000 颗白色 Points，sizeAttenuation=false
+  const starGeo = new THREE.BufferGeometry();
+  const sp = [];
+  for (let i = 0; i < 3000; i++) {
+    sp.push((Math.random() - 0.5) * 4000, (Math.random() - 0.5) * 4000, (Math.random() - 0.5) * 4000);
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false })));
+
+  // 太阳：原点，MeshBasicMaterial，贴图 sun.jpg
+  sunMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(5.5, 48, 48),
+    new THREE.MeshBasicMaterial({ color: 0xffdd44 })
+  );
+  scene.add(sunMesh);
+  loadTex(sunMesh.material, 'sun.jpg');
+
+  // 光晕：DataTexture 径向渐变（金色→透明），Sprite，scale=36
+  const gs = 128, gd = new Uint8Array(gs * gs * 4);
+  for (let y = 0; y < gs; y++) for (let x = 0; x < gs; x++) {
+    const dx = x - gs / 2, dy = y - gs / 2, d = Math.sqrt(dx * dx + dy * dy) / (gs / 2);
+    const a = d < 0.35 ? 1 : d < 0.75 ? 1 - (d - 0.35) / 0.4 : 0;
+    const idx = (y * gs + x) * 4;
+    gd[idx] = 255; gd[idx + 1] = 214; gd[idx + 2] = 90; gd[idx + 3] = Math.round(clamp(a, 0, 1) * 255);
+  }
+  const gt = new THREE.DataTexture(gd, gs, gs, THREE.RGBAFormat);
+  gt.needsUpdate = true;
+  sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: gt, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sunGlow.scale.set(36, 36, 1);
+  scene.add(sunGlow);
+
+  // 行星 + 轨道线
+  PLANETS.forEach((p) => {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(p.sz, 36, 36),
+      new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8, metalness: 0.1 }) // 灰色默认
+    );
+    mesh.userData = p;
+    loadTex(mesh.material, p.tex + '.jpg');
+    const grp = new THREE.Group();
+    grp.add(mesh);
+    scene.add(grp);
+    planetMeshes.push(mesh);
+    planetGroups.push(grp);
+
+    // 轨道线：XY 平面圆环，128 段，rgba(26,48,80,0.5)
+    const R = SCALE(p.a);
+    const pts = Array.from({ length: 129 }, (_, k) => {
+      const ang = k / 128 * Math.PI * 2;
+      return new THREE.Vector3(Math.cos(ang) * R, Math.sin(ang) * R, 0);
+    });
+    scene.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: 0x1a3050, transparent: true, opacity: 0.5 })
+    ));
+  });
+
+  // 24 节气：沿地球轨道 SCALE(1)，每 15° 黄经一个
+  const eR = SCALE(1);
+  window._seasonPts = [];
+  for (let i = 0; i < 24; i++) {
+    const a = i * 15 * RAD;
+    window._seasonPts.push({ x: Math.cos(a) * eR, y: Math.sin(a) * eR, z: 0, name: TERMS[i], idx: i });
+  }
+
+  // 坐标轴：X红(春分)/Y绿(夏至)/Z蓝(北极)，长度 999
+  const axLen = 999;
+  const axDirs = [[axLen, 0, 0], [0, axLen, 0], [0, 0, axLen]];
+  const axColors = [0xff4444, 0x44ff44, 0x4488ff];
+  const axNames = ['X·春分', 'Y·夏至', 'Z·北极'];
+  const labelsEl = document.getElementById('labels');
+  window._axDirs = axDirs;
+  window._axLabels = [];
+  axDirs.forEach((dir, i) => {
+    const posMat = new THREE.LineBasicMaterial({ color: axColors[i], transparent: true, opacity: 0.5 });
+    const negMat = new THREE.LineBasicMaterial({ color: axColors[i], transparent: true, opacity: 0.22 });
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(...dir)]), posMat));
+    const neg = dir.map(v => -v);
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(...neg)]), negMat));
+    const lbl = document.createElement('div');
+    lbl.className = 'axlabel';
+    lbl.style.color = ['#ff6666', '#66ff66', '#6688ff'][i];
+    lbl.textContent = axNames[i];
+    labelsEl.appendChild(lbl);
+    window._axLabels.push(lbl);
+  });
+
+  // 行星标签（DOM div：名称 + AU 距离）
+  window._plabEls = [];
+  PLANETS.forEach((p, i) => {
+    const el = document.createElement('div');
+    el.className = 'plab';
+    el.innerHTML = '<span class="nm">' + p.n + '</span><span class="au">' + p.a + ' AU</span>';
+    labelsEl.appendChild(el);
+    window._plabEls.push(el);
+  });
+
+  // 节气标签
+  window._slabEls = [];
+  window._seasonPts.forEach(() => {
+    const el = document.createElement('div');
+    labelsEl.appendChild(el);
+    window._slabEls.push(el);
+  });
+}
+
+// ===== 投影（世界坐标 → 屏幕坐标）=====
+const _v = new THREE.Vector3();
+function project(x, y, z) {
+  _v.set(x, y, z).project(cam);
+  return { x: (_v.x * 0.5 + 0.5) * W, y: (-_v.y * 0.5 + 0.5) * H, vis: _v.z < 1 };
+}
+
+// ===== 每帧更新太阳系 =====
+function updateSolar(d, dt) {
+  // 行星位置（XY 黄道面）
+  for (let i = 0; i < PLANETS.length; i++) {
+    const p = PLANETS[i], R = SCALE(p.a), a = planetLon(p, d) * RAD;
+    planetGroups[i].position.set(Math.cos(a) * R, Math.sin(a) * R, 0);
+    planetMeshes[i].rotation.z = ((d / p.rot) % 1) * 2 * Math.PI;
+  }
+  // 太阳自转
+  sunMesh.rotation.y += 0.15 * dt;
+  // 光晕呼吸
+  const pu = 1 + Math.sin(performance.now() / 600) * 0.04;
+  sunGlow.scale.set(36 * pu, 36 * pu, 1);
+  // 上帝之手震动
+  if (shakePl !== null) {
+    const m = planetMeshes[shakePl];
+    m.position.set((Math.random() - 0.5) * SHAKE_AMP, (Math.random() - 0.5) * SHAKE_AMP, 0);
+  }
+
+  // 相机平滑插值
+  camS.r += (camS.tr - camS.r) * SMOOTH;
+  camS.th += (camS.tth - camS.th) * SMOOTH;
+  camS.ph += (camS.tph - camS.ph) * SMOOTH;
+  cam.up.set(0, 1, 0);
+  cam.position.set(
+    camS.r * Math.sin(camS.ph) * Math.sin(camS.th),
+    camS.r * Math.sin(camS.ph) * Math.cos(camS.th),
+    camS.r * Math.cos(camS.ph)
+  );
+  cam.lookAt(0, 0, 0);
+
+  renderer.render(scene, cam);
+}
+
+// ===== DOM 标签投影（每 60ms 一次）=====
+function setLabelPos(el, x, y, z) {
+  const s = project(x, y, z);
+  if (!s.vis) { el.style.display = 'none'; return false; }
+  el.style.display = '';
+  el.style.left = clamp(s.x, 12, W - 56) + 'px';
+  el.style.top = clamp(s.y, 12, H - 16) + 'px';
+  return true;
+}
+function updateDom(d) {
+  // 行星标签
+  for (let i = 0; i < PLANETS.length; i++) {
+    const el = window._plabEls[i];
+    if (!labelsOn) { el.style.display = 'none'; continue; }
+    const g = planetGroups[i].position;
+    const s = project(g.x, g.y, g.z);
+    if (s.vis && s.x > -20 && s.x < W + 20 && s.y > -20 && s.y < H + 20) {
+      el.style.display = '';
+      el.style.left = s.x + 'px';
+      el.style.top = (s.y - 18) + 'px';
+    } else el.style.display = 'none';
+  }
+  // 节气标签：4 主节气金字，其余小圆点，当前节气高亮青色
+  const cur = solarTermIdx(d);
+  window._seasonPts.forEach((sp, i) => {
+    const el = window._slabEls[i];
+    const s = project(sp.x, sp.y, sp.z);
+    if (!s.vis || s.x < 10 || s.x > W - 10 || s.y < 10 || s.y > H - 10) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.style.left = s.x + 'px';
+    el.style.top = s.y + 'px';
+    const major = sp.idx % 6 === 0;
+    if (sp.idx === cur) { el.className = 'slab slab-c'; el.textContent = sp.name; }
+    else if (major) { el.className = 'slab slab-m'; el.textContent = sp.name; }
+    else { el.className = 'slab slab-d'; el.textContent = ''; }
+  });
+  // 坐标轴标签：始终可见
+  setLabelPos(window._axLabels[0], 999, 0, 0);
+  setLabelPos(window._axLabels[1], 0, 999, 0);
+  if (!setLabelPos(window._axLabels[2], 0, 0, 999)) {
+    // Z 轴（北极）始终指向观察者，俯视时端点在相机后方，固定在屏幕顶部
+    window._axLabels[2].style.display = '';
+    window._axLabels[2].style.left = (W / 2) + 'px';
+    window._axLabels[2].style.top = '20px';
+  }
+}
+
+// ===== 渲染循环 =====
+let lastT = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+  // 时间推进
+  if (drag !== null && drag.pl !== null) {
+    // 上帝之手：dispT 由拖动直接改写，本帧不动
+  } else if (inertia) {
+    dispT += inertia * dt;
+    inertia *= Math.exp(-1.4 * dt);
+    if (Math.abs(inertia) < 1000) inertia = 0;
+  } else {
+    dispT += (Date.now() - dispT) * 0.05;
+  }
+  const d = dnum(dispT);
+  updateSolar(d, dt);
+  if (now - lastDom >= 60) { lastDom = now; updateDom(d); }
+}
+
+// ===== 拾取 =====
+function pickPlanet(px, py) {
+  let best = -1, bd = 1e9;
+  PLANETS.forEach((p, i) => {
+    const g = planetGroups[i].position;
+    const s = project(g.x, g.y, g.z);
+    if (!s.vis) return;
+    const dd = Math.hypot(s.x - px, s.y - py);
+    const tol = Math.max(30, p.sz * 14);
+    if (dd < tol && dd < bd) { bd = dd; best = i; }
+  });
+  return best;
+}
+function hitSun(px, py) {
+  const c = project(0, 0, 0);
+  if (!c.vis) return false;
+  const rx = project(5.5, 0, 0), ry = project(0, 5.5, 0);
+  const r = Math.max(Math.hypot(rx.x - c.x, rx.y - c.y), Math.hypot(ry.x - c.x, ry.y - c.y), 24);
+  return Math.hypot(px - c.x, py - c.y) <= r + 6;
+}
+
+// ===== 指针交互（鼠标 + 单指触摸）=====
+function onDown(x, y) {
+  drag = { x, y, moved: 0, pl: null, lastT: Date.now() };
+  const pi = pickPlanet(x, y);
+  if (pi >= 0) {
+    drag.pl = pi;
+    shakePl = pi;
+    planetMeshes[pi].scale.setScalar(GOD_SCALE); // 放大 1.3 倍
+  }
+}
+function onMove(x, y) {
+  if (!drag) return;
+  const dx = x - drag.x, dy = y - drag.y;
+  drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+  if (drag.pl !== null) {
+    // 上帝之手：以行星屏幕位置为中心计算角度差
+    const g = planetGroups[drag.pl].position;
+    const sp = project(g.x, g.y, g.z);
+    const prevAngle = Math.atan2(drag.y - sp.y, drag.x - sp.x);
+    const currAngle = Math.atan2(y - sp.y, x - sp.x);
+    let dA = prevAngle - currAngle;
+    while (dA > Math.PI) dA -= 2 * Math.PI;
+    while (dA < -Math.PI) dA += 2 * Math.PI;
+    const pl = PLANETS[drag.pl];
+    const timeMs = dA * (pl.P * 365.25 / 360) * 86400e3;
+    dispT += timeMs;
+    const now = Date.now();
+    scrubVel = timeMs / Math.max((now - drag.lastT) / 1000, 0.001);
+    drag.lastT = now;
+    drag.x = x; drag.y = y;
+    return;
+  }
+  // 拖空白处 = 旋转相机
+  camS.tth -= dx * 0.008;
+  camS.tph = clamp(camS.tph + dy * 0.008, PHI_MIN, PHI_MAX);
+  drag.x = x; drag.y = y;
+}
+function onUp() {
+  if (!drag) return;
+  if (drag.pl !== null) {
+    planetMeshes[drag.pl].scale.setScalar(1);
+    planetMeshes[drag.pl].position.set(0, 0, 0);
+    shakePl = null;
+    if (drag.moved < 8) showPlanetCard(drag.pl);   // 点击（非拖拽）
+    else inertia = scrubVel;                        // 松手：惯性
+  } else if (drag.moved < 8 && hitSun(drag.x, drag.y)) {
+    showSunCard();                                  // 点击太阳
+  }
+  drag = null;
+  scrubVel = 0;
+}
+
+// ===== 信息卡 =====
+function openCard(title, rows) {
+  document.getElementById('cardTitle').textContent = title;
+  document.getElementById('cardBody').innerHTML = rows
+    .map(r => '<div class="row"><span>' + r[0] + '</span><span class="v">' + r[1] + '</span></div>')
+    .join('');
+  document.getElementById('cardMask').style.display = 'flex';
+}
+function showPlanetCard(idx) {
+  const p = PLANETS[idx];
+  const d = dnum(dispT);
+  openCard(p.n, [
+    ['距离', p.a + ' AU'],
+    ['直径', p.dia],
+    ['温度', p.temp],
+    ['类型', p.type],
+    ['卫星数', p.moons + ' 颗'],
+    ['当前黄经', planetLon(p, d).toFixed(1) + '°']
+  ]);
+}
+function showSunCard() {
+  const d = dnum(dispT);
+  openCard(SUN.n, [
+    ['直径', SUN.dia],
+    ['温度', SUN.temp],
+    ['类型', SUN.type],
+    ['当前黄经', sunLon(d).toFixed(1) + '°']
+  ]);
+}
+
+// ===== 尺寸 =====
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  if (renderer && cam) {
+    renderer.setPixelRatio(DPR);
+    renderer.setSize(W, H, false);
+    cam.aspect = W / H;
+    cam.updateProjectionMatrix();
+  }
+}
+window.addEventListener('resize', resize);
+resize();
+initThree();
+
+// ===== 事件绑定 =====
+const gl = document.getElementById('gl');
+gl.addEventListener('touchstart', e => { e.preventDefault(); if (e.touches.length) onDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+gl.addEventListener('touchmove', e => { e.preventDefault(); if (e.touches.length) onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+gl.addEventListener('touchend', onUp);
+gl.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+gl.addEventListener('mousemove', e => { if (drag) onMove(e.clientX, e.clientY); });
+window.addEventListener('mouseup', onUp);
+gl.addEventListener('wheel', e => {
+  e.preventDefault();
+  camS.tr = clamp(camS.tr * (e.deltaY > 0 ? 1.1 : 0.9), TR_MIN, TR_MAX);
+}, { passive: false });
+
+document.getElementById('cardClose').onclick = () => document.getElementById('cardMask').style.display = 'none';
+document.getElementById('cardMask').onclick = function (e) { if (e.target === this) this.style.display = 'none'; };
+
+// 三个预设视角
+document.getElementById('bTop').onclick = () => { camS.tr = 200; camS.tth = 0; camS.tph = 0.01; };
+document.getElementById('bReset').onclick = () => { camS.tr = 200; camS.tth = 3 * Math.PI / 4; camS.tph = 0.8; };
+document.getElementById('bGod').onclick = () => { camS.tr = 400; camS.tth = 0; camS.tph = 0.01; };
+document.getElementById('bLabels').onclick = function () { labelsOn = !labelsOn; this.classList.toggle('on', labelsOn); };
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
