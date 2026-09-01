@@ -852,7 +852,7 @@ for (const c of CONSTELLATIONS) {
   const color = c.type === 'zodiac' ? '#ffdd77' : '#88ccff';
   el.innerHTML = `<span class="name" style="color:${color};cursor:pointer">${c.name}</span>`;
   el.style.pointerEvents = 'auto';
-  labelsLayer.appendChild(el);
+  document.getElementById('labelsLayer').appendChild(el);
   constellationLabels.push({ el, pos: labelPos, group });
   constellationClickTargets.push({ pos: labelPos.clone(), data: c, el });
 }
