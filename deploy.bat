@@ -3,7 +3,7 @@ chcp 65001 >nul
 echo === TimeView Deploy ===
 echo.
 
-set SERVER=root@timeview.site
+set SERVER=root@124.223.178.244
 set REMOTE_DIR=/root/timeview
 
 echo [1/3] Creating package...
@@ -16,7 +16,7 @@ if errorlevel 1 (
 echo Package created.
 
 echo [2/3] Uploading to server...
-scp timeview-deploy.tar.gz deploy.sh %SERVER%:%REMOTE_DIR%/
+scp -P 2048 timeview-deploy.tar.gz deploy.sh %SERVER%:%REMOTE_DIR%/
 if errorlevel 1 (
     echo Upload failed!
     pause
@@ -24,7 +24,7 @@ if errorlevel 1 (
 )
 
 echo [3/3] Deploying on server...
-ssh %SERVER% "cd %REMOTE_DIR% && bash deploy.sh"
+ssh -p 2048 %SERVER% "cd %REMOTE_DIR% && bash deploy.sh"
 if errorlevel 1 (
     echo Deploy failed!
     pause
