@@ -568,7 +568,7 @@ document.getElementById('bZodiac').addEventListener('click', function() { zodiac
 document.getElementById('bXiusu').addEventListener('click', function() { xiusuOn = !xiusuOn; this.classList.toggle('on', xiusuOn); xiusuGroup.visible = xiusuOn; });
 
 // 点击星座/星宿标签显示详情
-labelsLayer.addEventListener('click', (e) => {
+document.getElementById('labelsLayer').addEventListener('click', (e) => {
   const span = e.target.closest('.name');
   if (!span) return;
   for (const ct of constellationClickTargets) {
