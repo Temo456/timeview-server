@@ -113,7 +113,7 @@
   <div class="bar-btn on" id="bOrbits">轨道</div>
   <div class="bar-btn on" id="bAxes">轴</div>
   <div class="bar-btn on" id="bZodiac">星座</div>
-  <div class="bar-btn on" id="bXiusu">星宿</div>
+  <div class="bar-btn" id="bXiusu">星宿</div>
 </div>
 
 <!-- 速度弹窗 -->
@@ -564,8 +564,16 @@ document.getElementById('bLabels').addEventListener('click', function() { labels
 document.getElementById('bTerms').addEventListener('click', function() { termsOn = !termsOn; this.classList.toggle('on', termsOn); for (const t of termLabelEls) t.el.style.display = termsOn ? '' : 'none'; termLabelEl.style.display = termsOn ? '' : 'none'; });
 document.getElementById('bOrbits').addEventListener('click', function() { orbitsOn = !orbitsOn; this.classList.toggle('on', orbitsOn); for (const l of orbitLines) l.visible = orbitsOn; });
 document.getElementById('bAxes').addEventListener('click', function() { axesOn = !axesOn; this.classList.toggle('on', axesOn); axesGroup.visible = axesOn; });
-document.getElementById('bZodiac').addEventListener('click', function() { zodiacOn = !zodiacOn; this.classList.toggle('on', zodiacOn); zodiacGroup.visible = zodiacOn; });
-document.getElementById('bXiusu').addEventListener('click', function() { xiusuOn = !xiusuOn; this.classList.toggle('on', xiusuOn); xiusuGroup.visible = xiusuOn; });
+document.getElementById('bZodiac').addEventListener('click', function() {
+  zodiacOn = true; xiusuOn = false;
+  this.classList.add('on'); document.getElementById('bXiusu').classList.remove('on');
+  zodiacGroup.visible = true; xiusuGroup.visible = false;
+});
+document.getElementById('bXiusu').addEventListener('click', function() {
+  xiusuOn = true; zodiacOn = false;
+  this.classList.add('on'); document.getElementById('bZodiac').classList.remove('on');
+  xiusuGroup.visible = true; zodiacGroup.visible = false;
+});
 
 // 点击星座/星宿标签显示详情
 document.getElementById('labelsLayer').addEventListener('click', (e) => {
@@ -859,9 +867,10 @@ for (const c of CONSTELLATIONS) {
 
 constellationGroup.add(zodiacGroup);
 constellationGroup.add(xiusuGroup);
+xiusuGroup.visible = false;
 worldGroup.add(constellationGroup);
 
-let zodiacOn = true, xiusuOn = true;
+let zodiacOn = true, xiusuOn = false;
 
 /* ============ 构建太阳系 ============ */
 const textures = {};
