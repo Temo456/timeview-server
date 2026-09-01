@@ -693,7 +693,7 @@ function makeOrbitLine(radius) {
 const axesGroup = new THREE.Group();
 const xLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1,0,0), new THREE.Vector3(1,0,0)]), new THREE.LineBasicMaterial({ color:0xff7b7b, transparent:true, opacity:0.55 }));
 const yLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-1,0), new THREE.Vector3(0,1,0)]), new THREE.LineBasicMaterial({ color:0x6fdf6f, transparent:true, opacity:0.55 }));
-const zLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-3), new THREE.Vector3(0,0,12)]), new THREE.LineBasicMaterial({ color:0x7ba8ff, transparent:true, opacity:0.6 }));
+const zLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-6), new THREE.Vector3(0,0,12)]), new THREE.LineBasicMaterial({ color:0x7ba8ff, transparent:true, opacity:0.6 }));
 const xLabel = makeTextSprite('X·春分', '#ffb3b3', 1.6);
 const yLabel = makeTextSprite('Y·夏至', '#b8f0b8', 1.6);
 const zLabel = makeTextSprite('Z·北极', '#a0c0ff', 1.4);
@@ -787,9 +787,9 @@ function updateAxes() {
   const reach = Math.sqrt(halfH*halfH + halfW*halfW);
   const labelR = Math.min(88, reach * 0.8);
   xLine.scale.x = reach; yLine.scale.y = reach;
-  zLine.scale.z = reach * 0.5;
+  zLine.scale.z = reach / 12;
   xLabel.position.set(labelR, 0, 0); yLabel.position.set(0, labelR, 0);
-  zLabel.position.set(0, 0, reach * 0.25);
+  zLabel.position.set(0, 0, reach);
 }
 
 /* ============ 动画循环 ============ */
