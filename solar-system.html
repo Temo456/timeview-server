@@ -112,6 +112,8 @@
   <div class="bar-btn on" id="bTerms">节气</div>
   <div class="bar-btn on" id="bOrbits">轨道</div>
   <div class="bar-btn on" id="bAxes">轴</div>
+  <div class="bar-btn on" id="bZodiac">星座</div>
+  <div class="bar-btn on" id="bXiusu">星宿</div>
 </div>
 
 <!-- 速度弹窗 -->
@@ -405,6 +407,17 @@ function showCard(key, cx, cy) {
   cardEl.style.display = 'block';
 }
 
+function showConstellationCard(c) {
+  const typeLabel = c.type === 'zodiac' ? '黄道星座' : '二十八星宿';
+  document.getElementById('cardName').textContent = c.name;
+  document.getElementById('cardEn').textContent = typeLabel;
+  document.getElementById('cardGrid').innerHTML = '';
+  document.getElementById('cardDesc').textContent = c.desc;
+  cardEl.style.left = '50%'; cardEl.style.top = '50%';
+  cardEl.style.transform = 'translate(-50%,-50%)';
+  cardEl.style.display = 'block';
+}
+
 /* ============ 控件 ============ */
 const p2 = n => String(n).padStart(2, '0');
 function formatInput(d) { return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
@@ -551,6 +564,20 @@ document.getElementById('bLabels').addEventListener('click', function() { labels
 document.getElementById('bTerms').addEventListener('click', function() { termsOn = !termsOn; this.classList.toggle('on', termsOn); for (const t of termLabelEls) t.el.style.display = termsOn ? '' : 'none'; termLabelEl.style.display = termsOn ? '' : 'none'; });
 document.getElementById('bOrbits').addEventListener('click', function() { orbitsOn = !orbitsOn; this.classList.toggle('on', orbitsOn); for (const l of orbitLines) l.visible = orbitsOn; });
 document.getElementById('bAxes').addEventListener('click', function() { axesOn = !axesOn; this.classList.toggle('on', axesOn); axesGroup.visible = axesOn; });
+document.getElementById('bZodiac').addEventListener('click', function() { zodiacOn = !zodiacOn; this.classList.toggle('on', zodiacOn); zodiacGroup.visible = zodiacOn; });
+document.getElementById('bXiusu').addEventListener('click', function() { xiusuOn = !xiusuOn; this.classList.toggle('on', xiusuOn); xiusuGroup.visible = xiusuOn; });
+
+// 点击星座/星宿标签显示详情
+labelsLayer.addEventListener('click', (e) => {
+  const span = e.target.closest('.name');
+  if (!span) return;
+  for (const ct of constellationClickTargets) {
+    if (ct.el.contains(span)) {
+      showConstellationCard(ct.data);
+      return;
+    }
+  }
+});
 
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateDateText();
@@ -697,19 +724,7 @@ function makeGlowSprite() {
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true }));
   spr.scale.set(SUN_RADIUS * 5.2, SUN_RADIUS * 5.2, 1); return spr;
 }
-function makeStars() {
-  const N = 2600, pos = new Float32Array(N*3), col = new Float32Array(N*3), tmp = new THREE.Color();
-  for (let i = 0; i < N; i++) {
-    const r = 500 + Math.random()*500, th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
-    pos[i*3] = r*Math.sin(ph)*Math.cos(th); pos[i*3+1] = r*Math.sin(ph)*Math.sin(th); pos[i*3+2] = r*Math.cos(ph);
-    tmp.setHSL(0.55+Math.random()*0.18, 0.3+Math.random()*0.5, 0.6+Math.random()*0.4);
-    col[i*3]=tmp.r; col[i*3+1]=tmp.g; col[i*3+2]=tmp.b;
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
-  geo.setAttribute('color', new THREE.BufferAttribute(col,3));
-  return new THREE.Points(geo, new THREE.PointsMaterial({ size:1.8, vertexColors:true, sizeAttenuation:true, transparent:true, opacity:1, depthWrite:false }));
-}
+
 const orbitLines = [];
 function makeOrbitLine(radius) {
   const pts = [], SEG = 256;
@@ -730,10 +745,126 @@ const zLabel = makeTextSprite('Z·北极', '#a0c0ff', 1.4);
 axesGroup.add(xLine, yLine, zLine, xLabel, yLabel, zLabel);
 worldGroup.add(axesGroup);
 
+/* ============ 星座与星宿 ============ */
+const CONSTELLATIONS = [
+  // 十二星座（黄道十二宫）
+  { name:'白羊座', type:'zodiac', desc:'黄道第一宫，春分点所在星座。白羊座位于双鱼座和金牛座之间，最佳观测月份为12月。主要恒星有娄宿三（α，2.0等）。在希腊神话中，白羊座代表拯救佛里克索斯的金毛公羊。', stars:[[5,3,0],[7,4,0],[9,5,0],[7,7,0]], lines:[[0,1],[1,2],[1,3]] },
+  { name:'金牛座', type:'zodiac', desc:'黄道第二宫，冬季夜空中最壮观的星座之一。拥有著名的昴宿星团（M45）和毕宿星团。主星毕宿五（α，0.85等）是橙红色巨星，为全天第14亮星。金牛座象征宙斯化身的白色公牛。', stars:[[12,6,0],[14,7,0],[16,5,0],[15,3,0],[13,4,0],[17,8,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,0],[1,5]] },
+  { name:'双子座', type:'zodiac', desc:'黄道第三宫，冬季重要星座。双子座有两颗明亮的"双星"——北河二（α，1.6等）和北河三（β，1.1等）。每年12月中旬达到最佳观测位置。代表宙斯的双生子卡斯托尔和波吕杜克斯。', stars:[[18,7,0],[20,8,0],[22,7,0],[20,5,0],[22,6,0],[24,9,0]], lines:[[0,1],[1,2],[1,3],[3,4],[4,2],[2,5]] },
+  { name:'巨蟹座', type:'zodiac', desc:'黄道第四宫，是一个较暗的星座，最亮星柳宿增十（β）仅3.5等。其中包含著名的蜂巢星团（M44），肉眼可见为一团朦胧的光斑。巨蟹座在3月前后最佳观测。象征赫拉克勒斯踩死的巨蟹。', stars:[[27,4,0],[29,5,0],[31,4,0],[29,2,0]], lines:[[0,1],[1,2],[1,3]] },
+  { name:'狮子座', type:'zodiac', desc:'黄道第五宫，春季星空的主角。主星轩辕十四（α，1.35等）是全天第21亮星，呈蓝白色。狮子座的"镰刀"形状非常醒目，容易辨认。代表赫拉克勒斯十二功绩中杀死的涅墨亚狮子。', stars:[[34,5,0],[36,7,0],[38,8,0],[39,6,0],[37,4,0],[35,3,0],[40,9,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[3,6]] },
+  { name:'室女座', type:'zodiac', desc:'黄道第六宫，全天第二大星座。主星角宿一（α，0.98等）是蓝白色亮星，为春季大三角之一。室女座星系团包含数千个星系，是宇宙最大的结构之一。代表丰收女神得墨忒耳或其女儿珀耳塞福涅。', stars:[[43,6,0],[45,8,0],[47,7,0],[46,4,0],[44,3,0],[48,9,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,0],[2,5]] },
+  { name:'天秤座', type:'zodiac', desc:'黄道第七宫，唯一一个不以动物命名的星座。主星氐宿一（α，2.7等）和氐宿四（β，2.6等）。秋分点位于天秤座附近。在古代，天秤座曾是天蝎座的一部分，后被独立出来。', stars:[[51,4,0],[53,5,0],[55,4,0],[53,2,0]], lines:[[0,1],[1,2],[1,3]] },
+  { name:'天蝎座', type:'zodiac', desc:'黄道第八宫，夏季南天最壮观的星座。主星心宿二（α，0.96等）是红超巨星，直径约为太阳的883倍，呈醒目的红色。天蝎座拥有丰富的深空天体，是全年最美丽的星座之一。', stars:[[58,5,0],[60,6,0],[62,7,0],[64,6,0],[63,4,0],[61,3,0],[59,4,0],[65,8,0],[66,10,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0],[3,7],[7,8]] },
+  { name:'人马座', type:'zodiac', desc:'黄道第九宫，银河系中心所在方向。人马座的"茶壶"形状非常容易辨认。银河系中心（人马座A*）距离地球约26,000光年。在希腊神话中，人马座代表半人马喀戎。', stars:[[69,5,0],[71,6,0],[73,5,0],[71,3,0],[69,4,0],[74,7,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,0],[2,5]] },
+  { name:'摩羯座', type:'zodiac', desc:'黄道第十宫，秋季可见。摩羯座是一个较暗的星座，最亮星垒壁阵四（δ）仅2.9等。摩羯座被视为"海山羊"，上半身为羊，下半身为鱼。在巴比伦神话中与智慧之神恩基有关。', stars:[[76,3,0],[78,4,0],[80,3,0],[78,1,0]], lines:[[0,1],[1,2],[1,3]] },
+  { name:'宝瓶座', type:'zodiac', desc:'黄道第十一宫，秋季星座。宝瓶座较为暗淡，没有特别明亮的恒星。其中包含许多年轻的球状星团和行星状星云。在希腊神话中，宝瓶座代表特洛伊王子伽倪墨得斯，为众神斟酒的美少年。', stars:[[83,4,0],[85,5,0],[87,4,0],[85,2,0],[83,3,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,0]] },
+  { name:'双鱼座', type:'zodiac', desc:'黄道第十二宫，秋季星座。双鱼座由两条鱼组成，用一条丝带连接。春分点由于岁差已从白羊座移至双鱼座。双鱼座较暗，最亮星右更二（η）仅3.6等。代表爱神阿芙洛狄忒和儿子厄洛斯化鱼逃走的传说。', stars:[[88,4,0],[90,5,0],[92,3,0],[90,2,0],[88,3,0],[86,5,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,0],[0,5]] },
+
+  // 二十八星宿
+  // 东方青龙七宿
+  { name:'角宿', type:'xiusu', desc:'东方青龙第一宿，主星为室女座α（角宿一），1.0等蓝白色亮星。角宿意为"龙角"，是青龙之首。角宿一也是春季大三角之一，距离地球约250光年。在古代占星中，角宿主刑罚、法令。', stars:[[160,5,0],[162,7,0]], lines:[[0,1]] },
+  { name:'亢宿', type:'xiusu', desc:'东方青龙第二宿，主星为室女座κ（亢宿一），4.2等。亢宿意为"龙颈"，连接龙头与龙身。亢宿共4颗星，在室女座西部。在古代占星中，亢宿主疾病、诉讼。', stars:[[155,8,0],[157,9,0],[159,8,0],[157,7,0]], lines:[[0,1],[1,2],[2,3],[3,0]] },
+  { name:'氐宿', type:'xiusu', desc:'东方青龙第三宿，主星为天秤座α（氐宿一），2.7等。氐宿意为"龙胸"，是青龙的胸部。氐宿共4星组成一个四边形。秋分点附近，古代用以判断季节。在占星中氐宿主天子行宫。', stars:[[150,6,0],[152,7,0],[154,6,0],[152,5,0]], lines:[[0,1],[1,2],[2,3],[3,0]] },
+  { name:'房宿', type:'xiusu', desc:'东方青龙第四宿，主星为天蝎座β（房宿一），2.6等。房宿意为"龙腹"，共4星排列成一条线。房宿位于银河附近，含有丰富的星团。在古代占星中，房宿为天子明堂，主政令。', stars:[[145,7,0],[147,8,0],[149,7,0],[151,8,0]], lines:[[0,1],[1,2],[2,3]] },
+  { name:'心宿', type:'xiusu', desc:'东方青龙第五宿，主星为天蝎座α（心宿二/大火），0.96等红超巨星。心宿意为"龙心"，心宿二是中国古代最重要的授时恒星之一，"七月流火"即指大火星西沉。在占星中，心宿为天子明堂。', stars:[[140,7,0],[142,8,0],[140,6,0]], lines:[[0,1],[1,2]] },
+  { name:'尾宿', type:'xiusu', desc:'东方青龙第六宿，主星为天蝎座μ（尾宿一），3.0等。尾宿意为"龙尾"，共9星排列成弧形，如龙尾摆动。尾宿位于银河最密集的区域，是观测银河的最佳位置之一。在占星中主后宫。', stars:[[133,9,0],[135,10,0],[137,10,0],[139,9,0],[138,7,0],[136,6,0],[134,7,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0]] },
+  { name:'箕宿', type:'xiusu', desc:'东方青龙第七宿，主星为人马座γ（箕宿一），3.0等。箕宿意为"龙尾末梢"，形似簸箕。箕宿共4星组成一个不规则四边形。在中国古代，箕宿与风有关，民间传说箕宿主管风。', stars:[[127,8,0],[129,9,0],[131,8,0],[129,7,0]], lines:[[0,1],[1,2],[2,3],[3,0]] },
+
+  // 北方玄武七宿
+  { name:'斗宿', type:'xiusu', desc:'北方玄武第一宿，主星为人马座φ（斗宿一），3.1等。斗宿意为"龟蛇之斗"，共6星排列如斗形，即南斗六星。在中国文化中，南斗主生，北斗主死，有"南斗注生北斗注死"之说。', stars:[[120,7,0],[122,8,0],[124,8,0],[124,6,0],[122,5,0],[120,6,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]] },
+  { name:'牛宿', type:'xiusu', desc:'北方玄武第二宿，主星为摩羯座β（牛宿一），3.1等。牛宿意为"牵牛"，共6星。牛宿与织女星隔银河相望，是中国古代牛郎织女传说的天文基础之一。在占星中牛宿主祭祀。', stars:[[114,6,0],[116,7,0],[118,6,0],[116,5,0],[114,4,0],[118,4,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]] },
+  { name:'女宿', type:'xiusu', desc:'北方玄武第三宿，主星为宝瓶座ε（女宿一），3.8等。女宿意为"织女"，共4星。女宿是北方玄武中较暗的一宿。在古代占星中，女宿主布帛、裁缝、珍宝。', stars:[[110,8,0],[112,9,0],[114,8,0],[112,7,0]], lines:[[0,1],[1,2],[2,3],[3,0]] },
+  { name:'虚宿', type:'xiusu', desc:'北方玄武第四宿，主星为宝瓶座β（虚宿一），2.9等。虚宿意为"虚空"，共2星。虚宿是古代秋分点所在，具有重要的历法意义。在占星中，虚宿主死丧、哭泣。', stars:[[106,7,0],[108,8,0]], lines:[[0,1]] },
+  { name:'危宿', type:'xiusu', desc:'北方玄武第五宿，主星为宝瓶座α（危宿一），2.9等。危宿意为"屋脊"，共3星组成一个三角形。危宿位于飞马座大四边形附近。在占星中危宿主架屋、建造。', stars:[[100,7,0],[102,9,0],[104,7,0]], lines:[[0,1],[1,2],[2,0]] },
+  { name:'室宿', type:'xiusu', desc:'北方玄武第六宿，主星为飞马座α（室宿一），2.5等。室宿意为"营室"，共2星。室宿二与飞马座β、γ、α组成著名的"飞马座大四边形"，是秋季星空的标志。在占星中主军营。', stars:[[94,8,0],[96,7,0]], lines:[[0,1]] },
+  { name:'壁宿', type:'xiusu', desc:'北方玄武第七宿，主星为飞马座γ（壁宿一），2.8等。壁宿意为"墙壁"，共2星。壁宿与室宿共同组成飞马座大四边形的两条边。在中国古代，壁宿是图书之府。在占星中主文章。', stars:[[90,7,0],[92,9,0]], lines:[[0,1]] },
+
+  // 西方白虎七宿
+  { name:'奎宿', type:'xiusu', desc:'西方白虎第一宿，主星为仙女座η（奎宿一），4.4等。奎宿意为"虎尾"，共16星，是二十八宿中星数最多的一宿。奎宿形状如鞋底。在占星中奎宿主武库兵甲。', stars:[[84,7,0],[86,8,0],[88,7,0],[87,5,0],[85,4,0],[83,5,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]] },
+  { name:'娄宿', type:'xiusu', desc:'西方白虎第二宿，主星为白羊座β（娄宿一），2.6等。娄宿意为"聚众"，共3星。娄宿是春分点附近的重要星宿。在古代，娄宿主管牧养牺牲。在占星中主兴兵聚众。', stars:[[78,6,0],[80,7,0],[82,6,0]], lines:[[0,1],[1,2]] },
+  { name:'胃宿', type:'xiusu', desc:'西方白虎第三宿，主星为白羊座41（胃宿一），3.6等。胃宿意为"粮仓"，共3星。胃宿在古代与收获、储藏有关。在占星中胃宿主仓廪、收藏。', stars:[[72,8,0],[74,9,0],[76,8,0]], lines:[[0,1],[1,2]] },
+  { name:'昴宿', type:'xiusu', desc:'西方白虎第四宿，即著名的昴宿星团（M45/七姐妹星团），位于金牛座。昴宿是肉眼可见的疏散星团，包含数百颗恒星，距离地球约444光年。在中国文化中，昴宿与胡人有关。在占星中主狱事。', stars:[[66,7,0],[68,8,0],[70,7,0],[68,6,0],[67,8,0],[69,6,0]], lines:[[0,1],[1,2],[2,3],[3,0],[0,4],[2,5]] },
+  { name:'毕宿', type:'xiusu', desc:'西方白虎第五宿，主星为金牛座α（毕宿五/Aldebaran），0.85等橙红色巨星。毕宿意为"猎网"，毕宿五是全天第14亮星，距离地球65光年。毕宿附近有毕宿星团。在占星中主边兵。', stars:[[60,6,0],[62,7,0],[64,6,0],[63,4,0],[61,5,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,0]] },
+  { name:'觜宿', type:'xiusu', desc:'西方白虎第六宿，主星为猎户座λ（觜宿一），3.4等。觜宿意为"鸟嘴"，共3星，位于猎户座头部。觜宿在冬季星空容易辨认。在占星中主军旅、刑罚。', stars:[[55,6,0],[57,7,0],[59,6,0]], lines:[[0,1],[1,2]] },
+  { name:'参宿', type:'xiusu', desc:'西方白虎第七宿，主星为猎户座α（参宿四/Betelgeuse），0.5等红超巨星和猎户座β（参宿七/Rigel），0.1等蓝白超巨星。参宿是冬季最壮观的星宿，猎户座腰带三星是其标志。在占星中主斩刈杀伐。', stars:[[48,8,0],[50,10,0],[52,8,0],[50,6,0],[49,10,0],[51,10,0],[49,6,0],[51,6,0]], lines:[[0,1],[1,2],[2,3],[3,0],[0,4],[2,5],[3,6],[3,7]] },
+
+  // 南方朱雀七宿
+  { name:'井宿', type:'xiusu', desc:'南方朱雀第一宿，主星为双子座μ（井宿一），2.9等。井宿意为"水井"，共8星排列成井字形。井宿位于银河附近，含有丰富的深空天体。在占星中主水事、法令。', stars:[[40,8,0],[42,9,0],[44,9,0],[44,7,0],[42,6,0],[40,7,0],[41,10,0],[43,6,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,6],[4,7]] },
+  { name:'鬼宿', type:'xiusu', desc:'南方朱雀第二宿，主星为巨蟹座θ（鬼宿一），5.3等。鬼宿意为"鬼魂"，共4星围成一个四边形，中间有著名的蜂巢星团（M44）。鬼宿在中国古代与丧葬、祭祀有关。在占星中主祭祀。', stars:[[36,7,0],[38,8,0],[39,7,0],[37,6,0]], lines:[[0,1],[1,2],[2,3],[3,0]] },
+  { name:'柳宿', type:'xiusu', desc:'南方朱雀第三宿，主星为长蛇座δ（柳宿一），4.2等。柳宿意为"柳树"，共8星排列如柳枝垂下。柳宿在春季星空可见。在中国古代，柳宿与饮食、宴会有关。在占星中主厨宰。', stars:[[32,6,0],[33,7,0],[34,8,0],[35,7,0],[34,6,0],[33,5,0],[32,5,0],[31,6,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0]] },
+  { name:'星宿', type:'xiusu', desc:'南方朱雀第四宿，主星为长蛇座α（星宿一/Alphard），1.98等橙色巨星。星宿意为"七星"，共7星。星宿一为全天第45亮星，距离地球177光年。在中国古代，星宿为天子朱雀之首。在占星中主衣裳。', stars:[[26,7,0],[28,8,0],[30,7,0],[29,5,0],[27,4,0],[25,5,0],[26,6,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0]] },
+  { name:'张宿', type:'xiusu', desc:'南方朱雀第五宿，主星为长蛇座υ1（张宿一），4.1等。张宿意为"张开的弓"，共6星。张宿在春季星空可见。在中国古代，张宿主管珍宝、衣物。在占星中主天厨、赏赐。', stars:[[20,8,0],[22,9,0],[24,8,0],[23,6,0],[21,6,0],[20,7,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]] },
+  { name:'翼宿', type:'xiusu', desc:'南方朱雀第六宿，主星为巨爵座α（翼宿一），4.1等。翼宿意为"鸟翼"，共22星，是二十八宿中星数较多的一宿。翼宿象征朱雀展开的翅膀。在占星中主远行、宴会。', stars:[[14,8,0],[16,9,0],[18,8,0],[17,6,0],[15,6,0]], lines:[[0,1],[1,2],[2,3],[3,4],[4,0]] },
+  { name:'轸宿', type:'xiusu', desc:'南方朱雀第七宿，主星为乌鸦座γ（轸宿一），2.6等。轸宿意为"车轮"，共4星排列成四边形。轸宿是南方朱雀之尾，也是二十八宿的最后一宿。在中国古代，轸宿主风、死丧。在占星中主车骑。', stars:[[8,7,0],[10,8,0],[12,7,0],[10,6,0]], lines:[[0,1],[1,2],[2,3],[3,0]] }
+];
+
+const R_CST = 220; // 星座球面半径
+const constellationGroup = new THREE.Group();
+const zodiacLinesMat = new THREE.LineBasicMaterial({ color:0xffcc44, transparent:true, opacity:0.6 });
+const xiusuLinesMat = new THREE.LineBasicMaterial({ color:0x66bbff, transparent:true, opacity:0.5 });
+const zodiacStarMat = new THREE.PointsMaterial({ color:0xffcc44, size:2.5, sizeAttenuation:true, transparent:true, opacity:0.9 });
+const xiusuStarMat = new THREE.PointsMaterial({ color:0x66bbff, size:2, sizeAttenuation:true, transparent:true, opacity:0.8 });
+const _tmpV = new THREE.Vector3();
+const zodiacGroup = new THREE.Group();
+const xiusuGroup = new THREE.Group();
+const constellationLabels = [];
+const constellationClickTargets = []; // { pos, data }
+
+function eclipticToXYZ(lonDeg, latDeg, r) {
+  const lon = lonDeg * RAD, lat = latDeg * RAD;
+  return new THREE.Vector3(Math.cos(lat)*Math.cos(lon)*r, Math.cos(lat)*Math.sin(lon)*r, Math.sin(lat)*r);
+}
+
+for (const c of CONSTELLATIONS) {
+  const group = c.type === 'zodiac' ? zodiacGroup : xiusuGroup;
+  const linesMat = c.type === 'zodiac' ? zodiacLinesMat : xiusuLinesMat;
+  const starMat = c.type === 'zodiac' ? zodiacStarMat : xiusuStarMat;
+
+  // 星星
+  const starPositions = [];
+  for (const s of c.stars) {
+    const p = eclipticToXYZ(s[0], s[1], R_CST);
+    starPositions.push(p.x, p.y, p.z);
+  }
+  const starsGeo = new THREE.BufferGeometry();
+  starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+  group.add(new THREE.Points(starsGeo, starMat));
+
+  // 连线
+  const linePositions = [];
+  for (const l of c.lines) {
+    const p0 = eclipticToXYZ(c.stars[l[0]][0], c.stars[l[0]][1], R_CST);
+    const p1 = eclipticToXYZ(c.stars[l[1]][0], c.stars[l[1]][1], R_CST);
+    linePositions.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z);
+  }
+  const linesGeo = new THREE.BufferGeometry();
+  linesGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+  group.add(new THREE.LineSegments(linesGeo, linesMat));
+
+  // 标签（HTML）
+  let cx = 0, cy = 0, cz = 0;
+  for (const s of c.stars) { const p = eclipticToXYZ(s[0], s[1], R_CST); cx += p.x; cy += p.y; cz += p.z; }
+  cx /= c.stars.length; cy /= c.stars.length; cz /= c.stars.length;
+  const labelPos = new THREE.Vector3(cx, cy, cz);
+  const el = document.createElement('div'); el.className = 'plabel';
+  const color = c.type === 'zodiac' ? '#ffdd77' : '#88ccff';
+  el.innerHTML = `<span class="name" style="color:${color};cursor:pointer">${c.name}</span>`;
+  el.style.pointerEvents = 'auto';
+  labelsLayer.appendChild(el);
+  constellationLabels.push({ el, pos: labelPos, group });
+  constellationClickTargets.push({ pos: labelPos.clone(), data: c, el });
+}
+
+constellationGroup.add(zodiacGroup);
+constellationGroup.add(xiusuGroup);
+scene.add(constellationGroup);
+
+let zodiacOn = true, xiusuOn = true;
+
 /* ============ 构建太阳系 ============ */
 const textures = {};
 for (const k of Object.keys(TEX)) textures[k] = await loadTexture(TEX[k]);
-scene.add(makeStars());
 
 // 太阳
 const sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 64, 48), new THREE.MeshBasicMaterial({ map: textures.sun }));
@@ -882,6 +1013,19 @@ function animate() {
         termLabelEl.style.display = termsOn ? '' : 'none';
         termLabelEl.style.left = sx + 'px'; termLabelEl.style.top = sy + 'px';
       } else { termLabelEl.style.display = 'none'; }
+    }
+    // 星座/星宿标签位置
+    for (const cl of constellationLabels) {
+      _projV.copy(cl.pos);
+      constellationGroup.localToWorld(_projV);
+      _projV.project(camera);
+      if (_projV.z > 1) { cl.el.style.display = 'none'; continue; }
+      const sx = (_projV.x * 0.5 + 0.5) * innerWidth;
+      const sy = (-_projV.y * 0.5 + 0.5) * innerHeight;
+      if (sx < -50 || sx > innerWidth + 50 || sy < -50 || sy > innerHeight + 50) { cl.el.style.display = 'none'; continue; }
+      const isZodiac = cl.group === zodiacGroup;
+      cl.el.style.display = (isZodiac ? zodiacOn : xiusuOn) ? '' : 'none';
+      cl.el.style.left = sx + 'px'; cl.el.style.top = sy + 'px';
     }
   }
 
