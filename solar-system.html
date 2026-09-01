@@ -110,6 +110,8 @@
   <div class="bar-sep"></div>
   <div class="bar-btn on" id="bLabels">标签</div>
   <div class="bar-btn on" id="bTerms">节气</div>
+  <div class="bar-btn on" id="bOrbits">轨道</div>
+  <div class="bar-btn on" id="bAxes">轴</div>
 </div>
 
 <!-- 速度弹窗 -->
@@ -258,7 +260,7 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const ROT_SENS = 0.005;
 let spinZ = 0, spinX = 0, spinZVel = 0, spinXVel = 0;
 let simElapsed = (Date.now() - EPOCH_MS) / 1000;
-let scaleKey = 'sec', paused = false, labelsOn = true, axesOn = true, termsOn = true;
+let scaleKey = 'sec', paused = false, labelsOn = true, axesOn = true, termsOn = true, orbitsOn = true;
 
 // 拖拽行星状态
 let planetDrag = null; // { key, cumulative, lastAngle, lastTime, velocity, moved }
@@ -547,6 +549,8 @@ document.addEventListener('click', (e) => {
 // 标签/节气切换
 document.getElementById('bLabels').addEventListener('click', function() { labelsOn = !labelsOn; this.classList.toggle('on', labelsOn); labelsLayer.style.display = labelsOn ? '' : 'none'; [xLabel, yLabel, zLabel].forEach(s => s.visible = labelsOn); });
 document.getElementById('bTerms').addEventListener('click', function() { termsOn = !termsOn; this.classList.toggle('on', termsOn); for (const t of termLabelEls) t.el.style.display = termsOn ? '' : 'none'; termLabelEl.style.display = termsOn ? '' : 'none'; });
+document.getElementById('bOrbits').addEventListener('click', function() { orbitsOn = !orbitsOn; this.classList.toggle('on', orbitsOn); for (const l of orbitLines) l.visible = orbitsOn; });
+document.getElementById('bAxes').addEventListener('click', function() { axesOn = !axesOn; this.classList.toggle('on', axesOn); axesGroup.visible = axesOn; });
 
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateDateText();
@@ -706,10 +710,13 @@ function makeStars() {
   geo.setAttribute('color', new THREE.BufferAttribute(col,3));
   return new THREE.Points(geo, new THREE.PointsMaterial({ size:1.8, vertexColors:true, sizeAttenuation:true, transparent:true, opacity:1, depthWrite:false }));
 }
+const orbitLines = [];
 function makeOrbitLine(radius) {
   const pts = [], SEG = 256;
   for (let i = 0; i <= SEG; i++) { const a = (i/SEG)*Math.PI*2; pts.push(new THREE.Vector3(Math.cos(a)*radius, Math.sin(a)*radius, 0)); }
-  return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color:0x4a6a90, transparent:true, opacity:0.45 }));
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color:0x4a6a90, transparent:true, opacity:0.45 }));
+  orbitLines.push(line);
+  return line;
 }
 
 /* ============ 坐标轴 ============ */
