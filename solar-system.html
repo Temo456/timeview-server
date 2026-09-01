@@ -746,6 +746,7 @@ axesGroup.add(xLine, yLine, zLine, xLabel, yLabel, zLabel);
 worldGroup.add(axesGroup);
 
 /* ============ 星座与星宿 ============ */
+const RAD = Math.PI / 180;
 const CONSTELLATIONS = [
   // 十二星座（黄道十二宫）
   { name:'白羊座', type:'zodiac', desc:'黄道第一宫，春分点所在星座。白羊座位于双鱼座和金牛座之间，最佳观测月份为12月。主要恒星有娄宿三（α，2.0等）。在希腊神话中，白羊座代表拯救佛里克索斯的金毛公羊。', stars:[[5,3,0],[7,4,0],[9,5,0],[7,7,0]], lines:[[0,1],[1,2],[1,3]] },
