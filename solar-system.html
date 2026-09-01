@@ -787,9 +787,8 @@ function updateAxes() {
   const reach = Math.sqrt(halfH*halfH + halfW*halfW);
   const labelR = Math.min(88, reach * 0.8);
   xLine.scale.x = reach; yLine.scale.y = reach;
-  zLine.scale.z = reach / 12;
   xLabel.position.set(labelR, 0, 0); yLabel.position.set(0, labelR, 0);
-  zLabel.position.set(0, 0, reach);
+  zLabel.position.set(0, 0, 12);
 }
 
 /* ============ 动画循环 ============ */
