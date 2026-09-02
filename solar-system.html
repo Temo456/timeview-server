@@ -1189,7 +1189,7 @@ const vger2 = createVoyager(vger2Dir, VGER2_DIST, '旅行者2号', '#66ccff', [1
 
 // 旅行者号位置随时间更新
 function updateVoyagers() {
-  const now = dispT;
+  const now = EPOCH_MS + simElapsed * 1000;
   // 旅行者1号
   const v1Years = (now - VGER1_LAUNCH) / AU_YEAR_MS;
   const v1AU = Math.max(0, v1Years * VGER1_AU_PER_YEAR);
