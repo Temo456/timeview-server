@@ -144,16 +144,15 @@
   <div class="bar-sep"></div>
   <div class="bar-spd" id="spdBtn">⚡ 秒/秒 ▾</div>
   <div class="bar-sep"></div>
-  <div class="bar-btn on" id="bLabels">标签</div>
-  <div class="bar-btn on" id="bTerms">节气</div>
-  <div class="bar-btn on" id="bOrbits">轨道</div>
-  <div class="bar-btn on" id="bAxes">轴</div>
-  <div class="bar-sep"></div>
   <div class="bar-spd" id="layerBtn">☰ 图层 ▾</div>
 </div>
 
 <!-- 图层选择弹窗 -->
 <div id="layerPopup" style="display:none;position:fixed;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px;min-width:160px;max-width:90vw">
+  <div class="layer-opt on" data-layer="labels">🏷 标签</div>
+  <div class="layer-opt on" data-layer="terms">📅 节气</div>
+  <div class="layer-opt on" data-layer="orbits">◎ 轨道</div>
+  <div class="layer-opt on" data-layer="axes">＋ 坐标轴</div>
   <div class="layer-opt on" data-layer="zodiac">✦ 星座</div>
   <div class="layer-opt" data-layer="xiusu">✧ 星宿</div>
   <div class="layer-opt" data-layer="threeBody">🔴 三体星系</div>
@@ -636,13 +635,13 @@ document.addEventListener('click', (e) => {
 });
 
 // 标签/节气切换
-document.getElementById('bLabels').addEventListener('click', function() { labelsOn = !labelsOn; this.classList.toggle('on', labelsOn); labelsLayer.style.display = labelsOn ? '' : 'none'; [xLabel, yLabel, zLabel].forEach(s => s.visible = labelsOn); });
-document.getElementById('bTerms').addEventListener('click', function() { termsOn = !termsOn; this.classList.toggle('on', termsOn); for (const t of termLabelEls) t.el.style.display = termsOn ? '' : 'none'; termLabelEl.style.display = termsOn ? '' : 'none'; });
-document.getElementById('bOrbits').addEventListener('click', function() { orbitsOn = !orbitsOn; this.classList.toggle('on', orbitsOn); for (const l of orbitLines) l.visible = orbitsOn; });
-document.getElementById('bAxes').addEventListener('click', function() { axesOn = !axesOn; this.classList.toggle('on', axesOn); axesGroup.visible = axesOn; });
 // 图层弹窗
 let voyagerOn = true;
 const layerConfig = {
+  labels: { get: () => labelsOn, set: (v) => { labelsOn = v; labelsLayer.style.display = v ? '' : 'none'; [xLabel, yLabel, zLabel].forEach(s => s.visible = v); } },
+  terms: { get: () => termsOn, set: (v) => { termsOn = v; for (const t of termLabelEls) t.el.style.display = v ? '' : 'none'; termLabelEl.style.display = v ? '' : 'none'; } },
+  orbits: { get: () => orbitsOn, set: (v) => { orbitsOn = v; for (const l of orbitLines) l.visible = v; } },
+  axes: { get: () => axesOn, set: (v) => { axesOn = v; axesGroup.visible = v; } },
   zodiac: { get: () => zodiacOn, set: (v) => { zodiacOn = v; zodiacGroup.visible = v; } },
   xiusu: { get: () => xiusuOn, set: (v) => { xiusuOn = v; xiusuGroup.visible = v; } },
   threeBody: { get: () => threeBodyOn, set: (v) => { threeBodyOn = v; threeBodyGroup.visible = v; } },
