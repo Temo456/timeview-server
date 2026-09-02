@@ -30,6 +30,13 @@
   .spd-opt{padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;border:1px solid rgba(95,214,240,.3);background:rgba(10,24,42,.55);color:#dff0fb;cursor:pointer}
   .spd-opt.on{background:linear-gradient(90deg,#5fd6f0,#2aa9c8);color:#04121c;border-color:transparent}
 
+  /* 图层选项 */
+  .layer-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:#7fa8c4;cursor:pointer;border-radius:8px;transition:background .15s}
+  .layer-opt:hover{background:rgba(95,214,240,.1)}
+  .layer-opt.on{color:#5fd6f0}
+  .layer-opt::before{content:'';display:inline-block;width:14px;height:14px;border-radius:3px;border:1.5px solid rgba(95,214,240,.4);flex-shrink:0}
+  .layer-opt.on::before{background:#5fd6f0;border-color:#5fd6f0}
+
   /* 日期选择器 */
   .dp-tab{flex:1;text-align:center;padding:10px;font-size:13px;font-weight:600;color:#6a8ea8;cursor:pointer;border-bottom:2px solid transparent}
   .dp-tab.active{color:#5fd6f0;border-bottom-color:#5fd6f0}
@@ -141,10 +148,16 @@
   <div class="bar-btn on" id="bTerms">节气</div>
   <div class="bar-btn on" id="bOrbits">轨道</div>
   <div class="bar-btn on" id="bAxes">轴</div>
-  <div class="bar-btn on" id="bZodiac">星座</div>
-  <div class="bar-btn" id="bXiusu">星宿</div>
   <div class="bar-sep"></div>
-  <div class="bar-btn" id="bThreeBody" style="color:#ff8866;border-color:rgba(255,100,80,.4)">三体</div>
+  <div class="bar-spd" id="layerBtn">☰ 图层 ▾</div>
+</div>
+
+<!-- 图层选择弹窗 -->
+<div id="layerPopup" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px;min-width:160px">
+  <div class="layer-opt on" data-layer="zodiac">✦ 星座</div>
+  <div class="layer-opt" data-layer="xiusu">✧ 星宿</div>
+  <div class="layer-opt" data-layer="threeBody">🔴 三体星系</div>
+  <div class="layer-opt on" data-layer="voyager">🛰 旅行者号</div>
 </div>
 
 <!-- 速度弹窗 -->
@@ -623,13 +636,54 @@ document.getElementById('bLabels').addEventListener('click', function() { labels
 document.getElementById('bTerms').addEventListener('click', function() { termsOn = !termsOn; this.classList.toggle('on', termsOn); for (const t of termLabelEls) t.el.style.display = termsOn ? '' : 'none'; termLabelEl.style.display = termsOn ? '' : 'none'; });
 document.getElementById('bOrbits').addEventListener('click', function() { orbitsOn = !orbitsOn; this.classList.toggle('on', orbitsOn); for (const l of orbitLines) l.visible = orbitsOn; });
 document.getElementById('bAxes').addEventListener('click', function() { axesOn = !axesOn; this.classList.toggle('on', axesOn); axesGroup.visible = axesOn; });
-document.getElementById('bZodiac').addEventListener('click', function() {
-  if (zodiacOn) { zodiacOn = false; this.classList.remove('on'); zodiacGroup.visible = false; }
-  else { zodiacOn = true; xiusuOn = false; this.classList.add('on'); document.getElementById('bXiusu').classList.remove('on'); zodiacGroup.visible = true; xiusuGroup.visible = false; }
+// 图层弹窗
+let voyagerOn = true;
+const layerConfig = {
+  zodiac: { get: () => zodiacOn, set: (v) => { zodiacOn = v; zodiacGroup.visible = v; } },
+  xiusu: { get: () => xiusuOn, set: (v) => { xiusuOn = v; xiusuGroup.visible = v; } },
+  threeBody: { get: () => threeBodyOn, set: (v) => { threeBodyOn = v; threeBodyGroup.visible = v; } },
+  voyager: { get: () => voyagerOn, set: (v) => { voyagerOn = v; vger1Group.visible = v; vger2Group.visible = v; } }
+};
+
+document.getElementById('layerBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const popup = document.getElementById('layerPopup');
+  if (popup.style.display !== 'none') { popup.style.display = 'none'; return; }
+  // 同步状态
+  document.querySelectorAll('.layer-opt').forEach(el => {
+    const layer = el.dataset.layer;
+    el.classList.toggle('on', layerConfig[layer]?.get() || false);
+  });
+  const rect = e.currentTarget.getBoundingClientRect();
+  popup.style.left = Math.max(8, rect.left) + 'px';
+  popup.style.transform = 'none';
+  popup.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+  popup.style.display = 'block';
 });
-document.getElementById('bXiusu').addEventListener('click', function() {
-  if (xiusuOn) { xiusuOn = false; this.classList.remove('on'); xiusuGroup.visible = false; }
-  else { xiusuOn = true; zodiacOn = false; this.classList.add('on'); document.getElementById('bZodiac').classList.remove('on'); xiusuGroup.visible = true; zodiacGroup.visible = false; }
+
+document.querySelectorAll('.layer-opt').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const layer = el.dataset.layer;
+    if (!layerConfig[layer]) return;
+    const newVal = !layerConfig[layer].get();
+    layerConfig[layer].set(newVal);
+    el.classList.toggle('on', newVal);
+    // 星座和星宿互斥
+    if (layer === 'zodiac' && newVal) { layerConfig.xiusu.set(false); }
+    if (layer === 'xiusu' && newVal) { layerConfig.zodiac.set(false); }
+    // 同步checkbox样式
+    document.querySelectorAll('.layer-opt').forEach(o => {
+      const l = o.dataset.layer;
+      o.classList.toggle('on', layerConfig[l]?.get() || false);
+    });
+  });
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#layerPopup') && !e.target.closest('#layerBtn')) {
+    document.getElementById('layerPopup').style.display = 'none';
+  }
 });
 
 // 点击星座/星宿标签显示详情
@@ -641,18 +695,6 @@ document.getElementById('labelsLayer').addEventListener('click', (e) => {
       showConstellationCard(ct.data);
       return;
     }
-  }
-});
-
-// 三体星系按钮
-document.getElementById('bThreeBody').addEventListener('click', function() {
-  threeBodyOn = !threeBodyOn;
-  threeBodyGroup.visible = threeBodyOn;
-  this.classList.toggle('on', threeBodyOn);
-  if (threeBodyOn) {
-    // 相机看向三体方向
-    const target = threeBodyGroup.position;
-    camera.lookAt(target.x * 0.3, target.y * 0.3, target.z * 0.3);
   }
 });
 
@@ -1098,17 +1140,17 @@ const vger1Label = makeTextSprite('旅行者1号', '#ffcc44', 1.3);
 vger1Label.position.set(0, 2.2, 0);
 vger1Group.add(vger1Label);
 
-// 旅行者1号轨迹线
-const vger1TrailPts = [new THREE.Vector3(0, 0, 0)];
-for (let i = 1; i <= 20; i++) {
-  const t = i / 20;
-  const r = t * VGER1_DIST;
-  // 近似黄道面出发，逐渐偏向实际方向
-  const blendDir = new THREE.Vector3(1, 0, 0).lerp(vger1Dir, t * t).normalize();
-  vger1TrailPts.push(blendDir.clone().multiplyScalar(r));
-}
-const vger1TrailGeo = new THREE.BufferGeometry().setFromPoints(vger1TrailPts);
-worldGroup.add(new THREE.Line(vger1TrailGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.25 })));
+// 旅行者1号轨迹线（从地球轨道附近出发，经过木星土星引力弹弓后飞出）
+const EARTH_ORBIT_R = SCALE(1.0);
+const vger1Waypoints = [
+  new THREE.Vector3(EARTH_ORBIT_R, 0, 0),                              // 地球出发
+  new THREE.Vector3(SCALE(5.2) * 0.95, SCALE(5.2) * 0.3, 0),          // 木星引力弹弓
+  new THREE.Vector3(SCALE(9.5) * 0.7, SCALE(9.5) * 0.7, 0.5),         // 土星
+  new THREE.Vector3(VGER1_DIST * 0.4, VGER1_DIST * 0.15, 0.8),        // 飞出海王星轨道
+  vger1Group.position.clone()                                           // 当前位置
+];
+const vger1TrailGeo = new THREE.BufferGeometry().setFromPoints(vger1Waypoints);
+worldGroup.add(new THREE.Line(vger1TrailGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.3 })));
 
 // 旅行者2号
 const vger2Group = new THREE.Group();
@@ -1123,21 +1165,21 @@ vger2Glow.scale.set(3, 3, 1);
 vger2Group.add(vger2Marker, vger2Glow);
 vger2Group.position.copy(vger2Dir).multiplyScalar(VGER2_DIST);
 worldGroup.add(vger2Group);
-
 const vger2Label = makeTextSprite('旅行者2号', '#66ccff', 1.3);
 vger2Label.position.set(0, 2.2, 0);
 vger2Group.add(vger2Label);
 
-// 旅行者2号轨迹线
-const vger2TrailPts = [new THREE.Vector3(0, 0, 0)];
-for (let i = 1; i <= 20; i++) {
-  const t = i / 20;
-  const r = t * VGER2_DIST;
-  const blendDir = new THREE.Vector3(-0.5, 0, -0.866).lerp(vger2Dir, t * t).normalize();
-  vger2TrailPts.push(blendDir.clone().multiplyScalar(r));
-}
-const vger2TrailGeo = new THREE.BufferGeometry().setFromPoints(vger2TrailPts);
-worldGroup.add(new THREE.Line(vger2TrailGeo, new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.25 })));
+// 旅行者2号轨迹线（经过全部四颗外行星）
+const vger2Waypoints = [
+  new THREE.Vector3(EARTH_ORBIT_R * -0.5, EARTH_ORBIT_R * 0.86, 0),    // 地球出发（不同相位）
+  new THREE.Vector3(SCALE(5.2) * -0.7, SCALE(5.2) * 0.7, 0),           // 木星
+  new THREE.Vector3(SCALE(9.5) * -0.8, SCALE(9.5) * -0.5, 0.3),        // 土星
+  new THREE.Vector3(SCALE(19.2) * -0.6, SCALE(19.2) * -0.7, 0.5),      // 天王星
+  new THREE.Vector3(SCALE(30.1) * -0.5, SCALE(30.1) * -0.8, 0.3),      // 海王星
+  vger2Group.position.clone()                                            // 当前位置
+];
+const vger2TrailGeo = new THREE.BufferGeometry().setFromPoints(vger2Waypoints);
+worldGroup.add(new THREE.Line(vger2TrailGeo, new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3 })));
 
 // 注册到sphereMap以便点击检测
 sphereMap.set(vger1Marker, 'voyager1');
