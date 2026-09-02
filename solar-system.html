@@ -622,14 +622,12 @@ document.getElementById('bTerms').addEventListener('click', function() { termsOn
 document.getElementById('bOrbits').addEventListener('click', function() { orbitsOn = !orbitsOn; this.classList.toggle('on', orbitsOn); for (const l of orbitLines) l.visible = orbitsOn; });
 document.getElementById('bAxes').addEventListener('click', function() { axesOn = !axesOn; this.classList.toggle('on', axesOn); axesGroup.visible = axesOn; });
 document.getElementById('bZodiac').addEventListener('click', function() {
-  zodiacOn = true; xiusuOn = false;
-  this.classList.add('on'); document.getElementById('bXiusu').classList.remove('on');
-  zodiacGroup.visible = true; xiusuGroup.visible = false;
+  if (zodiacOn) { zodiacOn = false; this.classList.remove('on'); zodiacGroup.visible = false; }
+  else { zodiacOn = true; xiusuOn = false; this.classList.add('on'); document.getElementById('bXiusu').classList.remove('on'); zodiacGroup.visible = true; xiusuGroup.visible = false; }
 });
 document.getElementById('bXiusu').addEventListener('click', function() {
-  xiusuOn = true; zodiacOn = false;
-  this.classList.add('on'); document.getElementById('bZodiac').classList.remove('on');
-  xiusuGroup.visible = true; zodiacGroup.visible = false;
+  if (xiusuOn) { xiusuOn = false; this.classList.remove('on'); xiusuGroup.visible = false; }
+  else { xiusuOn = true; zodiacOn = false; this.classList.add('on'); document.getElementById('bZodiac').classList.remove('on'); xiusuGroup.visible = true; zodiacGroup.visible = false; }
 });
 
 // 点击星座/星宿标签显示详情
