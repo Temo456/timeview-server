@@ -1000,7 +1000,7 @@ const tbGlowC = new THREE.Sprite(new THREE.SpriteMaterial({
 tbGlowC.scale.set(5, 5, 1);
 
 threeBodyGroup.add(tbStarA, tbGlowA, tbStarB, tbGlowB, tbStarC, tbGlowC);
-scene.add(threeBodyGroup);
+worldGroup.add(threeBodyGroup);
 
 // 三体标签
 const tbLabelA = makeTextSprite('南门二A', '#fff4e0', 1.8);
@@ -1019,29 +1019,34 @@ let tbTrailIdx = 0;
 let threeBodyOn = false;
 threeBodyGroup.visible = false;
 
-// 三体运动参数（简化版：A和B互绕，C在远处绕行）
+// 三体运动参数（简化版混沌三体：A和B互绕，C在混沌轨道上）
 let tbTime = 0;
-const TB_AB_PERIOD = 12;  // A-B互绕周期（秒）
-const TB_C_PERIOD = 45;   // C绕AB周期（秒）
-const TB_AB_R = 8;        // A-B轨道半径
-const TB_C_R = 25;        // C轨道半径
+const TB_AB_PERIOD = 10;  // A-B互绕周期（秒）
+const TB_AB_R = 7;        // A-B轨道半径
+const TB_C_R0 = 22;       // C初始轨道半径
 
 function updateThreeBody(dt) {
   if (!threeBodyOn) return;
   tbTime += dt;
 
-  // A和B互绕
+  // A和B互绕（椭圆轨道 + 摄动）
   const abAngle = (tbTime / TB_AB_PERIOD) * Math.PI * 2;
-  const abR = TB_AB_R * (0.9 + 0.1 * Math.sin(tbTime * 0.3)); // 轨道微变
-  tbStarA.position.set(Math.cos(abAngle) * abR * 0.45, Math.sin(abAngle) * abR * 0.45, 0);
-  tbStarB.position.set(-Math.cos(abAngle) * abR * 0.55, -Math.sin(abAngle) * abR * 0.55, 0);
+  const abEcc = 0.12; // 偏心率
+  const abR = TB_AB_R * (1 - abEcc * Math.cos(abAngle * 2)); // 轨径微变
+  const abJitter = Math.sin(tbTime * 0.7) * 0.3; // 混沌微扰
+  tbStarA.position.set(Math.cos(abAngle) * abR * 0.45 + abJitter, Math.sin(abAngle) * abR * 0.45, Math.sin(abAngle * 1.3) * 0.5);
+  tbStarB.position.set(-Math.cos(abAngle) * abR * 0.55 - abJitter, -Math.sin(abAngle) * abR * 0.55, -Math.sin(abAngle * 1.3) * 0.5);
   tbGlowA.position.copy(tbStarA.position);
   tbGlowB.position.copy(tbStarB.position);
 
-  // C绕AB质心运行（混沌微扰）
-  const cAngle = (tbTime / TB_C_PERIOD) * Math.PI * 2;
-  const cR = TB_C_R * (1 + 0.15 * Math.sin(tbTime * 0.7) + 0.08 * Math.cos(tbTime * 1.3));
-  tbStarC.position.set(Math.cos(cAngle) * cR, Math.sin(cAngle) * cR, Math.sin(cAngle * 0.5) * 5);
+  // C（比邻星）混沌轨道：多个频率叠加模拟混沌
+  const w1 = 2 * Math.PI / 35;   // 主周期
+  const w2 = 2 * Math.PI / 17.3; // 次周期（无理数比→准周期→类混沌）
+  const w3 = 2 * Math.PI / 11.7; // 第三频率
+  const rC = TB_C_R0 * (1 + 0.2 * Math.sin(w1 * tbTime) + 0.12 * Math.cos(w2 * tbTime));
+  const aC = w1 * tbTime * 0.8 + 0.3 * Math.sin(w2 * tbTime) + 0.15 * Math.cos(w3 * tbTime);
+  const zC = TB_C_R0 * 0.25 * Math.sin(w3 * tbTime + 1.2);
+  tbStarC.position.set(Math.cos(aC) * rC, Math.sin(aC) * rC, zC);
   tbGlowC.position.copy(tbStarC.position);
 
   // 标签位置
@@ -1049,7 +1054,7 @@ function updateThreeBody(dt) {
   tbLabelB.position.set(tbStarB.position.x, tbStarB.position.y + 3, 0);
   tbLabelC.position.set(tbStarC.position.x, tbStarC.position.y + 2.5, 0);
 
-  // 轨迹
+  // 轨迹（只记录比邻星）
   const pos = tbTrailLine.geometry.attributes.position;
   pos.setXYZ(tbTrailIdx, tbStarC.position.x, tbStarC.position.y, tbStarC.position.z);
   pos.needsUpdate = true;
