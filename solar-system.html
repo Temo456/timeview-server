@@ -1182,8 +1182,6 @@ const vger1Waypoints = [
   new THREE.Vector3(72 * Math.cos(vger1Angle), 72 * Math.sin(vger1Angle), 0),                  // 海王星轨道
   vger1Group.position.clone().setZ(0)
 ];
-  vger1Group.position.clone().setZ(0)
-];
 const vger1TrailGeo = new THREE.BufferGeometry().setFromPoints(vger1Waypoints);
 const vger1Trail = new THREE.Line(vger1TrailGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.3 }));
 worldGroup.add(vger1Trail);
