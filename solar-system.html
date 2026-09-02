@@ -951,7 +951,20 @@ constellationGroup.add(xiusuGroup);
 xiusuGroup.visible = false;
 worldGroup.add(constellationGroup);
 
-let zodiacOn = true, xiuSuOn = false;
+let zodiacOn = true, xiusuOn = false;
+
+// 发光纹理生成
+function makeGlow(r, g, b) {
+  const s = 128, canvas = document.createElement('canvas'); canvas.width = s; canvas.height = s;
+  const c = canvas.getContext('2d');
+  const grad = c.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2);
+  grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
+  grad.addColorStop(0.3, `rgba(${r},${g},${b},0.5)`);
+  grad.addColorStop(0.7, `rgba(${r},${g},${b},0.1)`);
+  grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  c.fillStyle = grad; c.fillRect(0, 0, s, s);
+  return new THREE.CanvasTexture(canvas);
+}
 
 /* ============ 三体星系 ============ */
 const THREEBODY_DIST = 180; // 距太阳的距离（视觉单位）
