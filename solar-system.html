@@ -81,6 +81,35 @@
   #planetCard .card-grid dt { font-size: 11px; color: #7fa8cc; }
   #planetCard .card-grid dd { font-size: 13px; color: #e0ecff; margin: 0; }
   #planetCard .card-desc { font-size: 12.5px; color: #b8d0e8; line-height: 1.6; }
+
+  /* 三体信息卡 */
+  #threeBodyCard {
+    position: fixed; z-index: 20; display: none;
+    background: rgba(16, 28, 50, 0.92);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 100, 80, 0.5);
+    border-radius: 16px; padding: 18px 20px;
+    width: 340px; max-height: 70vh; overflow-y: auto;
+    color: #e0ecff;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    pointer-events: auto;
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+  }
+  #threeBodyCard .tb-title { font-size: 20px; font-weight: 700; color: #ffb088; margin-bottom: 6px; }
+  #threeBodyCard .tb-sub { font-size: 12px; color: #cc8866; margin-bottom: 12px; }
+  #threeBodyCard .tb-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+    margin-bottom: 12px;
+  }
+  #threeBodyCard .tb-grid dt { font-size: 11px; color: #cc8866; }
+  #threeBodyCard .tb-grid dd { font-size: 13px; color: #e0ecff; margin: 0; }
+  #threeBodyCard .tb-desc { font-size: 12.5px; color: #d4b8a8; line-height: 1.8; }
+  #threeBodyCard .tb-close {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none; color: #cc8866;
+    font-size: 20px; cursor: pointer; line-height: 1;
+  }
+  #threeBodyCard .tb-close:hover { color: #fff; }
 </style>
 </head>
 <body>
@@ -114,6 +143,8 @@
   <div class="bar-btn on" id="bAxes">轴</div>
   <div class="bar-btn on" id="bZodiac">星座</div>
   <div class="bar-btn" id="bXiusu">星宿</div>
+  <div class="bar-sep"></div>
+  <div class="bar-btn" id="bThreeBody" style="color:#ff8866;border-color:rgba(255,100,80,.4)">三体</div>
 </div>
 
 <!-- 速度弹窗 -->
@@ -165,6 +196,32 @@
   <div class="card-en" id="cardEn"></div>
   <dl class="card-grid" id="cardGrid"></dl>
   <div class="card-desc" id="cardDesc"></div>
+</div>
+
+<!-- 三体星系信息卡 -->
+<div id="threeBodyCard">
+  <button class="tb-close" id="tbClose">✕</button>
+  <div class="tb-title">三体星系</div>
+  <div class="tb-sub">Alpha Centauri · 半人马座α · 距太阳4.37光年</div>
+  <div class="tb-grid">
+    <dt>恒星A</dt><dd>南门二A (α Cen A)</dd>
+    <dt>类型</dt><dd>G2V 主序星（类太阳）</dd>
+    <dt>质量</dt><dd>1.1 太阳质量</dd>
+    <dt>亮度</dt><dd>1.519 太阳光度</dd>
+    <dt>恒星B</dt><dd>南门二B (α Cen B)</dd>
+    <dt>类型</dt><dd>K1V 主序星</dd>
+    <dt>质量</dt><dd>0.9 太阳质量</dd>
+    <dt>亮度</dt><dd>0.5 太阳光度</dd>
+    <dt>恒星C</dt><dd>比邻星 (Proxima Cen)</dd>
+    <dt>类型</dt><dd>M5.5Ve 红矮星</dd>
+    <dt>距离</dt><dd>4.246 光年（最近恒星）</dd>
+    <dt>行星</dt><dd>比邻星b（宜居带行星）</dd>
+  </div>
+  <div class="tb-desc">三体星系是距太阳系最近的恒星系统，由三颗恒星组成：南门二A、南门二B和比邻星。A和B互相绕转（周期约80年），比邻星在远处绕AB双星运行（周期约54.7万年）。
+
+刘慈欣科幻小说《三体》中，三体文明的母星位于该星系。由于三体运动的混沌性，三体人无法预测行星上的气候规律，经历了两百多次文明毁灭与重生。小说中"不要回答！不要回答！不要回答！"的警告信号即从比邻星方向发出。
+
+2022年天文学家在比邻星系发现了第二颗行星（比邻星c），进一步增加了该星系的科学关注度。</div>
 </div>
 
 <div id="labelsLayer"></div>
@@ -587,6 +644,30 @@ document.getElementById('labelsLayer').addEventListener('click', (e) => {
   }
 });
 
+// 三体星系按钮
+document.getElementById('bThreeBody').addEventListener('click', function() {
+  threeBodyOn = !threeBodyOn;
+  threeBodyGroup.visible = threeBodyOn;
+  this.classList.toggle('on', threeBodyOn);
+  if (threeBodyOn) {
+    // 相机看向三体方向
+    const target = threeBodyGroup.position;
+    camera.lookAt(target.x * 0.3, target.y * 0.3, target.z * 0.3);
+  }
+});
+
+// 点击三体恒星显示信息卡
+document.getElementById('scene').addEventListener('click', (e) => {
+  if (!threeBodyOn) return;
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects([tbStarA, tbStarB, tbStarC], false);
+  if (hits.length > 0) {
+    document.getElementById('threeBodyCard').style.display = 'block';
+  }
+});
+document.getElementById('tbClose').onclick = () => { document.getElementById('threeBodyCard').style.display = 'none'; };
+
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateDateText();
 
@@ -870,7 +951,97 @@ constellationGroup.add(xiusuGroup);
 xiusuGroup.visible = false;
 worldGroup.add(constellationGroup);
 
-let zodiacOn = true, xiusuOn = false;
+let zodiacOn = true, xiuSuOn = false;
+
+/* ============ 三体星系 ============ */
+const THREEBODY_DIST = 180; // 距太阳的距离（视觉单位）
+const threeBodyGroup = new THREE.Group();
+threeBodyGroup.position.set(THREEBODY_DIST * 0.7, THREEBODY_DIST * 0.5, THREEBODY_DIST * 0.3);
+
+// 三颗恒星
+const tbStarA = new THREE.Mesh(
+  new THREE.SphereGeometry(2.2, 32, 24),
+  new THREE.MeshBasicMaterial({ color: 0xfff4e0 })
+);
+const tbGlowA = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: makeGlow(255, 244, 224), transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false
+}));
+tbGlowA.scale.set(12, 12, 1);
+
+const tbStarB = new THREE.Mesh(
+  new THREE.SphereGeometry(1.6, 32, 24),
+  new THREE.MeshBasicMaterial({ color: 0xffd090 })
+);
+const tbGlowB = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: makeGlow(255, 208, 144), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
+}));
+tbGlowB.scale.set(8, 8, 1);
+
+const tbStarC = new THREE.Mesh(
+  new THREE.SphereGeometry(0.8, 32, 24),
+  new THREE.MeshBasicMaterial({ color: 0xff6040 })
+);
+const tbGlowC = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: makeGlow(255, 96, 64), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
+}));
+tbGlowC.scale.set(5, 5, 1);
+
+threeBodyGroup.add(tbStarA, tbGlowA, tbStarB, tbGlowB, tbStarC, tbGlowC);
+scene.add(threeBodyGroup);
+
+// 三体标签
+const tbLabelA = makeTextSprite('南门二A', '#fff4e0', 1.8);
+const tbLabelB = makeTextSprite('南门二B', '#ffd090', 1.4);
+const tbLabelC = makeTextSprite('比邻星', '#ff6040', 1.2);
+threeBodyGroup.add(tbLabelA, tbLabelB, tbLabelC);
+
+// 三体轨迹线
+const tbTrailGeo = new THREE.BufferGeometry();
+const tbTrailPositions = new Float32Array(300 * 3);
+tbTrailGeo.setAttribute('position', new THREE.BufferAttribute(tbTrailPositions, 3));
+const tbTrailLine = new THREE.Line(tbTrailGeo, new THREE.LineBasicMaterial({ color: 0xff8866, transparent: true, opacity: 0.3 }));
+threeBodyGroup.add(tbTrailLine);
+let tbTrailIdx = 0;
+
+let threeBodyOn = false;
+threeBodyGroup.visible = false;
+
+// 三体运动参数（简化版：A和B互绕，C在远处绕行）
+let tbTime = 0;
+const TB_AB_PERIOD = 12;  // A-B互绕周期（秒）
+const TB_C_PERIOD = 45;   // C绕AB周期（秒）
+const TB_AB_R = 8;        // A-B轨道半径
+const TB_C_R = 25;        // C轨道半径
+
+function updateThreeBody(dt) {
+  if (!threeBodyOn) return;
+  tbTime += dt;
+
+  // A和B互绕
+  const abAngle = (tbTime / TB_AB_PERIOD) * Math.PI * 2;
+  const abR = TB_AB_R * (0.9 + 0.1 * Math.sin(tbTime * 0.3)); // 轨道微变
+  tbStarA.position.set(Math.cos(abAngle) * abR * 0.45, Math.sin(abAngle) * abR * 0.45, 0);
+  tbStarB.position.set(-Math.cos(abAngle) * abR * 0.55, -Math.sin(abAngle) * abR * 0.55, 0);
+  tbGlowA.position.copy(tbStarA.position);
+  tbGlowB.position.copy(tbStarB.position);
+
+  // C绕AB质心运行（混沌微扰）
+  const cAngle = (tbTime / TB_C_PERIOD) * Math.PI * 2;
+  const cR = TB_C_R * (1 + 0.15 * Math.sin(tbTime * 0.7) + 0.08 * Math.cos(tbTime * 1.3));
+  tbStarC.position.set(Math.cos(cAngle) * cR, Math.sin(cAngle) * cR, Math.sin(cAngle * 0.5) * 5);
+  tbGlowC.position.copy(tbStarC.position);
+
+  // 标签位置
+  tbLabelA.position.set(tbStarA.position.x, tbStarA.position.y + 3.5, 0);
+  tbLabelB.position.set(tbStarB.position.x, tbStarB.position.y + 3, 0);
+  tbLabelC.position.set(tbStarC.position.x, tbStarC.position.y + 2.5, 0);
+
+  // 轨迹
+  const pos = tbTrailLine.geometry.attributes.position;
+  pos.setXYZ(tbTrailIdx, tbStarC.position.x, tbStarC.position.y, tbStarC.position.z);
+  pos.needsUpdate = true;
+  tbTrailIdx = (tbTrailIdx + 1) % 300;
+}
 
 /* ============ 构建太阳系 ============ */
 const textures = {};
@@ -987,6 +1158,7 @@ function animate() {
 
   setPlanetPositions();
   updateAxes();
+  updateThreeBody(dt);
 
   // 更新 HTML 标签位置
   if (labelsOn) {
