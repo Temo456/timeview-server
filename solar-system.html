@@ -643,7 +643,7 @@ const layerConfig = {
   zodiac: { get: () => zodiacOn, set: (v) => { zodiacOn = v; zodiacGroup.visible = v; } },
   xiusu: { get: () => xiusuOn, set: (v) => { xiusuOn = v; xiusuGroup.visible = v; } },
   threeBody: { get: () => threeBodyOn, set: (v) => { threeBodyOn = v; threeBodyGroup.visible = v; } },
-  voyager: { get: () => voyagerOn, set: (v) => { voyagerOn = v; vger1Group.visible = v; vger2Group.visible = v; } }
+  voyager: { get: () => voyagerOn, set: (v) => { voyagerOn = v; vger1Group.visible = v; vger2Group.visible = v; vger1Trail.visible = v; vger2Trail.visible = v; } }
 };
 
 document.getElementById('layerBtn').addEventListener('click', (e) => {
@@ -1125,64 +1125,93 @@ const vger2Dir = new THREE.Vector3(
   Math.sin(299.0 * RAD) * Math.cos(-57.1 * RAD)
 ).normalize();
 
+// 旅行者号探测器纹理（canvas绘制）
+function makeVoyagerTex(color) {
+  const s = 128, c = document.createElement('canvas'); c.width = s; c.height = s;
+  const x = c.getContext('2d');
+  x.translate(s/2, s/2);
+  // 金色抛物面天线（圆盘）
+  x.beginPath(); x.ellipse(0, -8, 30, 22, 0, 0, Math.PI*2);
+  const dg = x.createRadialGradient(0, -12, 2, 0, -8, 30);
+  dg.addColorStop(0, '#ffe8a0'); dg.addColorStop(0.5, '#d4a040'); dg.addColorStop(1, '#a07020');
+  x.fillStyle = dg; x.fill();
+  x.strokeStyle = '#c89030'; x.lineWidth = 1.5; x.stroke();
+  // 天线支架
+  x.strokeStyle = '#888'; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(0, 14); x.lineTo(0, 30); x.stroke();
+  // 磁强计吊杆（长臂）
+  x.strokeStyle = '#999'; x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(-2, 14); x.lineTo(-40, 40); x.stroke();
+  // 等离子体探测器吊杆
+  x.beginPath(); x.moveTo(2, 14); x.lineTo(35, 38); x.stroke();
+  // 放射性同位素发电机（两个小圆柱）
+  x.fillStyle = '#666';
+  x.fillRect(-8, 30, 5, 10); x.fillRect(3, 30, 5, 10);
+  x.fillStyle = '#888';
+  x.fillRect(-8, 28, 5, 3); x.fillRect(3, 28, 5, 3);
+  // 科学仪器平台
+  x.fillStyle = '#777'; x.fillRect(-6, 14, 12, 6);
+  return new THREE.CanvasTexture(c);
+}
+
+const vgerTex = makeVoyagerTex();
+
 // 旅行者1号
 const vger1Group = new THREE.Group();
-const vger1Marker = new THREE.Mesh(
-  new THREE.SphereGeometry(0.4, 16, 12),
-  new THREE.MeshBasicMaterial({ color: 0xffcc44 })
-);
+const vger1Marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: vgerTex, transparent: true, depthTest: false }));
+vger1Marker.scale.set(4, 4, 1);
 const vger1Glow = new THREE.Sprite(new THREE.SpriteMaterial({
-  map: makeGlow(255, 204, 68), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false
+  map: makeGlow(255, 204, 68), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false
 }));
-vger1Glow.scale.set(3, 3, 1);
-vger1Group.add(vger1Marker, vger1Glow);
+vger1Glow.scale.set(5, 5, 1);
+vger1Group.add(vger1Glow, vger1Marker);
 vger1Group.position.copy(vger1Dir).multiplyScalar(VGER1_DIST);
 worldGroup.add(vger1Group);
 
 const vger1Label = makeTextSprite('旅行者1号', '#ffcc44', 1.3);
-vger1Label.position.set(0, 2.2, 0);
+vger1Label.position.set(0, 3.5, 0);
 vger1Group.add(vger1Label);
 
-// 旅行者1号轨迹线（从地球轨道出发，经过木星土星引力弹弓后飞出）
+// 旅行者1号轨迹线
 const EARTH_ORBIT_R = 18;
 const vger1Waypoints = [
   new THREE.Vector3(EARTH_ORBIT_R, 0, 0),
-  new THREE.Vector3(33, 10, 0),           // 木星引力弹弓
-  new THREE.Vector3(34, 34, 0.5),         // 土星
+  new THREE.Vector3(33, 10, 0),
+  new THREE.Vector3(34, 34, 0.5),
   new THREE.Vector3(VGER1_DIST * 0.4, VGER1_DIST * 0.15, 0.8),
   vger1Group.position.clone()
 ];
 const vger1TrailGeo = new THREE.BufferGeometry().setFromPoints(vger1Waypoints);
-worldGroup.add(new THREE.Line(vger1TrailGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.3 })));
+const vger1Trail = new THREE.Line(vger1TrailGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.3 }));
+worldGroup.add(vger1Trail);
 
 // 旅行者2号
 const vger2Group = new THREE.Group();
-const vger2Marker = new THREE.Mesh(
-  new THREE.SphereGeometry(0.4, 16, 12),
-  new THREE.MeshBasicMaterial({ color: 0x66ccff })
-);
+const vger2Marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: vgerTex, transparent: true, depthTest: false }));
+vger2Marker.scale.set(4, 4, 1);
 const vger2Glow = new THREE.Sprite(new THREE.SpriteMaterial({
-  map: makeGlow(102, 204, 255), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false
+  map: makeGlow(102, 204, 255), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false
 }));
-vger2Glow.scale.set(3, 3, 1);
-vger2Group.add(vger2Marker, vger2Glow);
+vger2Glow.scale.set(5, 5, 1);
+vger2Group.add(vger2Glow, vger2Marker);
 vger2Group.position.copy(vger2Dir).multiplyScalar(VGER2_DIST);
 worldGroup.add(vger2Group);
 const vger2Label = makeTextSprite('旅行者2号', '#66ccff', 1.3);
-vger2Label.position.set(0, 2.2, 0);
+vger2Label.position.set(0, 3.5, 0);
 vger2Group.add(vger2Label);
 
-// 旅行者2号轨迹线（经过全部四颗外行星）
+// 旅行者2号轨迹线
 const vger2Waypoints = [
-  new THREE.Vector3(-9, 15.6, 0),          // 地球出发
-  new THREE.Vector3(-24, 24, 0),           // 木星
-  new THREE.Vector3(-38, -24, 0.3),        // 土星
-  new THREE.Vector3(-36, -42, 0.5),        // 天王星
-  new THREE.Vector3(-36, -57, 0.3),        // 海王星
+  new THREE.Vector3(-9, 15.6, 0),
+  new THREE.Vector3(-24, 24, 0),
+  new THREE.Vector3(-38, -24, 0.3),
+  new THREE.Vector3(-36, -42, 0.5),
+  new THREE.Vector3(-36, -57, 0.3),
   vger2Group.position.clone()
 ];
 const vger2TrailGeo = new THREE.BufferGeometry().setFromPoints(vger2Waypoints);
-worldGroup.add(new THREE.Line(vger2TrailGeo, new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3 })));
+const vger2Trail = new THREE.Line(vger2TrailGeo, new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3 }));
+worldGroup.add(vger2Trail);
 
 // 注册到sphereMap以便点击检测
 sphereMap.set(vger1Marker, 'voyager1');
