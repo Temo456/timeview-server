@@ -256,6 +256,8 @@ const INFO = {
   uranus: { name:'天王星', en:'Uranus', data:{ '直径':'50,724 km','公转周期':'84 年','自转周期':'17.2 小时（逆转）','卫星':'28' }, desc:'一颗冰巨行星，最显著的特征是自转轴几乎躺在轨道平面上（倾斜98°），像是"躺着"公转。' },
   neptune: { name:'海王星', en:'Neptune', data:{ '直径':'49,244 km','公转周期':'165 年','自转周期':'16.1 小时','卫星':'16' }, desc:'太阳系最远的行星，拥有太阳系最强的风（时速超2,000 km）。呈深蓝色，因大气中的甲烷吸收红光所致。' },
   pluto: { name:'冥王星', en:'Pluto', data:{ '直径':'2,377 km','公转周期':'248 年','自转周期':'6.4 天','卫星':'5' }, desc:'2006年被重新分类为矮行星。表面有心形的氮冰平原（斯普特尼克平原），由新视野号探测器于2015年首次拍摄。' },
+  voyager1: { name:'旅行者1号', en:'Voyager 1', data:{ '发射日期':'1977年9月5日','当前距离':'~165 AU（约247亿公里）','当前速度':'~17 km/s','方向':'蛇夫座方向','状态':'仍在发送数据','已飞越':'木星(1979)、土星(1981)' }, desc:'离地球最远的人造物体。1990年拍摄了著名的"暗淡蓝点"照片。2012年穿越日球层进入星际空间，是第一个进入星际空间的人造飞行器。携带的金唱片收录了地球的声音、音乐和图片，作为给可能存在的外星文明的信息。' },
+  voyager2: { name:'旅行者2号', en:'Voyager 2', data:{ '发射日期':'1977年8月20日','当前距离':'~140 AU（约210亿公里）','当前速度':'~15 km/s','方向':'人马座方向','状态':'仍在发送数据','已飞越':'木星(1979)、土星(1981)、天王星(1986)、海王星(1989)' }, desc:'唯一飞越过全部四颗外行星的探测器。2018年也穿越了日球层进入星际空间。两个旅行者探测器各携带一块镀金铜质金唱片，包含55种语言的问候语、各种自然声音、音乐以及115张图片。' },
 };
 
 /* ============ 时间 ============ */
@@ -1058,6 +1060,116 @@ function updateThreeBody(dt) {
   pos.needsUpdate = true;
   tbTrailIdx = (tbTrailIdx + 1) % 300;
 }
+
+/* ============ 旅行者号探测器 ============ */
+const VGER_SCALE = 1.5; // 视觉缩放
+const VGER1_DIST = 50;  // 旅行者1号视觉距离（~165AU，缩小显示）
+const VGER2_DIST = 42;  // 旅行者2号视觉距离（~140AU）
+
+// 旅行者1号方向（蛇夫座方向）
+const vger1Dir = new THREE.Vector3(
+  Math.cos(257.5 * RAD) * Math.cos(12.4 * RAD),
+  Math.sin(12.4 * RAD),
+  Math.sin(257.5 * RAD) * Math.cos(12.4 * RAD)
+).normalize();
+
+// 旅行者2号方向（人马座方向）
+const vger2Dir = new THREE.Vector3(
+  Math.cos(299.0 * RAD) * Math.cos(-57.1 * RAD),
+  Math.sin(-57.1 * RAD),
+  Math.sin(299.0 * RAD) * Math.cos(-57.1 * RAD)
+).normalize();
+
+// 旅行者1号
+const vger1Group = new THREE.Group();
+const vger1Marker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.4, 16, 12),
+  new THREE.MeshBasicMaterial({ color: 0xffcc44 })
+);
+const vger1Glow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: makeGlow(255, 204, 68), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false
+}));
+vger1Glow.scale.set(3, 3, 1);
+vger1Group.add(vger1Marker, vger1Glow);
+vger1Group.position.copy(vger1Dir).multiplyScalar(VGER1_DIST);
+worldGroup.add(vger1Group);
+
+const vger1Label = makeTextSprite('旅行者1号', '#ffcc44', 1.3);
+vger1Label.position.set(0, 2.2, 0);
+vger1Group.add(vger1Label);
+
+// 旅行者1号轨迹线
+const vger1TrailPts = [new THREE.Vector3(0, 0, 0)];
+for (let i = 1; i <= 20; i++) {
+  const t = i / 20;
+  const r = t * VGER1_DIST;
+  // 近似黄道面出发，逐渐偏向实际方向
+  const blendDir = new THREE.Vector3(1, 0, 0).lerp(vger1Dir, t * t).normalize();
+  vger1TrailPts.push(blendDir.clone().multiplyScalar(r));
+}
+const vger1TrailGeo = new THREE.BufferGeometry().setFromPoints(vger1TrailPts);
+worldGroup.add(new THREE.Line(vger1TrailGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.25 })));
+
+// 旅行者2号
+const vger2Group = new THREE.Group();
+const vger2Marker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.4, 16, 12),
+  new THREE.MeshBasicMaterial({ color: 0x66ccff })
+);
+const vger2Glow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: makeGlow(102, 204, 255), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false
+}));
+vger2Glow.scale.set(3, 3, 1);
+vger2Group.add(vger2Marker, vger2Glow);
+vger2Group.position.copy(vger2Dir).multiplyScalar(VGER2_DIST);
+worldGroup.add(vger2Group);
+
+const vger2Label = makeTextSprite('旅行者2号', '#66ccff', 1.3);
+vger2Label.position.set(0, 2.2, 0);
+vger2Group.add(vger2Label);
+
+// 旅行者2号轨迹线
+const vger2TrailPts = [new THREE.Vector3(0, 0, 0)];
+for (let i = 1; i <= 20; i++) {
+  const t = i / 20;
+  const r = t * VGER2_DIST;
+  const blendDir = new THREE.Vector3(-0.5, 0, -0.866).lerp(vger2Dir, t * t).normalize();
+  vger2TrailPts.push(blendDir.clone().multiplyScalar(r));
+}
+const vger2TrailGeo = new THREE.BufferGeometry().setFromPoints(vger2TrailPts);
+worldGroup.add(new THREE.Line(vger2TrailGeo, new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.25 })));
+
+// 注册到sphereMap以便点击检测
+sphereMap.set(vger1Marker, 'voyager1');
+sphereMap.set(vger2Marker, 'voyager2');
+
+// 旅行者信息卡
+const VGER_INFO = {
+  1: {
+    name: '旅行者1号', en: 'Voyager 1', color: '#ffcc44',
+    data: {
+      '发射日期': '1977年9月5日',
+      '当前距离': '~165 AU（约247亿公里）',
+      '当前速度': '~17 km/s（远离太阳）',
+      '方向': '蛇夫座方向',
+      '状态': '仍在发送数据',
+      '已飞越': '木星（1979）、土星（1981）'
+    },
+    desc: '旅行者1号是离地球最远的人造物体。1990年拍摄了著名的"暗淡蓝点"照片。2012年穿越日球层进入星际空间，是第一个进入星际空间的人造飞行器。\n\n携带的金唱片收录了地球的声音、音乐和图片，作为给可能存在的外星文明的信息。唱片上刻有地球在银河系中的位置坐标。'
+  },
+  2: {
+    name: '旅行者2号', en: 'Voyager 2', color: '#66ccff',
+    data: {
+      '发射日期': '1977年8月20日',
+      '当前距离': '~140 AU（约210亿公里）',
+      '当前速度': '~15 km/s（远离太阳）',
+      '方向': '人马座方向',
+      '状态': '仍在发送数据',
+      '已飞越': '木星（1979）、土星（1981）、天王星（1986）、海王星（1989）'
+    },
+    desc: '旅行者2号是唯一飞越过全部四颗外行星（木星、土星、天王星、海王星）的探测器。2018年也穿越了日球层进入星际空间。\n\n两个旅行者探测器各携带一块镀金铜质金唱片，包含55种语言的问候语、各种自然声音、音乐以及115张图片，描绘了地球上的生命和文化。'
+  }
+};
 
 /* ============ 构建太阳系 ============ */
 const textures = {};
