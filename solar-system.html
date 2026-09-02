@@ -153,7 +153,7 @@
 </div>
 
 <!-- 图层选择弹窗 -->
-<div id="layerPopup" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px;min-width:160px">
+<div id="layerPopup" style="display:none;position:fixed;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px;min-width:160px;max-width:90vw">
   <div class="layer-opt on" data-layer="zodiac">✦ 星座</div>
   <div class="layer-opt" data-layer="xiusu">✧ 星宿</div>
   <div class="layer-opt" data-layer="threeBody">🔴 三体星系</div>
@@ -469,14 +469,15 @@ function showCard(key, cx, cy) {
   }
   document.getElementById('cardDesc').textContent = info.desc;
   // 定位：靠近点击位置，不超出屏幕
-  const w = 320, h = 280;
+  cardEl.style.display = 'block';
+  const w = cardEl.offsetWidth || 300, h = cardEl.offsetHeight || 280;
   let x = cx + 20, y = cy - 20;
-  if (x + w > innerWidth) x = cx - w - 20;
-  if (y + h > innerHeight) y = innerHeight - h - 10;
-  if (y < 10) y = 10;
+  if (x + w > innerWidth - 8) x = cx - w - 20;
+  if (x < 8) x = 8;
+  if (y + h > innerHeight - 8) y = innerHeight - h - 8;
+  if (y < 8) y = 8;
   cardEl.style.left = x + 'px';
   cardEl.style.top = y + 'px';
-  cardEl.style.display = 'block';
 }
 
 function showConstellationCard(c) {
@@ -649,15 +650,17 @@ document.getElementById('layerBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const popup = document.getElementById('layerPopup');
   if (popup.style.display !== 'none') { popup.style.display = 'none'; return; }
-  // 同步状态
   document.querySelectorAll('.layer-opt').forEach(el => {
     const layer = el.dataset.layer;
     el.classList.toggle('on', layerConfig[layer]?.get() || false);
   });
   const rect = e.currentTarget.getBoundingClientRect();
-  popup.style.left = Math.max(8, rect.left) + 'px';
-  popup.style.transform = 'none';
-  popup.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+  let left = rect.left;
+  const popupW = 170;
+  if (left + popupW > innerWidth) left = innerWidth - popupW - 8;
+  if (left < 8) left = 8;
+  popup.style.left = left + 'px';
+  popup.style.bottom = (innerHeight - rect.top + 6) + 'px';
   popup.style.display = 'block';
 });
 
@@ -1140,14 +1143,14 @@ const vger1Label = makeTextSprite('旅行者1号', '#ffcc44', 1.3);
 vger1Label.position.set(0, 2.2, 0);
 vger1Group.add(vger1Label);
 
-// 旅行者1号轨迹线（从地球轨道附近出发，经过木星土星引力弹弓后飞出）
-const EARTH_ORBIT_R = SCALE(1.0);
+// 旅行者1号轨迹线（从地球轨道出发，经过木星土星引力弹弓后飞出）
+const EARTH_ORBIT_R = 18;
 const vger1Waypoints = [
-  new THREE.Vector3(EARTH_ORBIT_R, 0, 0),                              // 地球出发
-  new THREE.Vector3(SCALE(5.2) * 0.95, SCALE(5.2) * 0.3, 0),          // 木星引力弹弓
-  new THREE.Vector3(SCALE(9.5) * 0.7, SCALE(9.5) * 0.7, 0.5),         // 土星
-  new THREE.Vector3(VGER1_DIST * 0.4, VGER1_DIST * 0.15, 0.8),        // 飞出海王星轨道
-  vger1Group.position.clone()                                           // 当前位置
+  new THREE.Vector3(EARTH_ORBIT_R, 0, 0),
+  new THREE.Vector3(33, 10, 0),           // 木星引力弹弓
+  new THREE.Vector3(34, 34, 0.5),         // 土星
+  new THREE.Vector3(VGER1_DIST * 0.4, VGER1_DIST * 0.15, 0.8),
+  vger1Group.position.clone()
 ];
 const vger1TrailGeo = new THREE.BufferGeometry().setFromPoints(vger1Waypoints);
 worldGroup.add(new THREE.Line(vger1TrailGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.3 })));
@@ -1171,12 +1174,12 @@ vger2Group.add(vger2Label);
 
 // 旅行者2号轨迹线（经过全部四颗外行星）
 const vger2Waypoints = [
-  new THREE.Vector3(EARTH_ORBIT_R * -0.5, EARTH_ORBIT_R * 0.86, 0),    // 地球出发（不同相位）
-  new THREE.Vector3(SCALE(5.2) * -0.7, SCALE(5.2) * 0.7, 0),           // 木星
-  new THREE.Vector3(SCALE(9.5) * -0.8, SCALE(9.5) * -0.5, 0.3),        // 土星
-  new THREE.Vector3(SCALE(19.2) * -0.6, SCALE(19.2) * -0.7, 0.5),      // 天王星
-  new THREE.Vector3(SCALE(30.1) * -0.5, SCALE(30.1) * -0.8, 0.3),      // 海王星
-  vger2Group.position.clone()                                            // 当前位置
+  new THREE.Vector3(-9, 15.6, 0),          // 地球出发
+  new THREE.Vector3(-24, 24, 0),           // 木星
+  new THREE.Vector3(-38, -24, 0.3),        // 土星
+  new THREE.Vector3(-36, -42, 0.5),        // 天王星
+  new THREE.Vector3(-36, -57, 0.3),        // 海王星
+  vger2Group.position.clone()
 ];
 const vger2TrailGeo = new THREE.BufferGeometry().setFromPoints(vger2Waypoints);
 worldGroup.add(new THREE.Line(vger2TrailGeo, new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3 })));
