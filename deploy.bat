@@ -7,7 +7,7 @@ set SERVER=root@124.223.178.244
 set REMOTE_DIR=/root/timeview
 
 echo [1/3] Creating package...
-tar czf timeview-deploy.tar.gz server.js astro.js lunar.js knowledge.json index.html landing.html release.html wallpaper.html manifest.json sw.js timeview-wallpaper.apk textures sounds
+tar czf timeview-deploy.tar.gz server.js astro.js lunar.js knowledge.json index.html  solar-system.html landing.html release.html wallpaper.html manifest.json sw.js timeview-wallpaper.apk textures sounds
 if errorlevel 1 (
     echo Failed to create package!
     pause

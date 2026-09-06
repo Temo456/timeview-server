@@ -4,13 +4,12 @@ services:
     image: timeview:latest
     container_name: timeview
     restart: always
+    network_mode: host          # 共享宿主机网络，使 HTTPS_PROXY(127.0.0.1:7890) 可达
     env_file:
       - ./timeview.env
     environment:
-      - PORT=3000
+      - PORT=8766
       - DATA_DIR=/data
       - BASE_PATH=/timeview     # 子路径部署：nginx 把 /timeview/ 反代到本容器
-    ports:
-      - "127.0.0.1:8766:3000"   # 对齐 nginx: /timeview -> http://127.0.0.1:8766/
     volumes:
       - ./data:/data

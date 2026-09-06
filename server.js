@@ -231,8 +231,10 @@ const server = http.createServer(async (req, res) => {
     // 若调用方只传时间戳(ts)，则服务端用同一套算法计算天文数据（H5 走此路径；
     // 小程序仍可直接传算好的字段——两者用的是同一份 astro.js，结果一致）
     if (d.ts) {
-      const personal = { name: d.name, gender: d.gender, birthday: d.birthday, birthLunar: d.birthLunar, birthHour: d.birthHour, birthPlace: d.birthPlace, phone: d.phone, mode: d.mode };
-      d = Object.assign(computeAstro(d.ts, d.tzMin || 0), personal);
+      try {
+        const personal = { name: d.name, gender: d.gender, birthday: d.birthday, birthLunar: d.birthLunar, birthHour: d.birthHour, birthPlace: d.birthPlace, phone: d.phone, mode: d.mode };
+        d = Object.assign(computeAstro(d.ts, d.tzMin || 0), personal);
+      } catch (e) { console.log("[fortune] computeAstro error:", e.message); return sendJson(res, { error: "天文数据计算失败: " + e.message }, 500); }
     }
     if (!d.dateText) return sendJson(res, { error: "missing data" }, 400);
     if (!_fk) return sendJson(res, { error: "未配置 LLM API Key" }, 500);
