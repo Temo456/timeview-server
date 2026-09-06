@@ -172,14 +172,14 @@
 <!-- 日期选择器 -->
 <div id="datePicker" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:30;background:rgba(8,20,36,.97);border:1px solid rgba(95,214,240,.5);border-radius:16px;padding:0;min-width:300px;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden">
   <div style="display:flex;border-bottom:1px solid rgba(95,214,240,.15)">
-    <div id="tabSolar" class="dp-tab active" onclick="switchCalTab('solar')">公历</div>
-    <div id="tabLunar" class="dp-tab" onclick="switchCalTab('lunar')">农历</div>
+    <div id="tabSolar" class="dp-tab active">公历</div>
+    <div id="tabLunar" class="dp-tab">农历</div>
   </div>
   <div id="solarPanel" style="padding:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="dp-nav" onclick="dpNav(-1)">‹</div>
+      <div class="dp-nav" id="dpPrev">‹</div>
       <div style="display:flex;gap:6px;align-items:center"><select id="dpYear" style="font-size:13px;color:#eaf6ff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:3px 6px"></select><span id="dpTitle" style="font-size:15px;font-weight:700;color:#eaf6ff"></span></div>
-      <div class="dp-nav" onclick="dpNav(1)">›</div>
+      <div class="dp-nav" id="dpNext">›</div>
     </div>
     <div id="dpGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center"></div>
     <div style="display:flex;gap:6px;margin-top:12px;align-items:center;justify-content:center">
@@ -728,6 +728,11 @@ function switchCalTab(tab) {
   document.getElementById('lunarPanel').style.display = tab === 'lunar' ? '' : 'none';
 }
 function dpNav(dir) { dpMonth += dir; if (dpMonth < 0) { dpMonth = 11; dpYear--; } if (dpMonth > 11) { dpMonth = 0; dpYear++; } renderCalendar(); }
+// 绑定日期选择器标签与月份导航（脚本为 ES module，函数不挂到 window，不能用内联 onclick）
+document.getElementById('tabSolar').addEventListener('click', () => switchCalTab('solar'));
+document.getElementById('tabLunar').addEventListener('click', () => switchCalTab('lunar'));
+document.getElementById('dpPrev').addEventListener('click', () => dpNav(-1));
+document.getElementById('dpNext').addEventListener('click', () => dpNav(1));
 function renderCalendar() {
   document.getElementById('dpTitle').textContent = (dpMonth + 1) + '月';
   var ySel = document.getElementById('dpYear');
@@ -825,6 +830,29 @@ function initLunarPicker() {
   rebuildMonths();
 }
 initLunarPicker();
+
+// 从地球视角跳转过来时，把日期/时间带过来（URL ?t=<ms>）
+(function applyIncomingTime() {
+  const m = location.search.match(/[?&]t=(\d+)/);
+  if (!m) return;
+  const t = parseInt(m[1], 10);
+  if (isNaN(t)) return;
+  simElapsed = (t - EPOCH_MS) / 1000;
+  paused = true;
+  document.getElementById('pPlay').textContent = '▶';
+  const d = new Date(t);
+  dpYear = d.getFullYear(); dpMonth = d.getMonth(); dpSelected = d.getDate();
+  updateDateText();
+})();
+
+// 返回地球视角时，把当前日期/时间带过去（URL ?t=<ms>）
+document.querySelectorAll('a[href*="index.html"]').forEach(el => {
+  el.addEventListener('click', function(e) {
+    e.preventDefault();
+    const sep = this.href.indexOf('?') >= 0 ? '&' : '?';
+    location.href = this.href + sep + 't=' + Math.round(EPOCH_MS + simElapsed * 1000);
+  });
+});
 
 /* ============ 工具函数 ============ */
 function loadTexture(url) {

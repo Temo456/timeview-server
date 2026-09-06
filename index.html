@@ -1099,9 +1099,6 @@ function flushFort(force) {
 }
 
 function startFortune() {
-  const d = dnum(dispT), date = new Date(dispT + tz.min * 60000);
-  const _fl = solarToLunar(date.getUTCFullYear(), date.getUTCMonth()+1, date.getUTCDate());
-  const ph = moonPhase(d, _fl ? _fl.day : null), st = solarTerm(d);
   _fortBuf = ''; _fortFlushed = '';
   document.getElementById('fortText').textContent = '';
   document.getElementById('fortLoading').style.display = 'flex';
@@ -1109,13 +1106,9 @@ function startFortune() {
   if (_fortTimer) clearInterval(_fortTimer);
   _fortTimer = setInterval(() => flushFort(), 90);
 
+  // 传 ts + tzMin 让服务端 computeAstro() 统一计算（含时辰、星座、行星黄经）
   const data = {
-    dateText: date.getUTCFullYear() + '-' + p2(date.getUTCMonth() + 1) + '-' + p2(date.getUTCDate()) + ' ' + p2(date.getUTCHours()) + ':' + p2(date.getUTCMinutes()),
-    lunar: gzYear(date.getUTCFullYear()) + '年',
-    shichen: '', yearGZ: gzYear(date.getUTCFullYear()),
-    solarTerm: st.name, termToNext: st.toNext,
-    moonPhase: ph.name, moonAge: ph.age.toFixed(1), moonIllum: Math.round(ph.illum * 100),
-    zodiac: '', sunLon: sunLon(d).toFixed(1), mode: 'almanac'
+    ts: dispT, tzMin: tz.min, mode: 'almanac'
   };
 
   fetch(API_URL, {
@@ -1209,6 +1202,18 @@ document.getElementById('guideSkip').onclick = closeGuide;
 document.getElementById('guideOverlay').onclick = closeGuide;
 
 // ========== 启动 ==========
+// 从太阳视角跳转过来时，带入日期/时间（URL ?t=<ms>）
+(function applyIncomingTime() {
+  const m = location.search.match(/[?&]t=(\d+)/);
+  if (!m) return;
+  const t = parseInt(m[1], 10);
+  if (isNaN(t)) return;
+  state.t = t;
+  dispT = t;
+  anchorT = t;
+  state.playing = false;
+  document.getElementById('pPlay').textContent = '▶';
+})();
 resize();
 // 默认进入地球视图
 setView('earth');
@@ -1274,7 +1279,8 @@ function transitionToSolar(href) {
 document.querySelectorAll('a[href*="solar-system"]').forEach(el => {
   el.addEventListener('click', function(e) {
     e.preventDefault();
-    transitionToSolar(this.href);
+    const sep = this.href.indexOf('?') >= 0 ? '&' : '?';
+    transitionToSolar(this.href + sep + 't=' + Math.round(dispT));
   });
 });
 </script>
