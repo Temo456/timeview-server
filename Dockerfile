@@ -1,7 +1,7 @@
 FROM node:20-alpine
 WORKDIR /app
 # 仅用 Node 内置模块，无需 npm install
-COPY server.js astro.js lunar.js knowledge.json index.html landing.html release.html wallpaper.html manifest.json sw.js timeview-wallpaper.apk ./
+COPY server.js astro.js lunar.js knowledge.json index.html solar-system.html assistant.js landing.html release.html wallpaper.html admin.html manifest.json sw.js timeview-wallpaper.apk ./
 COPY textures/ textures/
 COPY sounds/ sounds/
 ENV PORT=3000 DATA_DIR=/data

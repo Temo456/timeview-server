@@ -2,6 +2,24 @@
 node_modules/
 data/
 *.tar
+*.tar.gz
 timeview.env
 *.log
 .DS_Store
+
+# 构建产物 / 本地文件 / 配置
+.claude/
+test/
+screensaver/publish/
+screensaver/bin/
+screensaver/obj/
+screensaver-electron/dist/
+screensaver-electron/shot*.js
+screensaver-installer/publish/
+screensaver-installer/bin/
+screensaver-installer/obj/
+screensaver-installer/screensaver.scr
+screensaver-installer-win7/publish/
+screensaver-installer-win7/bin/
+screensaver-installer-win7/obj/
+screensaver-installer-win7/win7-screensaver.zip

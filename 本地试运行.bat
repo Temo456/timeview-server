@@ -14,6 +14,6 @@ set PORT=8080
 set BASE_PATH=
 echo  AI Key 是否已加载： %LLM_API_KEY:~0,6%...
 echo  （没填 Key 时，💬 只返回知识库匹配文本，可先验证模块是否打通）
-start "" http://localhost:8080/
+start "" http://localhost:8080/app
 node server.js
 pause

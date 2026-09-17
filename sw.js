@@ -1,4 +1,5 @@
-const C = "timeview-v2";
+// 缓存键：与 server.js 的 VERSION 同步 bump，否则老用户会被 SW 缓存挡住看不到新页面
+const C = "timeview-v3.21";
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["./","app","manifest.json","icon-192.png","icon-512.png"]).catch(()=>{})));
   self.skipWaiting();

@@ -6,8 +6,16 @@ echo.
 set SERVER=root@124.223.178.244
 set REMOTE_DIR=/root/timeview
 
-echo [1/3] Creating package...
-tar czf timeview-deploy.tar.gz server.js astro.js lunar.js knowledge.json index.html  solar-system.html landing.html release.html wallpaper.html manifest.json sw.js timeview-wallpaper.apk textures sounds
+echo [0/4] Bumping version (小版本 +1)...
+node bump-version.js
+if errorlevel 1 (
+    echo Version bump failed!
+    pause
+    exit /b 1
+)
+
+echo [1/4] Creating package...
+tar czf timeview-deploy.tar.gz server.js astro.js lunar.js knowledge.json index.html  solar-system.html assistant.js landing.html release.html wallpaper.html admin.html manifest.json sw.js timeview-wallpaper.apk textures sounds
 if errorlevel 1 (
     echo Failed to create package!
     pause
@@ -15,7 +23,7 @@ if errorlevel 1 (
 )
 echo Package created.
 
-echo [2/3] Uploading to server...
+echo [2/4] Uploading to server...
 scp -P 2048 timeview-deploy.tar.gz deploy.sh %SERVER%:%REMOTE_DIR%/
 if errorlevel 1 (
     echo Upload failed!
@@ -23,7 +31,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [3/3] Deploying on server...
+echo [3/4] Deploying on server...
 ssh -p 2048 %SERVER% "cd %REMOTE_DIR% && bash deploy.sh"
 if errorlevel 1 (
     echo Deploy failed!

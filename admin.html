@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>时间景观 · 知识库维护</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#050a18;color:#c8daf0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;padding:0 0 60px;-webkit-font-smoothing:antialiased}
+.hd{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px 20px;background:rgba(5,10,24,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(95,214,240,.15)}
+.hd h1{font-size:18px;font-weight:800;color:#eaf6ff;text-shadow:0 0 14px rgba(95,214,240,.4)}
+.hd .cnt{font-size:12px;color:#6a8ea8}
+.hd .sp{flex:1}
+.btn{font-size:13px;font-weight:700;cursor:pointer;border-radius:10px;padding:8px 14px;border:1px solid rgba(95,214,240,.4);color:#04121c;background:linear-gradient(135deg,#5fd6f0,#2aa9c8);white-space:nowrap}
+.btn.ghost{background:rgba(95,214,240,.08);color:#bfe4f5;border-color:rgba(95,214,240,.3)}
+.btn.danger{background:rgba(255,120,120,.12);color:#ffc9c9;border-color:rgba(255,120,120,.35)}
+.btn.sm{padding:4px 10px;font-size:12px}
+.wrap{max-width:820px;margin:18px auto;padding:0 16px}
+.cat{margin:20px 0 10px;font-size:14px;font-weight:800;color:#5fd6f0;display:flex;align-items:center;gap:8px}
+.cat .n{font-size:11px;font-weight:600;color:#04121c;background:#5fd6f0;border-radius:999px;padding:1px 8px}
+.card{background:rgba(8,20,36,.75);border:1px solid rgba(95,214,240,.16);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.card .q{font-size:14.5px;font-weight:700;color:#eaf6ff;margin-bottom:6px}
+.card .a{font-size:13.5px;color:#a8c4dd;white-space:pre-wrap}
+.card .meta{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tag{font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid rgba(95,214,240,.28);color:#7fa8c4}
+.tag.ayuan{color:#5fd6f0;border-color:rgba(95,214,240,.4)}
+.tag.axing{color:#ff9ebc;border-color:rgba(255,158,188,.4)}
+.tag.hot{color:#ffc9c9;border-color:rgba(255,140,140,.35)}
+.card .ops{margin-left:auto;display:flex;gap:6px}
+.empty{text-align:center;color:#6a8ea8;padding:40px 0;font-size:14px}
+/* 弹窗 */
+.mask{display:none;position:fixed;inset:0;z-index:40;background:rgba(2,6,16,.7);align-items:center;justify-content:center;padding:16px}
+.mask.on{display:flex}
+.modal{background:rgba(10,20,38,.98);border:1px solid rgba(95,214,240,.4);border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto}
+.modal h2{font-size:16px;font-weight:800;color:#eaf6ff;margin-bottom:14px}
+.f{display:flex;flex-direction:column;gap:12px}
+.f label{font-size:12px;color:#7fa8c4;font-weight:600}
+.f input,.f textarea,.f select{width:100%;font-size:13.5px;color:#e0ecff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:9px;padding:9px 11px;color-scheme:dark;font-family:inherit}
+.f textarea{min-height:120px;resize:vertical}
+.f .row{display:flex;gap:10px}
+.f .row>div{flex:1}
+.f .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+@media(max-width:640px){
+  .hd{flex-wrap:wrap;padding:12px 14px;gap:8px}
+  .hd h1{font-size:16px;width:100%}
+  .hd .cnt{order:3}
+  .f .row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="hd">
+  <h1>时间景观 · 知识库维护</h1>
+  <span class="cnt" id="cnt"></span>
+  <span class="sp"></span>
+  <button class="btn ghost" onclick="location.href='app'">← 返回应用</button>
+  <button class="btn" onclick="openAdd()">＋ 新增问答</button>
+</div>
+<div class="wrap" id="list"></div>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <h2 id="mTitle">新增问答</h2>
+    <div class="f">
+      <div class="row">
+        <div>
+          <label>分类</label>
+          <input id="fCat" placeholder="如：项目与科普 / 功能玩法 / 高危话题">
+        </div>
+        <div>
+          <label>回答角色</label>
+          <select id="fRole">
+            <option value="ayuan">阿远（理性·技术）</option>
+            <option value="axing">阿星（感性·体验）</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label>问题</label>
+        <input id="fQ" placeholder="用户点选的问题">
+      </div>
+      <div>
+        <label>答案</label>
+        <textarea id="fA" placeholder="预设答案（高危/闲聊类可填兜底话术）"></textarea>
+      </div>
+      <div class="btns">
+        <button class="btn ghost" onclick="closeModal()">取消</button>
+        <button class="btn" id="fSave">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var KB = [];
+var editId = null;
+
+function $id(x){ return document.getElementById(x); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function api(method, body){
+  var opt = { method: method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opt.body = JSON.stringify(body);
+  return fetch('api/qa', opt).then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.json(); });
+}
+
+function load(){
+  api('GET').then(function(j){
+    KB = j.items || [];
+    $id('cnt').textContent = '共 ' + KB.length + ' 条';
+    render();
+  }).catch(function(e){ $id('cnt').textContent = '加载失败'; $id('list').innerHTML = '<div class="empty">⚠️ ' + esc(e.message) + '</div>'; });
+}
+
+function render(){
+  var cats = {};
+  KB.forEach(function(k){ (cats[k.category] = cats[k.category] || []).push(k); });
+  var catsArr = Object.keys(cats).sort(function(a,b){
+    var o = ['项目与科普','功能玩法','边界话题','高危话题','闲聊对比','科普补充'];
+    var ia = o.indexOf(a), ib = o.indexOf(b);
+    return (ia<0?99:ia) - (ib<0?99:ib);
+  });
+  var html = '';
+  if (!KB.length) html = '<div class="empty">知识库为空，点右上角「新增问答」开始添加。</div>';
+  catsArr.forEach(function(cat){
+    html += '<div class="cat">' + esc(cat) + ' <span class="n">' + cats[cat].length + '</span></div>';
+    cats[cat].forEach(function(k){
+      html += '<div class="card">'
+        + '<div class="q">' + esc(k.question) + '</div>'
+        + '<div class="a">' + esc(k.answer) + '</div>'
+        + '<div class="meta">'
+        +   '<span class="tag ' + (k.role==='axing'?'axing':'ayuan') + '">' + (k.role==='axing'?'阿星':'阿远') + '</span>'
+        +   (k.category==='高危话题'||k.category==='闲聊对比' ? '<span class="tag hot">兜底话术</span>' : '')
+        +   '<span class="ops">'
+        +     '<button class="btn ghost sm" onclick="openEdit(' + k.id + ')">编辑</button>'
+        +     '<button class="btn danger sm" onclick="del(' + k.id + ')">删除</button>'
+        +   '</span>'
+        + '</div></div>';
+    });
+  });
+  $id('list').innerHTML = html;
+}
+
+function openModal(){
+  $id('mask').classList.add('on');
+}
+function closeModal(){
+  $id('mask').classList.remove('on');
+  $id('fCat').value=''; $id('fRole').value='ayuan'; $id('fQ').value=''; $id('fA').value=''; editId=null;
+}
+function openAdd(){ editId=null; $id('mTitle').textContent='新增问答'; $id('fSave').textContent='保存'; openModal(); }
+function openEdit(id){
+  var k = KB.find(function(x){ return x.id===id; }); if(!k) return;
+  editId = id; $id('mTitle').textContent='编辑问答'; $id('fSave').textContent='更新';
+  $id('fCat').value=k.category; $id('fRole').value=k.role; $id('fQ').value=k.question; $id('fA').value=k.answer;
+  openModal();
+}
+function save(){
+  var cat = $id('fCat').value.trim() || '未分类';
+  var role = $id('fRole').value;
+  var q = $id('fQ').value.trim();
+  var a = $id('fA').value.trim();
+  if(!q || !a){ alert('问题和答案不能为空'); return; }
+  var p;
+  if (editId){ p = api('PUT', { id: editId, category: cat, role: role, question: q, answer: a }); }
+  else { p = api('POST', { category: cat, role: role, question: q, answer: a }); }
+  p.then(function(){ closeModal(); load(); }).catch(function(e){ alert('保存失败：' + e.message); });
+}
+function del(id){
+  if(!confirm('确定删除这条问答？')) return;
+  api('DELETE', { id: id }).then(function(){ load(); }).catch(function(e){ alert('删除失败：' + e.message); });
+}
+
+$id('fSave').onclick = save;
+$id('mask').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
+load();
+</script>
+</body>
+</html>

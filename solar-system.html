@@ -117,6 +117,12 @@
     font-size: 20px; cursor: pointer; line-height: 1;
   }
   #threeBodyCard .tb-close:hover { color: #fff; }
+  /* 手机竖屏：底部工具条换行显示，日期占首行，其余按钮自动换行，避免横向滚动 */
+  @media(max-width:640px){
+    .bottombar{flex-wrap:wrap;overflow-x:hidden;gap:5px}
+    .bar-date{order:-1;flex-basis:100%;min-width:0}
+    .bar-sep{display:none}
+  }
 </style>
 </head>
 <body>
@@ -149,14 +155,14 @@
 
 <!-- 图层选择弹窗 -->
 <div id="layerPopup" style="display:none;position:fixed;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px;min-width:160px;max-width:90vw">
-  <div class="layer-opt on" data-layer="labels">🏷 标签</div>
-  <div class="layer-opt on" data-layer="terms">📅 节气</div>
-  <div class="layer-opt on" data-layer="orbits">◎ 轨道</div>
-  <div class="layer-opt on" data-layer="axes">＋ 坐标轴</div>
-  <div class="layer-opt on" data-layer="zodiac">✦ 星座</div>
+  <div class="layer-opt" data-layer="orbits">◎ 轨道</div>
+  <div class="layer-opt" data-layer="labels">🏷 标签</div>
+  <div class="layer-opt" data-layer="axes">＋ 坐标轴</div>
+  <div class="layer-opt" data-layer="terms">📅 节气</div>
+  <div class="layer-opt" data-layer="zodiac">✦ 星座</div>
   <div class="layer-opt" data-layer="xiusu">✧ 星宿</div>
   <div class="layer-opt" data-layer="threeBody">🔴 三体星系</div>
-  <div class="layer-opt on" data-layer="voyager">🛰 旅行者号</div>
+  <div class="layer-opt" data-layer="voyager">🛰 旅行者号</div>
 </div>
 
 <!-- 速度弹窗 -->
@@ -170,7 +176,7 @@
 </div>
 
 <!-- 日期选择器 -->
-<div id="datePicker" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:30;background:rgba(8,20,36,.97);border:1px solid rgba(95,214,240,.5);border-radius:16px;padding:0;min-width:300px;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden">
+<div id="datePicker" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:30;background:rgba(8,20,36,.97);border:1px solid rgba(95,214,240,.5);border-radius:16px;padding:0;width:min(340px,92vw);box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden">
   <div style="display:flex;border-bottom:1px solid rgba(95,214,240,.15)">
     <div id="tabSolar" class="dp-tab active">公历</div>
     <div id="tabLunar" class="dp-tab">农历</div>
@@ -178,7 +184,7 @@
   <div id="solarPanel" style="padding:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="dp-nav" id="dpPrev">‹</div>
-      <div style="display:flex;gap:6px;align-items:center"><select id="dpYear" style="font-size:13px;color:#eaf6ff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:3px 6px"></select><span id="dpTitle" style="font-size:15px;font-weight:700;color:#eaf6ff"></span></div>
+      <div style="display:flex;gap:6px;align-items:center"><input type="number" id="dpYear" style="font-size:13px;color:#eaf6ff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:3px 6px;width:96px" title="年份（公元前用负数，如 -500）"><span id="dpTitle" style="font-size:15px;font-weight:700;color:#eaf6ff"></span></div>
       <div class="dp-nav" id="dpNext">›</div>
     </div>
     <div id="dpGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center"></div>
@@ -333,7 +339,7 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const ROT_SENS = 0.005;
 let spinZ = 0, spinX = 0, spinZVel = 0, spinXVel = 0;
 let simElapsed = (Date.now() - EPOCH_MS) / 1000;
-let scaleKey = 'sec', paused = false, labelsOn = true, axesOn = true, termsOn = true, orbitsOn = true;
+let scaleKey = 'sec', paused = false, labelsOn = false, axesOn = false, termsOn = false, orbitsOn = false;
 
 // 拖拽行星状态
 let planetDrag = null; // { key, cumulative, lastAngle, lastTime, velocity, moved }
@@ -554,6 +560,7 @@ const LUNAR_BASE_MS = LUNAR_BASE.getTime();
 
 // 公历日期 → 农历
 function solarToLunar(date) {
+  if (date.getFullYear() < 1900 || date.getFullYear() > 2100) return null;  // 农历数据仅覆盖 1900-2100
   let offset = Math.floor((date.getTime() - LUNAR_BASE_MS) / 86400000);
   if (offset < 0) return null;
   let year = 1900;
@@ -636,7 +643,7 @@ document.addEventListener('click', (e) => {
 
 // 标签/节气切换
 // 图层弹窗
-let voyagerOn = true;
+let voyagerOn = false;
 const layerConfig = {
   labels: { get: () => labelsOn, set: (v) => { labelsOn = v; labelsLayer.style.display = v ? '' : 'none'; [xLabel, yLabel, zLabel].forEach(s => s.visible = v); } },
   terms: { get: () => termsOn, set: (v) => { termsOn = v; for (const t of termLabelEls) t.el.style.display = v ? '' : 'none'; termLabelEl.style.display = v ? '' : 'none'; } },
@@ -736,8 +743,12 @@ document.getElementById('dpNext').addEventListener('click', () => dpNav(1));
 function renderCalendar() {
   document.getElementById('dpTitle').textContent = (dpMonth + 1) + '月';
   var ySel = document.getElementById('dpYear');
-  if (ySel && !ySel.options.length) { for (var yy = 1900; yy <= 2100; yy++) { var o = document.createElement('option'); o.value = yy; o.textContent = yy + '年'; ySel.appendChild(o); } ySel.onchange = function() { dpYear = parseInt(this.value); renderCalendar(); }; }
-  if (ySel) ySel.value = dpYear;
+  if (ySel) {
+    ySel.min = new Date().getFullYear() - 5000;
+    ySel.max = new Date().getFullYear() + 5000;
+    if (!ySel.dataset.bound) { ySel.dataset.bound = '1'; ySel.onchange = function() { dpYear = parseInt(this.value) || dpYear; renderCalendar(); }; }
+    ySel.value = dpYear;
+  }
   var grid = document.getElementById('dpGrid'); grid.innerHTML = '';
   ['日','一','二','三','四','五','六'].forEach(function(d) { var el = document.createElement('div'); el.className = 'dp-cell head'; el.textContent = d; grid.appendChild(el); });
   var firstDay = new Date(dpYear, dpMonth, 1).getDay();
@@ -894,12 +905,14 @@ function makeOrbitLine(radius) {
   const pts = [], SEG = 256;
   for (let i = 0; i <= SEG; i++) { const a = (i/SEG)*Math.PI*2; pts.push(new THREE.Vector3(Math.cos(a)*radius, Math.sin(a)*radius, 0)); }
   const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color:0x4a6a90, transparent:true, opacity:0.45 }));
+  line.visible = false;
   orbitLines.push(line);
   return line;
 }
 
 /* ============ 坐标轴 ============ */
 const axesGroup = new THREE.Group();
+axesGroup.visible = false;
 const xLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1,0,0), new THREE.Vector3(1,0,0)]), new THREE.LineBasicMaterial({ color:0xff7b7b, transparent:true, opacity:0.55 }));
 const yLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-1,0), new THREE.Vector3(0,1,0)]), new THREE.LineBasicMaterial({ color:0x6fdf6f, transparent:true, opacity:0.55 }));
 const zLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-12), new THREE.Vector3(0,0,30)]), new THREE.LineBasicMaterial({ color:0x7ba8ff, transparent:true, opacity:0.6 }));
@@ -972,6 +985,7 @@ const zodiacStarMat = new THREE.PointsMaterial({ color:0xffcc44, size:2.5, sizeA
 const xiusuStarMat = new THREE.PointsMaterial({ color:0x66bbff, size:2, sizeAttenuation:true, transparent:true, opacity:0.8 });
 const _tmpV = new THREE.Vector3();
 const zodiacGroup = new THREE.Group();
+zodiacGroup.visible = false;
 const xiusuGroup = new THREE.Group();
 const constellationLabels = [];
 const constellationClickTargets = []; // { pos, data }
@@ -1026,7 +1040,7 @@ constellationGroup.add(xiusuGroup);
 xiusuGroup.visible = false;
 worldGroup.add(constellationGroup);
 
-let zodiacOn = true, xiusuOn = false;
+let zodiacOn = false, xiusuOn = false;
 
 // 发光纹理生成
 function makeGlow(r, g, b) {
@@ -1213,6 +1227,7 @@ function createVoyager(dir, dist, label, color, glowColor, trailColor) {
 
 const vger1 = createVoyager(vger1Dir, VGER1_DIST, '旅行者1号', '#ffcc44', [255, 204, 68], 0xffcc44);
 const vger2 = createVoyager(vger2Dir, VGER2_DIST, '旅行者2号', '#66ccff', [102, 204, 255], 0x66ccff);
+vger1.group.visible = false; vger2.group.visible = false; vger1.trail.visible = false; vger2.trail.visible = false;
 
 // 旅行者号位置随时间更新
 function updateVoyagers() {
@@ -1454,7 +1469,12 @@ function animate() {
   updateLunar();
   renderer.render(scene, camera);
 }
+// 初始化：所有图层默认隐藏（轨道/标签/坐标轴/节气/星座/星宿/三体星系/旅行者号）
+for (const key in layerConfig) layerConfig[key].set(false);
 animate();
 </script>
+
+<script>window.TIMEVIEW='solar';</script>
+<script src="assistant.js"></script>
 </body>
 </html>

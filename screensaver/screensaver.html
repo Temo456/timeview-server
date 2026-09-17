@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>时间景观 · 屏保</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:-apple-system,sans-serif}
+canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<script>
+const cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+const RAD=Math.PI/180,J2000=Date.UTC(2000,0,1,12,0,0),SYN=29.530588853;
+const dnum=ms=>(ms-J2000)/86400000;
+const rev=x=>{x%=360;return x<0?x+360:x};
+
+// 天文算法
+function sunLon(d){d+=1.5;const w=282.9404+4.70935e-5*d,e=0.016709-1.151e-9*d,M=rev(356.0470+0.9856002585*d),Mr=M*RAD,E=M+(e/RAD)*Math.sin(Mr)*(1+e*Math.cos(Mr)),Er=E*RAD;return rev(Math.atan2(Math.sqrt(1-e*e)*Math.sin(Er),Math.cos(Er)-e)/RAD+w)}
+function moonLon(d){d+=1.5;const N=rev(125.1228-0.0529538083*d),i=5.1454,w=rev(318.0634+0.1643573223*d),e=0.0549,M=rev(115.3654+13.0649929509*d),Mr=M*RAD;let E=M+(e/RAD)*Math.sin(Mr)*(1+e*Math.cos(Mr));for(let k=0;k<4;k++){const Er=E*RAD;E=E-(E-(e/RAD)*Math.sin(Er)-M)/(1-e*Math.cos(Er))}const Er=E*RAD,xv=Math.cos(Er)-e,yv=Math.sqrt(1-e*e)*Math.sin(Er),v=Math.atan2(yv,xv)/RAD,r=Math.sqrt(xv*xv+yv*yv),Nr=N*RAD,vr=(v+w)*RAD,ir=i*RAD,xh=r*(Math.cos(Nr)*Math.cos(vr)-Math.sin(Nr)*Math.sin(vr)*Math.cos(ir)),yh=r*(Math.sin(Nr)*Math.cos(vr)+Math.cos(Nr)*Math.sin(vr)*Math.cos(ir));return rev(Math.atan2(yh,xh)/RAD)}
+function moonPhase(d){const el=rev(moonLon(d)-sunLon(d)),illum=(1-Math.cos(el*RAD))/2,age=SYN*el/360;const name=el<22.5||el>=337.5?"新月":el<67.5?"峨眉月":el<112.5?"上弦月":el<157.5?"盈凸月":el<202.5?"满月":el<247.5?"亏凸月":el<292.5?"下弦月":"残月";return{el,illum,age,name}}
+const TERMS=["春分","清明","谷雨","立夏","小满","芒种","夏至","小暑","大暑","立秋","处暑","白露","秋分","寒露","霜降","立冬","小雪","大雪","冬至","小寒","大寒","立春","雨水","惊蛰"];
+function solarTerm(d){const SL=rev(sunLon(d)),i=Math.floor(SL/15)%24,within=SL-i*15,perDay=360/365.2422;return{name:TERMS[i],toNext:Math.max(1,Math.round((15-within)/perDay)),next:TERMS[(i+1)%24]}}
+function moonDistKm(d){d+=1.5;const M=rev(115.3654+13.0649929509*d),Mr=M*RAD;let E=M+(0.0549/RAD)*Math.sin(Mr);for(let k=0;k<3;k++){const Er=E*RAD;E=E-(E-(0.0549/RAD)*Math.sin(Er)-M)/(1-0.0549*Math.cos(Er))}const Er=E*RAD,xv=Math.cos(Er)-0.0549,yv=Math.sqrt(1-0.0549*0.0549)*Math.sin(Er);return Math.round(60.2666*Math.sqrt(xv*xv+yv*yv)*6371)}
+
+// 星座（简化版）
+const ZSTART=[[1,20,"宝瓶"],[2,19,"双鱼"],[3,21,"白羊"],[4,20,"金牛"],[5,21,"双子"],[6,22,"巨蟹"],[7,23,"狮子"],[8,23,"室女"],[9,23,"天秤"],[10,24,"天蝎"],[11,23,"人马"],[12,22,"摩羯"]];
+function zodiac(dt){const m=dt.getUTCMonth()+1,d=dt.getUTCDate();let name="摩羯";for(const z of ZSTART){if(m>z[0]||(m===z[0]&&d>=z[1]))name=z[2]}return name+"座"}
+
+// 背景星空
+let W=0,H=0,DPR=1,stars=[];
+function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);stars=[];for(let i=0;i<200;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,a:.2+Math.random()*.6})}
+window.addEventListener("resize",resize);resize();
+
+// 月球绘制
+function drawMoon(mx,my,r,illum,sunAngle){
+  ctx.shadowBlur=0;ctx.shadowColor="transparent";ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";ctx.strokeStyle="transparent";ctx.lineWidth=0;
+  ctx.save();ctx.translate(mx,my);
+  ctx.beginPath();ctx.arc(0,0,r+1,0,7);ctx.fillStyle="#0a0e18";ctx.fill();
+  ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.clip();
+  const g=ctx.createRadialGradient(-r*.15,-r*.1,r*.1,0,0,r);
+  g.addColorStop(0,"#cdd2dc");g.addColorStop(.5,"#b0b6c2");g.addColorStop(.85,"#8a90a0");g.addColorStop(1,"#626878");
+  ctx.fillStyle=g;ctx.fillRect(-r,-r,2*r,2*r);
+  ctx.globalAlpha=.28;
+  [[.1,-.05,.22],[-.15,.1,.18],[.18,.2,.15],[-.05,-.2,.2]].forEach(m=>{
+    const mg=ctx.createRadialGradient(m[0]*r,m[1]*r,0,m[0]*r,m[1]*r,m[2]*r);
+    mg.addColorStop(0,"#5a6070");mg.addColorStop(1,"rgba(90,96,112,0)");
+    ctx.fillStyle=mg;ctx.fillRect(-r,-r,2*r,2*r);
+  });
+  ctx.globalAlpha=1;
+  ctx.rotate(sunAngle);
+  const N=30;ctx.beginPath();
+  for(let i=0;i<=N;i++){const v=-1+2*i/N,sq=Math.sqrt(Math.max(0,1-v*v)),x=-r*sq,y=v*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  for(let i=N;i>=0;i--){const v=-1+2*i/N,sq=Math.sqrt(Math.max(0,1-v*v));ctx.lineTo((1-2*illum)*r*sq,v*r)}
+  ctx.closePath();ctx.fillStyle="#0a0e18";ctx.fill();
+  ctx.restore();
+}
+
+// 主绘制循环
+function draw(){
+  const now=Date.now(),d=dnum(now);
+  const cx=W/2,cy=H*.5,R=Math.min(W,H)*.30;
+  const date=new Date(now);
+  const utch=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600;
+  const earthRot=(90-utch*15)*RAD;
+  const ph=moonPhase(d),st=solarTerm(d);
+
+  // 背景
+  ctx.fillStyle="#050a18";ctx.fillRect(0,0,W,H);
+  for(const s of stars){ctx.globalAlpha=s.a;ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,7);ctx.fill()}
+  ctx.globalAlpha=1;
+
+  // 太阳光晕
+  const sx=cx,sy=cy-R*2;
+  let sg=ctx.createRadialGradient(sx,sy,0,sx,sy,R*.42);
+  sg.addColorStop(0,"rgba(255,246,220,.9)");sg.addColorStop(.4,"rgba(248,200,110,.35)");sg.addColorStop(1,"rgba(245,170,70,0)");
+  ctx.fillStyle=sg;ctx.beginPath();ctx.arc(sx,sy,R*.42,0,7);ctx.fill();
+  ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(sx,sy,8,0,7);ctx.fill();
+
+  // 地球
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();ctx.translate(cx,cy);ctx.rotate(earthRot);
+  const eg=ctx.createRadialGradient(0,0,R*.1,0,0,R);
+  eg.addColorStop(0,"#1a5a9e");eg.addColorStop(.4,"#164880");eg.addColorStop(.8,"#0e3060");eg.addColorStop(1,"#0a1e40");
+  ctx.fillStyle=eg;ctx.fillRect(-R,-R,2*R,2*R);
+  ctx.fillStyle="rgba(54,120,72,.8)";
+  const lands=[{x:.2,y:-.1,rw:.15,rh:.2},{x:-.3,y:.1,rw:.2,rh:.15},{x:.05,y:.15,rw:.25,rh:.3},{x:-.1,y:-.2,rw:.12,rh:.12},{x:.3,y:.25,rw:.1,rh:.08}];
+  for(const l of lands){ctx.beginPath();ctx.ellipse(l.x*R,l.y*R,l.rw*R,l.rh*R,0,0,7);ctx.fill()}
+  ctx.fillStyle="rgba(230,240,255,.7)";
+  ctx.beginPath();ctx.arc(0,-R*.92,R*.12,0,7);ctx.fill();
+  ctx.beginPath();ctx.arc(0,R*.92,R*.08,0,7);ctx.fill();
+  ctx.rotate(-earthRot);ctx.restore();
+  ctx.strokeStyle="rgba(95,214,240,.25)";ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(cx,cy,R*1.05,0,7);ctx.stroke();
+
+  // 24小时环
+  ctx.save();ctx.translate(cx,cy);
+  for(let h=0;h<24;h++){
+    const a=-((h-12)/24)*2*Math.PI,nx=Math.sin(a),ny=-Math.cos(a);
+    if(h%2===0){ctx.fillStyle="rgba(165,212,238,.85)";ctx.font="10px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(h),nx*R*1.5,ny*R*1.5)}
+    ctx.fillStyle="rgba(150,200,230,.6)";ctx.beginPath();ctx.arc(nx*R*1.4,ny*R*1.4,1.2,0,7);ctx.fill();
+  }
+  const pa=-((utch-12)/24)*2*Math.PI;
+  ctx.fillStyle="#5fd6f0";ctx.beginPath();
+  ctx.moveTo(Math.sin(pa)*R*1.08,-Math.cos(pa)*R*1.08);
+  ctx.lineTo(Math.sin(pa-.03)*R,-Math.cos(pa-.03)*R);
+  ctx.lineTo(Math.sin(pa+.03)*R,-Math.cos(pa+.03)*R);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // 月球（初一在正上方、十五在正下方）
+  const Or=R*1.21,ma=ph.el*RAD,mx=cx-Math.sin(ma)*Or,my=cy-Math.cos(ma)*Or,mr=11;
+  drawMoon(mx,my,mr,ph.illum,0);
+
+  // 中央时钟
+  const p2=n=>String(n).padStart(2,"0");
+  const sec=date.getUTCSeconds()+date.getUTCMilliseconds()/1000;
+  const min=date.getUTCMinutes()+sec/60;
+  const hour=(date.getUTCHours()+date.getUTCMinutes()/60);
+  const rc=R*.18;
+  ctx.save();ctx.translate(cx,cy);
+  ctx.beginPath();ctx.arc(0,0,rc,0,7);ctx.fillStyle="rgba(247,250,255,.92)";ctx.fill();
+  ctx.strokeStyle="rgba(60,90,120,.6)";ctx.lineWidth=1.2;ctx.stroke();
+  for(let i=0;i<12;i++){const a=i/12*2*Math.PI;ctx.strokeStyle="rgba(40,60,90,.5)";ctx.lineWidth=i%3===0?1.5:.7;ctx.beginPath();ctx.moveTo(Math.sin(a)*rc*.82,-Math.cos(a)*rc*.82);ctx.lineTo(Math.sin(a)*rc*.95,-Math.cos(a)*rc*.95);ctx.stroke()}
+  ctx.fillStyle="rgba(28,43,68,.9)";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.font="bold "+Math.max(7,Math.round(rc*.32))+"px sans-serif";
+  ctx.fillText(p2(date.getUTCMonth()+1)+"."+p2(date.getUTCDate()),0,rc*.45);
+  let a=min/60*2*Math.PI;ctx.strokeStyle="#1c2b44";ctx.lineWidth=2;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.sin(a)*rc*.55,-Math.cos(a)*rc*.55);ctx.stroke();
+  a=sec/60*2*Math.PI;ctx.strokeStyle="#e0453a";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-Math.sin(a)*rc*.12,Math.cos(a)*rc*.12);ctx.lineTo(Math.sin(a)*rc*.78,-Math.cos(a)*rc*.78);ctx.stroke();
+  ctx.fillStyle="#1c2b44";ctx.beginPath();ctx.arc(0,0,rc*.07,0,7);ctx.fill();
+  ctx.restore();
+
+  // 底部信息
+  ctx.textAlign="center";ctx.textBaseline="top";
+  const infoY=cy+R*1.6;
+  ctx.font="bold 13px sans-serif";ctx.fillStyle="#eaf6ff";
+  ctx.fillText(ph.name+" · 月龄 "+ph.age.toFixed(1)+"天 · "+Math.round(ph.illum*100)+"% 照亮",cx,infoY);
+  ctx.font="11px sans-serif";ctx.fillStyle="#ffd24a";
+  ctx.fillText("节气 "+st.name+" · 距下一节气 "+st.toNext+"天 "+st.next+" · "+zodiac(date),cx,infoY+18);
+  ctx.font="10px sans-serif";ctx.fillStyle="#7fa8c4";
+  ctx.fillText("月地距 "+(moonDistKm(d)+"").replace(/\B(?=(\d{3})+(?!\d))/g,",")+" km",cx,infoY+35);
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

@@ -132,9 +132,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05080f;font-family:
 .voy-destpicker{position:absolute;top:calc(env(safe-area-inset-top) + 52px);left:14px;padding:5px 12px;border-radius:16px;font-size:12px;color:#bfeeff;border:1px solid rgba(120,230,255,.45);background:rgba(8,22,40,.55);cursor:pointer}
 .voy-labels{position:absolute;inset:0;pointer-events:none}
 .voy-label{position:absolute;transform:translate(-50%,-150%);font-size:11px;color:#cdeeff;white-space:nowrap;padding:1px 6px;border-radius:8px;background:rgba(6,16,32,.5);border:1px solid rgba(120,230,255,.28)}
+/* 屏保模式：?scrsv=1 时隐藏 UI 装饰，只留地球表盘 */
+body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,body.scrsv #tv-assist,body.scrsv #guideOverlay,body.scrsv #guideCard{display:none!important}
+/* 手机竖屏：底部工具条换行显示，日期占首行，其余按钮自动换行，避免横向滚动 */
+@media(max-width:640px){
+  .bottombar{flex-wrap:wrap;overflow-x:hidden;gap:5px}
+  .bar-date{order:-1;flex-basis:100%;min-width:0}
+  .bar-sep{display:none}
+}
 </style>
 </head>
 <body>
+<script>if(/[?&]scrsv=1/.test(location.search))document.body.classList.add('scrsv');</script>
 
 <!-- 2D 画布（地球表盘） -->
 <canvas id="cv"></canvas>
@@ -190,15 +199,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05080f;font-family:
 
 <!-- 地图风格选择弹窗 -->
 <div id="skinPopup" style="display:none;position:fixed;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px">
-  <div style="display:flex;gap:6px">
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
     <div class="spd-opt skin-opt" data-skin="satellite">卫星</div>
     <div class="spd-opt skin-opt" data-skin="admin">行政</div>
     <div class="spd-opt skin-opt" data-skin="cartoon">卡通</div>
+    <div class="spd-opt skin-opt" data-skin="golden">金色丝线</div>
+    <div class="spd-opt skin-opt" data-skin="tellurian">地球仪</div>
   </div>
 </div>
 
 <!-- 日期选择器弹窗 -->
-<div id="datePicker" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:30;background:rgba(8,20,36,.97);border:1px solid rgba(95,214,240,.5);border-radius:16px;padding:0;min-width:300px;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden">
+<div id="datePicker" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:30;background:rgba(8,20,36,.97);border:1px solid rgba(95,214,240,.5);border-radius:16px;padding:0;width:min(340px,92vw);box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden">
   <div style="display:flex;border-bottom:1px solid rgba(95,214,240,.15)">
     <div id="tabSolar" class="dp-tab active" onclick="switchCalTab('solar')">公历</div>
     <div id="tabLunar" class="dp-tab" onclick="switchCalTab('lunar')">农历</div>
@@ -206,7 +217,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05080f;font-family:
   <div id="solarPanel" style="padding:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="dp-nav" onclick="dpNav(-1)">‹</div>
-      <div style="display:flex;gap:6px;align-items:center"><select id="dpYear" style="font-size:13px;color:#eaf6ff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:3px 6px"></select><span id="dpTitle" style="font-size:15px;font-weight:700;color:#eaf6ff"></span></div>
+      <div style="display:flex;gap:6px;align-items:center"><input type="number" id="dpYear" style="font-size:13px;color:#eaf6ff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:3px 6px;width:96px" title="年份（公元前用负数，如 -500）"><span id="dpTitle" style="font-size:15px;font-weight:700;color:#eaf6ff"></span></div>
       <div class="dp-nav" onclick="dpNav(1)">›</div>
     </div>
     <div id="dpGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center"></div>
@@ -319,7 +330,7 @@ const EARTH_CFG = {
   earthGlowOuter: 1,  // 地球光晕外圈 = R × 此值
   earthBorderScale: 1.001,// 地球边框圆圈 = R × 此值
   ptrTipScale: 1.05,     // 时区指针尖端距圆心 = R × 此值
-  sunY: -1.9,            // 太阳 Y 偏移 = R × 此值（负=上方）
+  sunY: -1.5,            // 太阳 Y 偏移 = R × 此值（负=上方，约在 12 点位置）
   sunGlowScale: 0.42     // 太阳光晕半径 = R × 此值
 };
 const J2000 = Date.UTC(2000, 0, 1, 12, 0, 0);
@@ -337,16 +348,24 @@ function sunLon(d) {
 }
 function moonLon(d) {
   d += 1.5;
-  const N = rev(125.1228 - 0.0529538083 * d), e = 0.0549;
-  const M = rev(115.3654 + 13.0649929509 * d), Mr = M * RAD;
-  let E = M + (e / RAD) * Math.sin(Mr);
+  const N = rev(125.1228 - 0.0529538083 * d), i = 5.1454,
+    w = rev(318.0634 + 0.1643573223 * d), e = 0.0549, M = rev(115.3654 + 13.0649929509 * d);
+  const Mr = M * RAD;
+  let E = M + (e / RAD) * Math.sin(Mr) * (1 + e * Math.cos(Mr));
   for (let k = 0; k < 4; k++) { const Er = E * RAD; E = E - (E - (e / RAD) * Math.sin(Er) - M) / (1 - e * Math.cos(Er)); }
-  const Er = E * RAD, xv = Math.cos(Er) - e, yv = Math.sqrt(1 - e * e) * Math.sin(Er);
-  const v = Math.atan2(yv, xv) / RAD, w = rev(318.0634 + 0.1643573223 * d);
-  return rev(v + w);
+  const Er = E * RAD, xv = Math.cos(Er) - e, yv = Math.sqrt(1 - e * e) * Math.sin(Er),
+    v = Math.atan2(yv, xv) / RAD, r = Math.sqrt(xv * xv + yv * yv);
+  const Nr = N * RAD, vr = (v + w) * RAD, ir = i * RAD;
+  const xh = r * (Math.cos(Nr) * Math.cos(vr) - Math.sin(Nr) * Math.sin(vr) * Math.cos(ir));
+  const yh = r * (Math.sin(Nr) * Math.cos(vr) + Math.cos(Nr) * Math.sin(vr) * Math.cos(ir));
+  return rev(Math.atan2(yh, xh) / RAD);
 }
 function moonPhase(d, lunarDay) {
-  const el = rev(moonLon(d) - sunLon(d)), illum = (1 - Math.cos(el * RAD)) / 2, age = SYN * el / 360;
+  // 伸长：有农历日时按农历日线性映射（初一=0°在上方、十五=180°在正下方），
+  // 避免真实满月落在十六/十七导致十五时月球偏出正下方
+  const elAstro = rev(moonLon(d) - sunLon(d));
+  const el = lunarDay != null ? ((lunarDay - 1) / 14) * 180 : elAstro;
+  const illum = (1 - Math.cos(el * RAD)) / 2, age = SYN * el / 360;
   // 月相名称按农历日判断，同一天内不变
   var name;
   if (lunarDay != null) {
@@ -454,9 +473,10 @@ function frame(now) {
 // ========== 地球 2D 绘制 ==========
 const TEXBASE = 'textures/';
 const EARTH_SKINS = ['satellite','admin','cartoon'];
-const SKIN_NAMES = { satellite:'卫星', admin:'行政', cartoon:'卡通' };
+const SKIN_NAMES = { satellite:'卫星', admin:'行政', cartoon:'卡通', golden:'金色丝线', tellurian:'地球仪' };
 let curSkin = 'satellite';
 const earthImgCache = {}; // key: 'skin_hemi' → Image
+let earthLoadStart = Date.now();
 function earthCacheKey(skin, hemi) { return skin + '_' + (hemi > 0 ? 'n' : 's'); }
 function getEarthTexName(skin, hemi) {
   const pole = hemi > 0 ? 'earth-north-pole' : 'earth-south-pole';
@@ -473,6 +493,7 @@ function isEarthReady() {
 function loadEarthPole() {
   const key = earthCacheKey(curSkin, state.hemi);
   if (earthImgCache[key] && earthImgCache[key].complete && earthImgCache[key].naturalWidth > 0) return;
+  earthLoadStart = Date.now();
   const img = new Image();
   earthImgCache[key] = img;
   img.src = TEXBASE + getEarthTexName(curSkin, state.hemi);
@@ -486,14 +507,7 @@ loadImage(moonImg, TEXBASE + 'moon.jpg');
 function makeEarthTex() {
   const s = 256, c = document.createElement('canvas'); c.width = c.height = s;
   const x = c.getContext('2d');
-  let g = x.createRadialGradient(s * 0.38, s * 0.34, s * 0.05, s * 0.5, s * 0.5, s * 0.6);
-  g.addColorStop(0, '#2a78c0'); g.addColorStop(1, '#0c2f57');
-  x.fillStyle = g; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, 7); x.fill();
-  x.fillStyle = 'rgba(54,148,92,.92)';
-  [[90, 70, 46, 30], [150, 150, 52, 40], [60, 170, 30, 26], [185, 95, 30, 24], [120, 200, 40, 20]].forEach(([bx, by, rw, rh]) => { x.beginPath(); x.ellipse(bx, by, rw, rh, 0, 0, 7); x.fill(); });
-  x.fillStyle = 'rgba(235,245,255,.85)';
-  x.beginPath(); x.arc(s / 2, 28, 40, 0, 7); x.fill();
-  x.beginPath(); x.arc(s / 2, s - 26, 46, 0, 7); x.fill();
+  x.fillStyle = '#1b4a7a'; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, 7); x.fill();
   return c;
 }
 let earthTex = null;
@@ -526,7 +540,8 @@ function drawMoonLit(mx, my, r, illum, rot) {
 }
 
 function drawEarth(d, date) {
-  const cx = W / 2, cy = H * EARTH_CFG.centerY, R = Math.min(W, H) * EARTH_CFG.earthScale * earthZoom;
+  const scrsv = document.body.classList.contains('scrsv');
+  const cx = scrsv ? W * 0.68 : W / 2, cy = H * EARTH_CFG.centerY, R = Math.min(W, H) * EARTH_CFG.earthScale * earthZoom;
   const utcDate = new Date(dispT);  // 不加时区偏移，纯 UTC
   const utch = utcDate.getUTCHours() + utcDate.getUTCMinutes() / 60;
   const merid = (90 - utch * 15) * RAD;
@@ -558,6 +573,24 @@ function drawEarth(d, date) {
   if (isEarthReady()) { ctx.drawImage(eimg, -RR, -RR, 2 * RR, 2 * RR); }
   else { ctx.drawImage(earthTex, -RR, -RR, 2 * RR, 2 * RR); }
   ctx.rotate(south ? -merid - 150 * RAD : -merid); ctx.restore();
+
+  // 地球加载中动画（不随地球旋转；至少显示 2s）
+  if (!isEarthReady() || Date.now() - earthLoadStart < 2000) {
+    const t = Date.now() / 1000;
+    // 外圈旋转弧线（醒目）
+    ctx.strokeStyle = '#8cd7ff';
+    ctx.lineWidth = Math.max(4, R * 0.08);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.52, t * 3, t * 3 + Math.PI * 1.5);
+    ctx.stroke();
+    // 内圈反向弧线
+    ctx.strokeStyle = 'rgba(210,235,255,.6)';
+    ctx.lineWidth = Math.max(3, R * 0.045);
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.38, -t * 2.4, -t * 2.4 + Math.PI * 1.6);
+    ctx.stroke();
+  }
 
   // 地球光晕
   let ag = ctx.createRadialGradient(cx, cy, R * EARTH_CFG.earthGlowInner, cx, cy, R * EARTH_CFG.earthGlowOuter);
@@ -601,17 +634,19 @@ function drawEarth(d, date) {
     { cn: '伦敦', lat: 51.5, lon: 0.0, tier: 0 },
     { cn: '温哥华', lat: 49.3, lon: -123.1, lonAdj: 15 },
     { cn: '渥太华', lat: 45.4, lon: -75.7, tier: 1 },
-    { cn: '多伦多', lat: 43.7, lon: -79.4, tier: 2 }
+    { cn: '多伦多', lat: 43.7, lon: -79.4, tier: 2 },
+    { cn: '旧金山', lat: 37.77, lon: -122.42, tier: 1 }
   ];
   const SOUTH_CITIES = [
     { cn: '悉尼', lat: -33.9, lon: 151.2 },
+    { cn: '堪培拉', lat: -35.28, lon: 149.13, tier: 1 },
     { cn: '开普敦', lat: -33.9, lon: 18.4 },
     { cn: '布宜诺斯艾利斯', lat: -34.6, lon: -58.4 },
     { cn: '圣保罗', lat: -23.6, lon: -46.6, tier: 1 },
     { cn: '惠灵顿', lat: -41.3, lon: 174.8 },
     { cn: '乌斯怀亚', lat: -54.8, lon: -68.3 }
   ];
-  const SOUTH_OFFSET = -60 * RAD;
+  const SOUTH_OFFSET = 30 * RAD;
   const south = state.hemi < 0;
   const list = south ? SOUTH_CITIES : NORTH_CITIES;
   const rot = south ? merid + 150 * RAD + SOUTH_OFFSET : merid;
@@ -665,11 +700,16 @@ function drawEarth(d, date) {
   // 中央时钟表盘
   const rc = R * EARTH_CFG.clockScale;
   ctx.save(); ctx.translate(cx, cy);
-  ctx.beginPath(); ctx.arc(0, 0, rc, 0, 7); ctx.fillStyle = 'rgba(247,250,255,.92)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, rc, 0, 7); ctx.fillStyle = '#f7faff'; ctx.fill();
   ctx.strokeStyle = 'rgba(60,90,120,.6)'; ctx.lineWidth = 1.2; ctx.stroke();
   for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * Math.PI; ctx.strokeStyle = 'rgba(40,60,90,.5)'; ctx.lineWidth = i % 3 === 0 ? 1.5 : 0.7; ctx.beginPath(); ctx.moveTo(Math.sin(a) * rc * 0.82, -Math.cos(a) * rc * 0.82); ctx.lineTo(Math.sin(a) * rc * 0.95, -Math.cos(a) * rc * 0.95); ctx.stroke(); }
+  // 分钟刻度 0/10/20/30/40/50
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold ' + Math.max(6, Math.round(rc * 0.18)) + 'px sans-serif';
+  ctx.fillStyle = 'rgba(28,43,68,.95)';
+  for (let m = 0; m < 60; m += 10) { const ma = (m / 60) * 2 * Math.PI; ctx.fillText(String(m), Math.sin(ma) * rc * 0.66, -Math.cos(ma) * rc * 0.66); }
   ctx.fillStyle = 'rgba(28,43,68,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold ' + Math.max(7, Math.round(rc * 0.34)) + 'px sans-serif';
+  ctx.font = 'bold ' + Math.max(7, Math.round(rc * 0.24)) + 'px sans-serif';
   ctx.fillText(p2(date.getUTCMonth() + 1) + '.' + p2(date.getUTCDate()), 0, rc * 0.45);
   const minu = date.getUTCMinutes() + date.getUTCSeconds() / 60;
   const sec = date.getUTCSeconds() + date.getUTCMilliseconds() / 1000;
@@ -681,7 +721,7 @@ function drawEarth(d, date) {
   ctx.restore();
 
   // 月球
-  const Or = R * EARTH_CFG.moonOrbitScale, ma = ph.el * RAD, mx = cx - Math.sin(ma) * Or, my = cy - Math.cos(ma) * Or, mr = EARTH_CFG.moonSize;
+  const Or = R * EARTH_CFG.moonOrbitScale, ma = ph.el * RAD, mx = cx - Math.sin(ma) * Or, my = cy - Math.cos(ma) * Or, mr = Math.min(EARTH_CFG.moonSize, R * 0.15);
   const cAng = Math.atan2(cy - my, cx - mx), sAng = Math.atan2(sy - my, sx - mx);
   const adist = (a, b) => { let dd = Math.abs((a - b) % (2 * Math.PI)); return dd > Math.PI ? 2 * Math.PI - dd : dd; };
   const t1 = cAng - Math.PI / 2, t2 = cAng + Math.PI / 2;
@@ -716,7 +756,32 @@ function lunarLeapDays(y){return lunarLeap(y)?((lunarInfo[y-1900]&0x10000)?30:29
 function lunarMonthDays(y,m){return(lunarInfo[y-1900]&(0x10000>>m))?30:29;}
 function lunarYearDays(y){var s=348;for(var i=0x8000;i>0x8;i>>=1)s+=(lunarInfo[y-1900]&i)?1:0;return s+lunarLeapDays(y);}
 function lunarMonths(y){var ms=[],leap=lunarLeap(y);for(var m=1;m<=12;m++){ms.push({m:m,isLeap:false,label:['\u6b63','\u4e8c','\u4e09','\u56db','\u4e94','\u516d','\u4e03','\u516b','\u4e5d','\u5341','\u51ac','\u814a'][m-1]+'\u6708'});if(m===leap)ms.push({m:m,isLeap:true,label:'\u95f0'+['\u6b63','\u4e8c','\u4e09','\u56db','\u4e94','\u516d','\u4e03','\u516b','\u4e5d','\u5341','\u51ac','\u814a'][m-1]+'\u6708'});}return ms;}
+// ===== 天文农历（覆盖 ±5000 年，用现代置闰规则推算；精度略低于 1900-2100 查表）=====
+function _astroNewMoonTime(d){let t=d;for(let i=0;i<15;i++){const el=rev(moonLon(t)-sunLon(t));const err=el>180?el-360:el;t-=(err/360)*SYN;if(Math.abs(err)<1e-7)break;}return t;}
+function _astroShuoDay(d){let t=_astroNewMoonTime(d);let sd=Math.round(t+8/24);if(sd>d){t-=SYN;sd=Math.round(t+8/24);}return sd;}
+function _astroNextShuoDay(d){let t=_astroNewMoonTime(d);let sd=Math.round(t+8/24);if(sd<=d){t+=SYN;sd=Math.round(t+8/24);}return sd;}
+function _astroSunLonDay(d,target){let t=d;for(let i=0;i<15;i++){const s=sunLon(t);let err=rev(s-target);if(err>180)err-=360;t-=err/0.9856;if(Math.abs(err)<1e-7)break;}return Math.round(t+8/24);}
+function solarToLunarAstro(y,m,d){
+  const day=Math.round(dnum(Date.UTC(y,m-1,d,12,0,0)));
+  const shuo=_astroShuoDay(day), nextShuo=_astroNextShuoDay(shuo);
+  let lunarDay=day-shuo+1;
+  let hasZQ=false;
+  for(let k=0;k<12;k++){const t=(k*30)%360;const zq=_astroSunLonDay(shuo+14,t);if(zq>=shuo&&zq<nextShuo){hasZQ=true;break;}}
+  let dongZhi=_astroSunLonDay(day,270); if(dongZhi>day) dongZhi=_astroSunLonDay(day-365,270);
+  const dongZhiShuo=_astroShuoDay(dongZhi);
+  const offset=Math.round((shuo-dongZhiShuo)/SYN);
+  const regMonth=off=>((11+off-1)%12+12)%12+1;
+  let month=regMonth(offset), isLeap=false;
+  if(!hasZQ&&month!==11){isLeap=true;month=regMonth(offset-1);}
+  const dongZhiYear=new Date(J2000+dongZhi*86400e3).getUTCFullYear();
+  const year=dongZhiYear+(offset>=2?1:0);
+  if(lunarDay<1)lunarDay=1; if(lunarDay>30)lunarDay=30;
+  const mStr=['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+  const dStr=['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+  return {year:year,month:month,day:lunarDay,isLeap:isLeap,monthName:mStr[month-1]+'月',dayName:dStr[lunarDay-1]||''};
+}
 function solarToLunar(y,m,d){
+  if (y < 1900 || y > 2100) return solarToLunarAstro(y, m, d);  // 超出查表范围，用天文推算
   var off=Math.round((Date.UTC(y,m-1,d)-Date.UTC(1900,0,31))/86400000);
   var year=1900,leap=0;
   for(var i=1900;i<2101&&off>0;i++){var dy=lunarYearDays(i);off-=dy;}
@@ -783,7 +848,13 @@ function dpNav(dir) { dpMonth += dir; if (dpMonth < 0) { dpMonth = 11; dpYear--;
 
 function renderCalendar() {
   document.getElementById('dpTitle').textContent = (dpMonth + 1) + '月';
-  var ySel = document.getElementById('dpYear'); if(ySel && !ySel.options.length) { for(var yy=1900;yy<=2100;yy++){var o=document.createElement('option');o.value=yy;o.textContent=yy+'年';ySel.appendChild(o);} ySel.onchange=function(){dpYear=parseInt(this.value);renderCalendar();}; } if(ySel)ySel.value=dpYear;
+  var ySel = document.getElementById('dpYear');
+  if (ySel) {
+    ySel.min = new Date().getFullYear() - 5000;
+    ySel.max = new Date().getFullYear() + 5000;
+    if (!ySel.dataset.bound) { ySel.dataset.bound = '1'; ySel.onchange = function(){ dpYear = parseInt(this.value) || dpYear; renderCalendar(); }; }
+    ySel.value = dpYear;
+  }
   var grid = document.getElementById('dpGrid');
   grid.innerHTML = '';
   ['日','一','二','三','四','五','六'].forEach(function(d) {
@@ -813,8 +884,12 @@ function renderCalendar() {
   }
   // Update lunar info
   var lunar = solarToLunar(dpYear, dpMonth + 1, dpSelected);
+  var _st = solarTerm(dnum(Date.UTC(dpYear, dpMonth, dpSelected) + 12*3600000));
+  var yearLabel = dpYear >= 0 ? dpYear + '年' : '公元前 ' + (-dpYear) + '年';
   if (lunar) {
-    var _st = solarTerm(dnum(Date.UTC(dpYear, dpMonth, dpSelected) + 12*3600000)); document.getElementById('lunarInfo').textContent = lunar.year + '年' + (lunar.isLeap ? '闰' : '') + lunar.monthName + lunar.dayName + ' · ' + _st.name;
+    document.getElementById('lunarInfo').textContent = lunar.year + '年' + (lunar.isLeap ? '闰' : '') + lunar.monthName + lunar.dayName + ' · ' + _st.name;
+  } else {
+    document.getElementById('lunarInfo').textContent = yearLabel + ' · ' + _st.name;
   }
 }
 
@@ -868,6 +943,9 @@ document.getElementById('tzBtn').onclick = function(e) {
     opts.appendChild(el);
   });
   popup.style.display = 'block';
+  // 防溢出：超出屏幕右边界时左移
+  var _pw = popup.offsetWidth, _ml = window.innerWidth - _pw - 8;
+  if (_pw && (parseFloat(popup.style.left) || 0) > _ml) popup.style.left = Math.max(8, _ml) + 'px';
 };
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#tzPopup') && !e.target.closest('#tzBtn')) {
@@ -1014,7 +1092,11 @@ document.getElementById('voyExit').onclick = () => exitVoyage();
 
 // ========== 触摸交互 ==========
 let drag = null, pinch = null;
+function isUI(t) {
+  return !!(t && t.closest && t.closest('button,a,input,select,textarea,[onclick],.topbar,.bottombar,.view-seg,#tv-fab,#tv-assist,#datePicker,#spdPopup,#skinPopup,#tzPopup,.fort-mask,.card-mask,.guide-card,.guide-overlay'));
+}
 function onTouchStart(e) {
+  if (isUI(e.target)) return;  // 点按交互元素不拦截，让按钮正常触发 click
   e.preventDefault && e.preventDefault();
   if (e.touches.length >= 2) {
     const a = { x: e.touches[0].clientX, y: e.touches[0].clientY }, b = { x: e.touches[1].clientX, y: e.touches[1].clientY };
@@ -1025,13 +1107,14 @@ function onTouchStart(e) {
   drag = { x: t.x, y: t.y, moved: 0 };
 }
 function onTouchMove(e) {
-  e.preventDefault && e.preventDefault();
   if (pinch && e.touches.length >= 2) {
+    e.preventDefault && e.preventDefault();
     const a = { x: e.touches[0].clientX, y: e.touches[0].clientY }, b = { x: e.touches[1].clientX, y: e.touches[1].clientY };
     const dd = Math.hypot(a.x - b.x, a.y - b.y);
     return;
   }
   if (!drag || !e.touches.length) return;
+  e.preventDefault && e.preventDefault();
   const p = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   const dx = p.x - drag.x, dy = p.y - drag.y;
   drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
@@ -1154,6 +1237,9 @@ document.getElementById('btnSkin').onclick = (e) => {
   popup.style.transform = 'none';
   popup.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
   popup.style.display = 'block';
+  // 防溢出：超出屏幕右边界时左移
+  var _pw = popup.offsetWidth, _ml = window.innerWidth - _pw - 8;
+  if (_pw && (parseFloat(popup.style.left) || 0) > _ml) popup.style.left = Math.max(8, _ml) + 'px';
   document.querySelectorAll('.skin-opt').forEach(o => o.classList.toggle('on', o.dataset.skin === curSkin));
 };
 document.querySelectorAll('.skin-opt').forEach(el => {
@@ -1217,8 +1303,8 @@ document.getElementById('guideOverlay').onclick = closeGuide;
 resize();
 // 默认进入地球视图
 setView('earth');
-// 首次引导
-if (!localStorage.getItem('guideSeen')) setTimeout(() => showGuide(0), 1500);
+// 首次引导（屏保模式下不弹）
+if (!localStorage.getItem('guideSeen') && !document.body.classList.contains('scrsv')) setTimeout(() => showGuide(0), 1500);
 requestAnimationFrame(frame);
 
 // ===== 过场动画：地球→太阳系 =====
@@ -1284,5 +1370,8 @@ document.querySelectorAll('a[href*="solar-system"]').forEach(el => {
   });
 });
 </script>
+
+<script>window.TIMEVIEW='earth';</script>
+<script src="assistant.js"></script>
 </body>
 </html>

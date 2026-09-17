@@ -1,0 +1,41 @@
+{
+  "name": "timeview-screensaver",
+  "version": "1.0.0",
+  "description": "时间景观 · 桌面屏保（Win7 兼容版）",
+  "main": "main.js",
+  "author": "TimeView",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "24.13.3",
+    "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.timeview.screensaver",
+    "productName": "时间景观屏保",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "时间景观屏保-Win7.exe"
+    }
+  }
+}

@@ -8,21 +8,31 @@ const tls = require("tls");
 
 const PORT = parseInt(process.env.PORT || "80", 10);
 const ROOT = __dirname;
-const LLM_API_KEY = process.env.LLM_API_KEY || "";
-const LLM_BASE_URL = (process.env.LLM_BASE_URL || "https://api.deepseek.com/v1").replace(/\/+$/, "");
-const LLM_MODEL = process.env.LLM_MODEL || "deepseek-chat";
+// 清理 env 值（去除 CRLF 行尾残留的 \r 与首尾空白，避免模型名带 \r 导致 "Model not found"）
+const clean = s => (s || "").replace(/\r/g, "").trim();
+const LLM_API_KEY = clean(process.env.LLM_API_KEY);
+const LLM_BASE_URL = (clean(process.env.LLM_BASE_URL) || "https://api.deepseek.com/v1").replace(/\/+$/, "");
+const LLM_MODEL = clean(process.env.LLM_MODEL) || "deepseek-chat";
 // 命理推演专用 LLM（留空则复用上面的通用 LLM）
-const FORTUNE_API_KEY = process.env.FORTUNE_API_KEY || "";
-const FORTUNE_BASE_URL = (process.env.FORTUNE_BASE_URL || "").replace(/\/+$/, "");
-const FORTUNE_MODEL = process.env.FORTUNE_MODEL || "";
+const FORTUNE_API_KEY = clean(process.env.FORTUNE_API_KEY);
+const FORTUNE_BASE_URL = (clean(process.env.FORTUNE_BASE_URL) || "").replace(/\/+$/, "");
+const FORTUNE_MODEL = clean(process.env.FORTUNE_MODEL);
 // 未单独配置时，命理推演复用通用 LLM
 const _fk = FORTUNE_API_KEY || LLM_API_KEY;
 const _fu = FORTUNE_BASE_URL || LLM_BASE_URL;
 const _fm = FORTUNE_MODEL || LLM_MODEL;
-const PROXY = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.ALL_PROXY || "";
-const BIND = process.env.BIND || "0.0.0.0";
+const PROXY = clean(process.env.HTTPS_PROXY) || clean(process.env.HTTP_PROXY) || clean(process.env.ALL_PROXY);
+const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
-const FORTUNE_MODE = (process.env.FORTUNE_MODE || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
+const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
+// 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
+const VERSION = "3.21";
+// 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
+const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
+const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
+const TTS_MODEL = clean(process.env.TTS_MODEL) || "mimo-v2.5-tts";
+const TTS_VOICE_MALE = clean(process.env.TTS_VOICE_MALE) || "白桦";     // 阿远（男声）
+const TTS_VOICE_FEMALE = clean(process.env.TTS_VOICE_FEMALE) || "茉莉";  // 阿星（女声）
 
 // 天文/历法计算（与小程序复用同一套 astro.js / lunar.js，保证两端结果完全一致）
 const A = require("./astro");
@@ -56,6 +66,7 @@ function computeAstro(ts, tzMin) {
 
 let KB = [];
 try { KB = JSON.parse(fs.readFileSync(path.join(ROOT, "knowledge.json"), "utf-8")); } catch (e) {}
+function saveKB() { try { fs.writeFileSync(path.join(ROOT, "knowledge.json"), JSON.stringify(KB, null, 2)); } catch (e) {} }
 const DATA_DIR = process.env.DATA_DIR || ROOT;
 const ARCH = path.join(DATA_DIR, "archives.json");
 function loadArch() { try { return JSON.parse(fs.readFileSync(ARCH, "utf-8")); } catch (e) { return []; } }
@@ -65,12 +76,21 @@ function saveArch(a) { try { fs.writeFileSync(ARCH, JSON.stringify(a)); } catch 
 const BASE = (process.env.BASE_PATH || "").replace(/\/+$/, "");
 const BHREF = (BASE || "") + "/";
 function injectBase(html){ return html.replace(/<head([^>]*)>/i, '<head$1><base href="' + BHREF + '">'); }
-let LANDING = "", APP = "", RELEASE = "", WALLPAPER = "";
-try { LANDING = injectBase(fs.readFileSync(path.join(ROOT, "landing.html"), "utf-8")); } catch (e) {}
-try { APP = injectBase(fs.readFileSync(path.join(ROOT, "index.html"), "utf-8")); } catch (e) {}
-try { RELEASE = injectBase(fs.readFileSync(path.join(ROOT, "release.html"), "utf-8")); } catch (e) {}
-try { WALLPAPER = injectBase(fs.readFileSync(path.join(ROOT, "wallpaper.html"), "utf-8")); } catch (e) {}
-function sendHtml(res, html){ res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(Buffer.from(html)); }
+// 版本号：紧跟「时间景观」品牌文字（左上角），以 sub 小字显示。release.html（v3.0 发布说明）与 wallpaper.html 不在此注入。
+function injectVersion(html){
+  const sub = '<sub style="font-size:9px;color:#5fd6f0;margin-left:4px;letter-spacing:1px">v' + VERSION + '</sub>';
+  html = html.replace('<span class="brand">时间景观</span>', '<span class="brand">时间景观 ' + sub + '</span>');   // 应用页 index.html 顶栏
+  html = html.replace('>时间景观 · 太阳系</span>', '>时间景观 · 太阳系 ' + sub + '</span>');                       // 太阳系页 solar-system.html 顶栏
+  html = html.replace('<div class="top">时间景观<span>', '<div class="top">时间景观 ' + sub + '<span>');           // 落地页 landing.html 顶栏
+  return html;
+}
+function preparePage(file){ try { return injectVersion(injectBase(fs.readFileSync(path.join(ROOT, file), "utf-8"))); } catch (e) { return ""; } }
+let LANDING = preparePage("landing.html");
+let APP = preparePage("index.html");
+let RELEASE = preparePage("release.html");
+let WALLPAPER = preparePage("wallpaper.html");
+let ADMIN = preparePage("admin.html");
+function sendHtml(res, html){ res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache, no-store, must-revalidate" }); res.end(Buffer.from(html)); }
 
 const MIME = { ".html":"text/html; charset=utf-8", ".js":"text/javascript", ".css":"text/css",
   ".json":"application/json", ".png":"image/png", ".jpg":"image/jpeg", ".svg":"image/svg+xml", ".ico":"image/x-icon",
@@ -91,7 +111,7 @@ function retrieve(message) {
   const terms = message.replace(/[，。,.\?？!！、；;：:\s]+/g, " ").split(" ").filter(w => w.length >= 2).slice(0, 6);
   const hits = [];
   for (const k of KB) {
-    const hay = (k.title + k.content + (k.tags || ""));
+    const hay = ((k.question || "") + (k.answer || "") + (k.category || "") + (k.title || "") + (k.content || "") + (k.tags || ""));
     if (terms.some(t => hay.indexOf(t) >= 0)) hits.push(k);
     if (hits.length >= 5) break;
   }
@@ -202,7 +222,52 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  if (p === "/api/health") return sendJson(res, { ok: true, ai: !!LLM_API_KEY, kb: KB.length, model: LLM_MODEL, fortune: _fm, fortuneMode: FORTUNE_MODE });
+  if (p === "/api/health") return sendJson(res, { ok: true, ai: !!LLM_API_KEY, tts: !!TTS_API_KEY, kb: KB.length, model: LLM_MODEL, fortune: _fm, fortuneMode: FORTUNE_MODE });
+
+  // ===== 知识库问答：列表 + 增删改查（写入 knowledge.json）=====
+  if (p === "/api/qa") {
+    if (req.method === "GET") return sendJson(res, { items: KB });
+    const b = await readBody(req);
+    if (req.method === "POST") {
+      const question = (b.question || "").toString().trim().slice(0, 200);
+      const answer = (b.answer || "").toString().trim().slice(0, 2000);
+      if (!question || !answer) return sendJson(res, { error: "question/answer required" }, 400);
+      const item = { id: Date.now(), category: (b.category || "未分类").toString().slice(0, 20), role: b.role === "axing" ? "axing" : "ayuan", question, answer };
+      KB.push(item); saveKB(); return sendJson(res, { ok: true, item });
+    }
+    if (req.method === "PUT") {
+      const id = Number(b.id); const k = KB.find(x => x.id === id);
+      if (!k) return sendJson(res, { error: "not found" }, 404);
+      if (b.category !== undefined) k.category = String(b.category).slice(0, 20);
+      if (b.role !== undefined) k.role = b.role === "axing" ? "axing" : "ayuan";
+      if (b.question !== undefined) k.question = String(b.question).trim().slice(0, 200);
+      if (b.answer !== undefined) k.answer = String(b.answer).trim().slice(0, 2000);
+      saveKB(); return sendJson(res, { ok: true, item: k });
+    }
+    if (req.method === "DELETE") {
+      const id = Number(b.id); const idx = KB.findIndex(x => x.id === id);
+      if (idx < 0) return sendJson(res, { error: "not found" }, 404);
+      KB.splice(idx, 1); saveKB(); return sendJson(res, { ok: true });
+    }
+    return sendJson(res, { error: "method not allowed" }, 405);
+  }
+
+  // ===== 语音合成（小米 MiMo TTS v2.5）=====
+  if (p === "/api/tts" && req.method === "POST") {
+    try {
+      const b = await readBody(req);
+      const text = (b.text || "").toString().trim().slice(0, 600);
+      if (!text) return sendJson(res, { error: "empty" }, 400);
+      if (!TTS_API_KEY) return sendJson(res, { error: "no TTS_API_KEY" }, 503);
+      const voice = (b.voice === "female" || b.voice === "axing") ? TTS_VOICE_FEMALE : TTS_VOICE_MALE;
+      const bodyStr = JSON.stringify({ model: TTS_MODEL, messages: [{ role: "assistant", content: text }], audio: { format: "mp3", voice } });
+      const j = await postJSON(TTS_BASE_URL + "/chat/completions", { "Authorization": "Bearer " + TTS_API_KEY }, bodyStr, PROXY);
+      if (j.error) throw new Error(j.error.message || JSON.stringify(j.error));
+      const audio = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.audio;
+      if (!audio || !audio.data) throw new Error("no audio in response");
+      return sendJson(res, { audio: audio.data, format: "mp3" });
+    } catch (e) { return sendJson(res, { error: String(e && e.message || e) }, 502); }
+  }
 
   if (p === "/api/chat" && req.method === "POST") {
     try {
@@ -211,16 +276,106 @@ const server = http.createServer(async (req, res) => {
       const history = Array.isArray(b.history) ? b.history : [];
       if (!message) return sendJson(res, { error: "empty" }, 400);
       const kb = retrieve(message);
-      const ctx = kb.map(k => "【" + k.title + "】" + k.content).join("\n");
+      const ctx = kb.map(k => "【" + (k.question || k.title) + "】" + (k.answer || k.content)).join("\n");
       if (!LLM_API_KEY) {
-        return sendJson(res, { answer: "（未配置 LLM API Key，仅返回知识库匹配）\n" + (ctx || "无匹配条目"), sources: kb.map(k => k.title) });
+        return sendJson(res, { answer: "（未配置 LLM API Key，仅返回知识库匹配）\n" + (ctx || "无匹配条目"), sources: kb.map(k => k.question || k.title) });
       }
       const sys = "你是『时间景观』里的天文向导，用简洁准确的中文回答天文、历法、星座、行星、月相、三体等问题。优先使用下面【知识库】内容；没覆盖的用常识谨慎回答并说明。命理类仅作娱乐。\n\n【知识库】\n" + (ctx || "（无匹配）");
       const messages = [{ role: "system", content: sys }];
       history.slice(-6).forEach(h => messages.push({ role: h.role === "user" ? "user" : "assistant", content: String(h.content || "").slice(0, 600) }));
       messages.push({ role: "user", content: message.slice(0, 800) });
       const answer = await callLLM(messages);
-      return sendJson(res, { answer: answer || "（暂无回答）", sources: kb.map(k => k.title) });
+      return sendJson(res, { answer: answer || "（暂无回答）", sources: kb.map(k => k.question || k.title) });
+    } catch (e) { return sendJson(res, { error: String(e && e.message || e) }, 500); }
+  }
+
+  // ===== 双人 AI 数字解说（阿远/阿星）：大模型理解问题 + 知识库总结 + 风控兜底 =====
+  if (p === "/api/assistant" && req.method === "POST") {
+    try {
+      const b = await readBody(req);
+      const message = (b.message || "").toString().trim();
+      const view = b.view === "solar" ? "solar" : "earth";
+      if (!message) return sendJson(res, { error: "empty" }, 400);
+
+      // 硬风控第一道：高危词本地即时兜底，不进入大模型
+      const DANGER = /算命|运势|吉凶|祸福|征兆|预言|地震|火山|海啸|灾难|风水|塔罗|占星|星座运势|宿命|国运|命运|神迹|天机|改命|星象祸福|天降异象|竞品|别的软件|别的博主|热点|明星|八卦|时政|肯定错|强多了|不如|垃圾|骗人/;
+      if (DANGER.test(message)) return sendJson(res, { role: "ayuan", text: "这个话题我们就不展开啦，咱们继续看眼前实时演算的天象画面吧。", dodge: true });
+
+      if (!LLM_API_KEY) return sendJson(res, { role: "ayuan", text: "（未配置大模型 API Key，暂时无法联网理解问题）", offline: true }, 503);
+
+      const kb = retrieve(message);
+      const ctx = kb.map(k => "【" + (k.question || k.title) + "】" + (k.answer || k.content)).join("\n");
+
+      // 实时天象数据（回答“现在/今晚/今天”类问题以此为准）
+      let nowAstro = null;
+      try { nowAstro = computeAstro(Date.now(), 480); } catch (e) {}
+      const realtime = nowAstro
+        ? "【当前实时天象】今天：" + nowAstro.dateText + "（" + (nowAstro.lunar || "") + "）；当前节气：" + nowAstro.solarTerm + "；今晚月相：" + nowAstro.moonPhase + "（月龄约 " + nowAstro.moonAge + " 天，照亮约 " + nowAstro.moonIllum + "%）；当前黄道星座：" + nowAstro.zodiac + "。"
+        : "";
+
+      // 实时问题直接作答（不经过大模型，保证按真实天象回答）
+      if (nowAstro) {
+        if (/几点|几点了|北京时间|当地时间|现在时间/.test(message)) {
+          const bj = new Date(Date.now() + 480 * 60000);
+          const hh = String(bj.getUTCHours()).padStart(2, "0");
+          const mm = String(bj.getUTCMinutes()).padStart(2, "0");
+          return sendJson(res, { role: "ayuan", text: "现在是北京时间 " + hh + ":" + mm + "。", realtime: true });
+        }
+        const isNow = /今晚|现在|今天|此刻|当前|这会儿/.test(message);
+        if (isNow && /月相|月亮|月牙|满月|新月|上弦|下弦|凸月|娥眉|峨眉|残月/.test(message)) {
+          return sendJson(res, { role: "axing", text: "今晚是" + nowAstro.moonPhase + "，月龄约 " + parseFloat(nowAstro.moonAge) + " 天，照亮约 " + nowAstro.moonIllum + "%。", realtime: true });
+        }
+        if (isNow && /节气/.test(message)) {
+          return sendJson(res, { role: "ayuan", text: "现在正值" + nowAstro.solarTerm + "节气。", realtime: true });
+        }
+        if (isNow && /星座|黄道/.test(message)) {
+          return sendJson(res, { role: "ayuan", text: "太阳现在位于" + nowAstro.zodiac + "。", realtime: true });
+        }
+      }
+
+      // 角色判定：体验/人文/玩法类 → 阿星；原理/技术/知识类 → 阿远
+      const isXing = /生日|体验|氛围|感受|浪漫|治愈|好玩|心情|故事|人文|星空|抬头|城市|时间怎么读|几点/.test(message);
+      const role = isXing ? "axing" : "ayuan";
+
+      const persona = role === "ayuan"
+        ? "你是『时间景观』双人 AI 解说里的阿远（男），理性·技术·原理担当，沉稳客观、不煽情，负责天体力学、轨道、坐标系、历法原理等技术类问题。"
+        : "你是『时间景观』双人 AI 解说里的阿星（女），感性·体验·互动担当，温柔灵动、有亲和力，负责体验、人文、氛围、玩法类问题，把硬核知识转化为通俗感受。";
+
+      const viewNote = view === "solar"
+        ? "当前解说画面是「上帝俯视视角的太阳系全景」：可见全行星轨道、星际旅行、生日天象宇宙码、历史天象溯源。"
+        : "当前解说画面是「地球视角的日月地同行表」：可见太阳·月球·地球相位、24 时区、月相、潮汐、节气。";
+
+      const facts = view === "solar"
+        ? ["时间景观是实时引擎演算，非录播、非预制动画，时间轴可任意回溯与前进。",
+           "支持前后一万年尺度天象推演，长周期受轨道摄动精度约束，可自由切换任意时间节点。",
+           "演算依据 IAU 国际天球坐标系标准 + NASA DE440 高精度星历 + 项目自有坐标系可视化。",
+           "上帝俯视视角=跳出地球、从北极上方俯瞰太阳系，看到行星真实立体排布（区别于地面仰望的二维投影）。",
+           "行星连珠是地球二维投影视觉效果，真实宇宙空间里行星几乎不会直线排列。",
+           "历史天象溯源可看一万年内任意时间节点，只展示当时行星排布画面，不做历史因果解读。",
+           "生日天象宇宙码是项目独立功能；直播间只做功能演示，不提供一对一演算。",
+           "项目持续迭代优化中，正式上线时间以官方后续通知为准。"].join("\n")
+        : ["时间景观是实时引擎演算，非录播、非预制动画。",
+           "地球视角=「日月地同行表」：呈现太阳·月球·地球与时间的相位关系，含 24 时区、月相、潮汐、节气。",
+           "地球划分 24 个时区，每 15 度弧长为一小时，直接读取所在时区当地时间、无需计算时差。",
+           "月相是月球被照亮部分随日月相对位置变化（新月/上弦/满月/下弦），朔望月约 29.53 天。",
+           "引潮力=月球和太阳引力对地球的差异作用，是可客观计算的物理现象。",
+           "二十四节气以太阳黄经每 15 度划分，春分为 0 度，体现地球公转与季节。",
+           "支持前后一万年尺度天象推演。项目持续迭代优化中，正式上线时间以官方通知为准。"].join("\n");
+
+      const rules = [
+        "【硬性红线】只讲天文与历法科普，严禁：运势、吉凶、命理、占卜、星座运势、地震/灾害预测、历史宿命、社会时政、宗教玄学、竞品评判；不承诺上线时间、不做一对一演算。",
+        "【项目口径】涉及项目能力、数据、推演范围等问题，必须严格按下面【项目口径】回答，不得编造或夸大。",
+        "【实时】若问题带『现在/今晚/今天/此刻/当前』等实时含义（如月相、节气、日期、星座、几点），必须直接说出【当前实时天象】里的实际数值（月相名称、月龄、照亮率等），不要只说原理、不要泛泛而谈。",
+        "【一般科普】若是太阳系、行星、月相、潮汐、节气等一般天文历法知识，可用你的天文知识简洁作答，但必须科学准确。",
+        "【兜底】若问题踩了红线、或与天文和本项目完全无关，用自然口吻轻轻带过、把话题拉回眼前的天象画面，不要展开、不要解释。",
+        "【输出要求】用第一人称、口语化的解说词直接回答，一到两句、40~80 字；不要标题、不要解释说明、不要括号注释；回答必须锚定眼前正在实时演算的画面。"
+      ].join("\n");
+
+      const sys = persona + "\n" + rules + "\n\n" + viewNote + "\n\n【项目口径】\n" + facts + "\n" + realtime + "\n\n【知识库】\n" + (ctx || "（无匹配）");
+      const userContent = message.slice(0, 800) + (realtime ? ("\n\n【实时天象数据，回答“现在/今晚/今天”类问题必须直接引用】" + realtime) : "");
+      const answer = await callLLM([{ role: "system", content: sys }, { role: "user", content: userContent }]);
+      const text = (answer || "").trim() || "我们继续看眼前正在实时演算的天象画面吧。";
+      return sendJson(res, { role, text, sources: kb.map(k => k.question || k.title) });
     } catch (e) { return sendJson(res, { error: String(e && e.message || e) }, 500); }
   }
 
@@ -398,12 +553,16 @@ const server = http.createServer(async (req, res) => {
   if (p === "/app" || p === "/app/") return sendHtml(res, APP);
   if (p === "/release" || p === "/release/") return sendHtml(res, RELEASE);
   if (p === "/wallpaper" || p === "/wallpaper/") return sendHtml(res, WALLPAPER);
+  if (p === "/admin" || p === "/admin/") return sendHtml(res, ADMIN);
   // 其它静态文件
   let fp = path.join(ROOT, decodeURIComponent(p));
   if (!fp.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
   fs.readFile(fp, (err, data) => {
     if (err) return sendHtml(res, LANDING);
-    res.writeHead(200, { "content-type": MIME[path.extname(fp).toLowerCase()] || "application/octet-stream", "access-control-allow-origin": "*", "cache-control": "no-cache, no-store, must-revalidate" });
+    const ext = path.extname(fp).toLowerCase();
+    // 静态 HTML（如 solar-system.html）同样注入版本徽标
+    if (ext === ".html") data = Buffer.from(injectVersion(data.toString("utf-8")));
+    res.writeHead(200, { "content-type": MIME[ext] || "application/octet-stream", "access-control-allow-origin": "*", "cache-control": "no-cache, no-store, must-revalidate" });
     res.end(data);
   });
 });
