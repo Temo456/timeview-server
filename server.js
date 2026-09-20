@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "3.22";
+const VERSION = "3.32";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -94,7 +94,7 @@ function sendHtml(res, html){ res.writeHead(200, { "content-type": "text/html; c
 
 const MIME = { ".html":"text/html; charset=utf-8", ".js":"text/javascript", ".css":"text/css",
   ".json":"application/json", ".png":"image/png", ".jpg":"image/jpeg", ".svg":"image/svg+xml", ".ico":"image/x-icon",
-  ".wav":"audio/wav", ".mp3":"audio/mpeg", ".webp":"image/webp", ".apk":"application/vnd.android.package-archive" };
+  ".wav":"audio/wav", ".mp3":"audio/mpeg", ".webp":"image/webp", ".mp4":"video/mp4", ".apk":"application/vnd.android.package-archive" };
 
 function sendJson(res, obj, code = 200) {
   const b = Buffer.from(JSON.stringify(obj));
@@ -557,9 +557,30 @@ const server = http.createServer(async (req, res) => {
   // 其它静态文件
   let fp = path.join(ROOT, decodeURIComponent(p));
   if (!fp.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
+  const ext = path.extname(fp).toLowerCase();
+  // 音视频等媒体：支持 Range 请求（用于流式播放）
+  if (ext === ".mp4" || ext === ".mp3" || ext === ".wav" || ext === ".webm") {
+    fs.stat(fp, (err, st) => {
+      if (err) return sendHtml(res, LANDING);
+      const type = MIME[ext] || "application/octet-stream";
+      const range = req.headers.range;
+      if (range) {
+        const m = /bytes=(\d*)-(\d*)/.exec(range);
+        let start = m && m[1] ? parseInt(m[1], 10) : 0;
+        let end = m && m[2] ? parseInt(m[2], 10) : st.size - 1;
+        if (start >= st.size || start > end) { res.writeHead(416, { "content-range": "bytes */" + st.size }); return res.end(); }
+        if (end >= st.size) end = st.size - 1;
+        res.writeHead(206, { "content-type": type, "content-length": end - start + 1, "content-range": "bytes " + start + "-" + end + "/" + st.size, "accept-ranges": "bytes" });
+        fs.createReadStream(fp, { start, end }).pipe(res);
+      } else {
+        res.writeHead(200, { "content-type": type, "content-length": st.size, "accept-ranges": "bytes" });
+        fs.createReadStream(fp).pipe(res);
+      }
+    });
+    return;
+  }
   fs.readFile(fp, (err, data) => {
     if (err) return sendHtml(res, LANDING);
-    const ext = path.extname(fp).toLowerCase();
     // 静态 HTML（如 solar-system.html）同样注入版本徽标
     if (ext === ".html") data = Buffer.from(injectVersion(data.toString("utf-8")));
     res.writeHead(200, { "content-type": MIME[ext] || "application/octet-stream", "access-control-allow-origin": "*", "cache-control": "no-cache, no-store, must-revalidate" });

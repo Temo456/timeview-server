@@ -143,6 +143,67 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
 </style>
 </head>
 <body>
+<div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" src="textures/disney-up-to-timeview.mp4" preload="auto" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
+<script>
+(function () {
+  var ov = document.getElementById('introOverlay');
+  var vid = document.getElementById('introVid');
+  var skip = document.getElementById('introSkip');
+  var hideTimer, generation = 0;
+  window.introActive = false;
+
+  function hide() {
+    ++generation; // 作废上一次播放的异步回调。
+    clearTimeout(hideTimer);
+    vid.pause();
+    ov.style.opacity = '0';
+    hideTimer = setTimeout(function () {
+      ov.style.display = 'none';
+      ov.style.opacity = '1';
+      vid.style.visibility = 'hidden';
+      window.introActive = false;
+    }, 800);
+  }
+
+  function start(muted) {
+    var run = ++generation;
+    clearTimeout(hideTimer);
+    vid.pause();
+    vid.style.visibility = 'hidden'; // 寻址完成前不显示上次的最后一帧。
+    window.introActive = true;
+    ov.style.display = 'block';
+    ov.style.opacity = '1';
+    vid.muted = muted;
+    vid.currentTime = 0;
+    // currentTime 在元数据尚未加载时也会设置起播位置。
+    var playing = vid.play();
+    if (playing && playing.catch) playing.catch(function (error) {
+      if (run !== generation) return;
+      if (!muted && error.name === 'NotAllowedError') {
+        vid.muted = true;
+        var retry = vid.play();
+        if (retry && retry.catch) retry.catch(function () {
+          if (run === generation) hide();
+        });
+      } else hide();
+    });
+  }
+
+  vid.addEventListener('playing', function () {
+    if (window.introActive && !vid.seeking && !vid.paused) vid.style.visibility = 'visible';
+  });
+  vid.addEventListener('ended', hide);
+  vid.addEventListener('error', hide);
+  skip.addEventListener('click', hide);
+  window.replayIntro = function () { start(false); };
+  var played = false;
+  try {
+    played = sessionStorage.getItem('introPlayed');
+    sessionStorage.setItem('introPlayed', '1');
+  } catch (_) {} // 禁用存储时仍允许播放和跳过。
+  if (!played) start(true);
+})();
+</script>
 <script>if(/[?&]scrsv=1/.test(location.search))document.body.classList.add('scrsv');</script>
 
 <!-- 2D 画布（地球表盘） -->
@@ -153,6 +214,7 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
 <div class="topbar" id="topbar">
   <span class="brand">时间景观</span>
   <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+    <button onclick="replayIntro()" style="font-size:11px;color:#5fd6f0;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px;background:transparent;cursor:pointer">🎬 开场</button>
     <a href="solar-system.html" style="font-size:11px;color:#5fd6f0;text-decoration:none;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px">☀ 太阳系</a>
   </div>
 </div>
@@ -441,6 +503,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - lastT) / 1000, 0.05);
   lastT = now;
+  // ???????????????? Canvas / WebGL ?????????????
+  if (window.introActive) return;
 
   // 时间推进
   if (!tlDrag) {

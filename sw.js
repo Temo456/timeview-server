@@ -1,5 +1,5 @@
 // 缓存键：与 server.js 的 VERSION 同步 bump，否则老用户会被 SW 缓存挡住看不到新页面
-const C = "timeview-v3.22";
+const C = "timeview-v3.32";
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["./","app","manifest.json","icon-192.png","icon-512.png"]).catch(()=>{})));
   self.skipWaiting();
@@ -13,6 +13,9 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   if (req.url.indexOf("/api/") >= 0) return;
   if (!req.url.startsWith("http")) return;
+  // 媒体由浏览器直接处理 Range / 206，避免缓存整段响应破坏拖动和重播。
+  if (req.headers.has("range") || req.destination === "video" || req.destination === "audio" ||
+      /\.(mp4|webm|mp3|wav)$/i.test(new URL(req.url).pathname)) return;
   // 本地开发不缓存，直接走网络
   if (req.url.indexOf("localhost") >= 0 || req.url.indexOf("127.0.0.1") >= 0) return;
   e.respondWith(
