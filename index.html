@@ -143,14 +143,36 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
 </style>
 </head>
 <body>
-<div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" src="textures/disney-up-to-timeview.mp4" preload="auto" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
+<div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/disney-up-to-timeview-web.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
 <script>
+// Check for SW updates even when the app is opened directly.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then(function (registration) { return registration.update(); }).catch(function () {});
+}
 (function () {
   var ov = document.getElementById('introOverlay');
   var vid = document.getElementById('introVid');
   var skip = document.getElementById('introSkip');
-  var hideTimer, generation = 0;
+  var loading = document.getElementById('introLoading');
+  var hideTimer, generation = 0, sourcePromise;
   window.introActive = false;
+
+  function prepareVideo() {
+    if (!sourcePromise) {
+      // 短片完整下载后再播放，避免贴图等并发请求抢占带宽导致中途停顿。
+      sourcePromise = fetch(vid.dataset.src).then(function (response) {
+        if (response.status !== 200) throw new Error('Incomplete intro video');
+        return response.blob();
+      }).then(function (blob) {
+        vid.src = URL.createObjectURL(blob);
+      }).catch(function (error) {
+        sourcePromise = null;
+        throw error;
+      });
+    }
+    return sourcePromise;
+  }
 
   function hide() {
     ++generation; // 作废上一次播放的异步回调。
@@ -173,11 +195,13 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
     window.introActive = true;
     ov.style.display = 'block';
     ov.style.opacity = '1';
+    loading.style.display = 'grid';
     vid.muted = muted;
-    vid.currentTime = 0;
-    // currentTime 在元数据尚未加载时也会设置起播位置。
-    var playing = vid.play();
-    if (playing && playing.catch) playing.catch(function (error) {
+    prepareVideo().then(function () {
+      if (run !== generation) return;
+      vid.currentTime = 0;
+      return vid.play();
+    }).catch(function (error) {
       if (run !== generation) return;
       if (!muted && error.name === 'NotAllowedError') {
         vid.muted = true;
@@ -190,7 +214,10 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
   }
 
   vid.addEventListener('playing', function () {
-    if (window.introActive && !vid.seeking && !vid.paused) vid.style.visibility = 'visible';
+    if (window.introActive && !vid.seeking && !vid.paused) {
+      vid.style.visibility = 'visible';
+      loading.style.display = 'none';
+    }
   });
   vid.addEventListener('ended', hide);
   vid.addEventListener('error', hide);
