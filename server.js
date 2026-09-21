@@ -32,7 +32,7 @@ const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
 const TTS_MODEL = clean(process.env.TTS_MODEL) || "mimo-v2.5-tts";
 const TTS_VOICE_MALE = clean(process.env.TTS_VOICE_MALE) || "白桦";     // 阿远（男声）
-const TTS_VOICE_FEMALE = clean(process.env.TTS_VOICE_FEMALE) || "茉莉";  // 阿星（女声）
+const TTS_VOICE_FEMALE = clean(process.env.TTS_VOICE_FEMALE) || "冰糖";  // 阿星（女声）
 
 // 天文/历法计算（与小程序复用同一套 astro.js / lunar.js，保证两端结果完全一致）
 const A = require("./astro");
