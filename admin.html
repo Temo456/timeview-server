@@ -62,7 +62,7 @@ body{background:#050a18;color:#c8daf0;font-family:-apple-system,"PingFang SC","M
 <nav class="admin-tabs" aria-label="内容类型"><button id="courseTab" class="btn ghost" aria-selected="true">讲解内容</button><button id="qaTab" class="btn ghost" aria-selected="false">知识库问答</button></nav>
 <div class="wrap" id="courseEditor">
   <p class="course-intro">按讲解顺序修改阿远、阿星的台词。保存后，前台下次打开或刷新时使用新内容；当前播放中的讲解不被打断。画面动作保持原有顺序。内容只讲科学事实，不加入玄学、性格判断或预测。</p>
-  <div class="course-toolbar"><input id="courseKey" type="password" autocomplete="off" placeholder="讲解管理口令" aria-label="讲解管理口令"><button id="courseSave" class="btn" disabled>保存并发布</button><button id="courseReload" class="btn ghost">重新加载</button><div id="courseMessage" class="course-msg" role="status">正在加载讲解内容…</div></div>
+  <div class="course-toolbar"><button id="courseSave" class="btn" disabled>保存并发布</button><button id="courseReload" class="btn ghost">重新加载</button><div id="courseMessage" class="course-msg" role="status">正在加载讲解内容…</div></div>
   <div id="courseFields"></div>
 </div>
 <div class="wrap" id="list"></div>
@@ -235,11 +235,10 @@ load();
   $('courseReload').onclick=loadCourse;
   $('courseSave').onclick=async()=>{
     if(!content||saving)return;
-    const key=$('courseKey').value.trim();if(!key){message('请输入讲解管理口令后发布。');$('courseKey').focus();return;}
     saving=true;$('courseSave').disabled=true;$('courseReload').disabled=true;message('正在保存…');
     // 保存期间冻结输入，避免把提交后继续键入的内容误标为已发布。
     $('courseFields').querySelectorAll('input,textarea,select').forEach(e=>e.disabled=true);
-    try{const r=await fetch('api/course-script',{method:'PUT',headers:{'Content-Type':'application/json','X-Course-Key':key},body:JSON.stringify(content),signal:AbortSignal.timeout(15000)});const j=await r.json();if(!r.ok)throw Error(j.error||'保存失败');content.revision=j.revision;content.updatedAt=j.updatedAt;dirty=false;message('已发布版本 '+j.revision+'，前台刷新后生效。');}
+    try{const r=await fetch('api/course-script',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(content),signal:AbortSignal.timeout(15000)});const j=await r.json();if(!r.ok)throw Error(j.error||'保存失败');content.revision=j.revision;content.updatedAt=j.updatedAt;dirty=false;message('已发布版本 '+j.revision+'，前台刷新后生效。');}
     catch(e){message('未确认发布成功：'+e.message+'。当前修改已保留。');}
     finally{saving=false;$('courseSave').disabled=false;$('courseReload').disabled=false;$('courseFields').querySelectorAll('input,textarea,select').forEach(e=>e.disabled=false);}
   };

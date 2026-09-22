@@ -1,7 +1,6 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const defaults = require('./course-default.json');
 const tokens = {date:['来源','日期','时间说明'],report:['月相','照亮比例']};
 
@@ -35,7 +34,7 @@ function validate(input) {
   return {chapters,lines,templates};
 }
 
-module.exports = function createCourseStore(dataDir, adminKey) {
+module.exports = function createCourseStore(dataDir) {
   const file=path.join(dataDir,'course-content.json');
   let current=JSON.parse(JSON.stringify(defaults)),loadError=false;
   if(fs.existsSync(file))try{const saved=JSON.parse(fs.readFileSync(file,'utf8'));current={...validate(saved),revision:saved.revision,updatedAt:saved.updatedAt};if(!Number.isSafeInteger(current.revision))throw Error('revision');}catch(_){loadError=true;console.error('[course] saved script invalid; keeping file and using defaults');}
@@ -45,9 +44,6 @@ module.exports = function createCourseStore(dataDir, adminKey) {
       res.setHeader('Cache-Control','no-store');
       if(req.method==='GET')return sendJson(res,current);
       if(req.method!=='PUT')return sendJson(res,{error:'method not allowed'},405);
-      if(!adminKey)return sendJson(res,{error:'服务器尚未配置讲解管理口令'},503);
-      const provided=Buffer.from(String(req.headers['x-course-key']||'')), expected=Buffer.from(adminKey);
-      if(provided.length!==expected.length||!crypto.timingSafeEqual(provided,expected))return sendJson(res,{error:'管理口令不正确'},401);
       if(loadError)return sendJson(res,{error:'已保存的课程文件异常，请先恢复文件；本次未覆盖'},503);
       try{
         const body=await readBody(req);

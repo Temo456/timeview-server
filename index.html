@@ -509,6 +509,26 @@ function loadImage(img, url) {
   img.src = url;
 }
 
+// Simplified Chang'e-1 icon and orbit, animated for teaching rather than telemetry.
+const changEIcon = new Image();
+loadImage(changEIcon, 'textures/change-orbiter.svg');
+let changEPhase = 0;
+function drawChangE(mx, my, mr) {
+  const orbit = mr + 20, size = Math.max(24, Math.min(34, mr * 1.2));
+  const x = mx + Math.cos(changEPhase) * orbit, y = my + Math.sin(changEPhase) * orbit;
+  ctx.save(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(153,199,218,.28)'; ctx.lineWidth = .7;
+  ctx.beginPath(); ctx.arc(mx, my, orbit, 0, Math.PI * 2); ctx.stroke();
+  ctx.translate(x, y); ctx.rotate(changEPhase + Math.PI / 2);
+  if (changEIcon.complete && changEIcon.naturalWidth) ctx.drawImage(changEIcon, -size/2, -size*0.3125, size, size*0.625);
+  else {ctx.fillStyle='#568dc4';ctx.fillRect(-12,-4,24,8);ctx.fillStyle='#ecd190';ctx.fillRect(-4,-6,8,12);}
+  ctx.restore();
+  ctx.save(); ctx.font='10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  const lx=Math.max(65,Math.min(W-65,mx)),ly=Math.max(55,Math.min(H-82,my+orbit+16));
+  ctx.fillStyle='rgba(6,14,30,.75)';ctx.fillRect(lx-53,ly-7,106,14);
+  ctx.fillStyle='#bdd7df';ctx.fillText('嫦娥一号 · 绕月示意',lx,ly);ctx.restore();
+}
+
 // ========== Canvas 2D（地球表盘） ==========
 var renderer = null;
 const cv = document.getElementById('cv');
@@ -548,6 +568,7 @@ function frame(now) {
     if (inertia) { state.t += inertia * dt; inertia *= Math.exp(-1.4 * dt); if (Math.abs(inertia) < 1000) inertia = 0; }
   }
   if (window.introActive) return;
+  if (state.playing) changEPhase = (changEPhase + dt * Math.PI * 2 / 24) % (Math.PI * 2);
   dispT += (state.t - dispT) * (1 - Math.exp(-8 * dt));
   refreshZones(dispT); document.getElementById('tzBtn').textContent='🕓 '+tz.label;
   const d = dnum(dispT), date = new Date(dispT + tz.min * 60000);
@@ -737,8 +758,7 @@ function drawEarth(d, date) {
     const az = clockAngle(utch + c.min / 60);
     const sinA = Math.sin(az), cosA = Math.cos(az);
     const px = cx + sinA * dotR, py = cy - cosA * dotR;
-    const night = py > cy;
-    ctx.globalAlpha = night ? 0.72 : 1;
+    ctx.globalAlpha = 1;
     // 圆点
     if (c.star) {
       // 北京红星
@@ -769,7 +789,7 @@ function drawEarth(d, date) {
     }
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(6,14,30,.72)'; ctx.fillRect(lx - tw / 2 - 3, ly - 6, tw + 6, 12);
-    ctx.fillStyle = c.star ? '#ffd7d3' : (night ? 'rgba(226,234,246,.95)' : '#fff7e0');
+    ctx.fillStyle = c.star ? '#ffd7d3' : '#fff7e0';
     ctx.fillText(c.cn, lx, ly);
     ctx.globalAlpha = 1;
   }
@@ -805,6 +825,7 @@ function drawEarth(d, date) {
   const t1 = cAng - Math.PI / 2, t2 = cAng + Math.PI / 2;
   const mrot = adist(t1, sAng) <= adist(t2, sAng) ? t1 : t2;
   drawMoonLit(mx, my, mr, ph.illum, mrot);
+  drawChangE(mx, my, mr);
   window._moonXY = { x: mx, y: my, r: mr };
 }
 

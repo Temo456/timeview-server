@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="80" viewBox="0 0 128 80">
+  <title>嫦娥一号绕月探测器示意</title>
+  <defs>
+    <linearGradient id="gold" x2=".8" y2="1"><stop stop-color="#fff2a6"/><stop offset=".5" stop-color="#d1a44c"/><stop offset="1" stop-color="#876223"/></linearGradient>
+    <linearGradient id="panel" y2="1" x2="0"><stop stop-color="#3d84c4"/><stop offset="1" stop-color="#163e78"/></linearGradient>
+    <pattern id="cells" width="9" height="8" patternUnits="userSpaceOnUse"><path d="M9 0H0V8" fill="none" stroke="#a7d4ee" stroke-width=".7" opacity=".75"/></pattern>
+  </defs>
+  <g stroke="#d7e6ed" stroke-linejoin="round">
+    <path d="M42 40H85" stroke-width="4"/>
+    <path d="M4 26H43V53H4Z M85 26H124V53H85Z" fill="url(#panel)" stroke-width="1.8"/>
+    <path d="M4 26H43V53H4Z M85 26H124V53H85Z" fill="url(#cells)" stroke="none"/>
+    <path d="M51 23L69 17L79 27V54L61 62L51 51Z" fill="url(#gold)" stroke="#ffe5a1" stroke-width="1.4"/>
+    <path d="M51 23L61 32L79 27M61 32V62" fill="none" stroke="#8d682c"/>
+    <path d="M57 28L56 11M57 28L45 16" fill="none" stroke-width="2"/>
+    <path d="M42 9Q39 25 58 24Z" fill="#e5eef2" stroke-width="1.4"/>
+    <path d="M43 10L54 14L47 20" fill="none" stroke="#8598ac"/>
+    <path d="M70 55L76 71M76 71H87" fill="none" stroke-width="1.7"/>
+    <rect x="65" y="36" width="9" height="10" rx="1" fill="#1d3347" stroke="#ffe5a1"/>
+    <circle cx="69.5" cy="41" r="2.2" fill="#97d5f3" stroke="none"/>
+  </g>
+</svg>
