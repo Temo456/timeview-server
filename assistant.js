@@ -33,9 +33,8 @@
   function scene() { if (!window.TimeviewCourse) throw Error('画面还在准备，稍后继续。'); return window.TimeviewCourse; }
   function layer(name, on) { scene().layer(name, on); }
   function cleanSolar() { ['axes','zodiac','xiusu','threeBody','voyager'].forEach(n=>layer(n,false)); $('planetCard').style.display='none'; }
-  function pauseScene() { scene().setTime(scene().time()); }
   for (let ch = 0; ch < chapters.length; ch++) {
-    say(ch, 0, chapters[ch][4], () => { pauseScene(); if(view==='solar') cleanSolar(); });
+    say(ch, 0, chapters[ch][4], () => { if(view==='solar') cleanSolar(); });
     say(ch, 1, chapters[ch][5]);
     if (ch === 2) {
       say(ch, 0, () => {
@@ -210,10 +209,9 @@
     if(!valid(gen))return;
     if(!response||!response.ok){await speak(scriptTemplates.reportFailure,0,gen);return;}
     const data=await response.json();if(!valid(gen))return;
-    if(Math.abs(scene().time()-item.ts)>1000){await speak('画面的日期发生了变化，我们先不把这份报告与当前画面混在一起。',0,gen);return;}
     report={...item,data};
     const text=['生日当天的天文快照',(item.example?'演示日期 · ':'观众日期 · ')+item.date+' '+item.time+' 北京时间',item.defaultTime?'12:00为演示时刻，非实际出生时刻。':'采用填写的时刻。','月相：'+data.moonPhase+'　照亮约 '+data.moonIllum+'%','月龄约 '+data.moonAge+' 天',data.lunar,'节气区间：'+data.solarTerm,'来源：项目 astro.js / lunar.js 近似计算。画面为教学示意，不用于精密星历或当地可见性判断。不含性格、运势或未来预测。'].join('\n');
-    $('tvReport').textContent=text;$('tvReport').hidden=false;
+    $('tvReport').textContent=text+'\n这份报告记录选定时刻的快照；画面时间继续运行。';$('tvReport').hidden=false;
     const download=document.createElement('a');download.href='#';download.textContent='留存这份天象记录 ↓';
     download.onclick=e=>{e.preventDefault();const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='天文快照-'+item.date+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};$('tvReport').append(download);
     await speak(fillTemplate(scriptTemplates.report,{'月相':data.moonPhase,'照亮比例':data.moonIllum}),0,gen);
@@ -265,7 +263,6 @@
     const intro=window.introActive||($('introOverlay')&&$('introOverlay').offsetHeight);
     if(resumeAfterIntro&&!intro&&!closed&&!document.hidden){resumeAfterIntro=false;run();}
     if(!welcomed&&!closed&&!intro&&window.TimeviewCourse){welcomed=true;open(saved.resume!==false);}
-    if(report&&Math.abs(scene().time()-report.ts)>1000){report=null;$('tvReport').hidden=true;}
   },500);
   if(!closed){panel.classList.add('on');fab.classList.add('hide');}
 })();

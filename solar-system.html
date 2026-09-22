@@ -339,9 +339,12 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const ROT_SENS = 0.005;
 let spinZ = 0, spinX = 0, spinZVel = 0, spinXVel = 0;
 let simElapsed = (Date.now() - EPOCH_MS) / 1000;
-let scaleKey = 'sec', paused = false, labelsOn = false, axesOn = false, termsOn = false, orbitsOn = false;
+let clockManuallyPaused = false;
+try { clockManuallyPaused = sessionStorage.getItem('tv-clock-paused') === '1'; } catch (_) {}
+let scaleKey = 'sec', paused = clockManuallyPaused, labelsOn = false, axesOn = false, termsOn = false, orbitsOn = false;
 
 // 拖拽行星状态
+document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚';
 let planetDrag = null; // { key, cumulative, lastAngle, lastTime, velocity, moved }
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -619,8 +622,8 @@ function updateLunar() {
 const SPD = { sec:1, day:86400, month:86400*30.44, year:86400*365.25 };
 const SPD_LABELS = { sec:'秒/秒', day:'日/秒', month:'月/秒', year:'年/秒' };
 
-document.getElementById('pPlay').addEventListener('click', () => { paused = !paused; document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚'; });
-document.getElementById('pNow').addEventListener('click', () => { simElapsed = (Date.now() - EPOCH_MS) / 1000; scaleKey = 'sec'; paused = false; document.getElementById('pPlay').textContent = '❚❚'; document.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾'; });
+document.getElementById('pPlay').addEventListener('click', () => { paused = !paused; try { sessionStorage.setItem('tv-clock-paused', paused ? '1' : '0'); } catch (_) {} document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚'; });
+document.getElementById('pNow').addEventListener('click', () => { simElapsed = (Date.now() - EPOCH_MS) / 1000; scaleKey = 'sec'; document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚'; document.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾'; });
 document.getElementById('pPrev').addEventListener('click', () => { simElapsed -= 30 * 86400; });
 document.getElementById('pNext').addEventListener('click', () => { simElapsed += 30 * 86400; });
 document.getElementById('pSlow').addEventListener('click', () => { const u = ['sec','day','month','year']; const i = u.indexOf(scaleKey); if (i > 0) { scaleKey = u[i-1]; document.getElementById('spdBtn').textContent = '⚡ ' + SPD_LABELS[scaleKey] + ' ▾'; } });
@@ -776,8 +779,8 @@ function jumpToDate() {
   var hm = ts.split(':');
   var target = new Date(dpYear, dpMonth, dpSelected, +hm[0] || 0, +hm[1] || 0, 0);
   simElapsed = (target.getTime() - EPOCH_MS) / 1000;
-  paused = true;
-  document.getElementById('pPlay').textContent = '▶';
+ 
+  document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚';
 }
 document.getElementById('dateText').onclick = function() {
   var picker = document.getElementById('datePicker');
@@ -787,7 +790,7 @@ document.getElementById('dateText').onclick = function() {
 document.getElementById('dpCancel').onclick = function() { document.getElementById('datePicker').style.display = 'none'; };
 document.getElementById('dpToday').onclick = function() {
   var now = new Date(); dpYear = now.getFullYear(); dpMonth = now.getMonth(); dpSelected = now.getDate(); renderCalendar();
-  simElapsed = (Date.now() - EPOCH_MS) / 1000; paused = false; document.getElementById('pPlay').textContent = '❚❚';
+  simElapsed = (Date.now() - EPOCH_MS) / 1000; document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚';
   document.getElementById('datePicker').style.display = 'none';
 };
 document.getElementById('dpTime').onchange = function() { jumpToDate(); };
@@ -851,8 +854,8 @@ initLunarPicker();
   const t = parseInt(m[1], 10);
   if (isNaN(t)) return;
   simElapsed = (t - EPOCH_MS) / 1000;
-  paused = true;
-  document.getElementById('pPlay').textContent = '▶';
+ 
+  document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚';
   const d = new Date(t);
   dpYear = d.getFullYear(); dpMonth = d.getMonth(); dpSelected = d.getDate();
   updateDateText();
@@ -1479,8 +1482,8 @@ window.TimeviewCourse = {
   setTime: (ts) => {
     if (!Number.isFinite(ts)) throw new Error('无效日期');
     window.courseBeijingTime = true;
-    simElapsed = (ts - EPOCH_MS) / 1000; paused = true;
-    document.getElementById('pPlay').textContent = '▶';
+    simElapsed = (ts - EPOCH_MS) / 1000;
+    document.getElementById('pPlay').textContent = paused ? '▶' : '❚❚';
     updateDateText(); updateLunar();
   },
   now: () => document.getElementById('pNow').click(),
