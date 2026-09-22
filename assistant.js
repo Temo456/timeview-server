@@ -1,240 +1,95 @@
-/*
- * 时间景观 · AI 数字助理（阿远 & 阿星）直播解说模块
- * 共享：index.html（地球视角 / TIMEVIEW=earth）与 solar-system.html（太阳系视角 / TIMEVIEW=solar）。
- * 形态：右侧抽屉（默认收起）；话题手动切换；同一话题内阿远/阿星对话连续累积显示。
- * 问答：问题选择式——点选知识库里的问题，直接返回预设答案（无需大模型）。
- * 语音：服务端 /api/tts（小米 MiMo TTS）合成，男声→阿远、女声→阿星。
- */
+/* 时间景观 · 双角色课程。章节时间为建议节奏，画面操作通过 TimeviewCourse 桥接。 */
 (function () {
   'use strict';
-  var VIEW = window.TIMEVIEW === 'solar' ? 'solar' : 'earth';
-
-  var AYUAN = { id: 'ayuan', name: '阿远', tag: '理性·技术', voice: 'male' };
-  var AXING = { id: 'axing', name: '阿星', tag: '感性·体验', voice: 'female' };
-
-  var REFUSE = '这个问题暂时不在我们今天时间景观的科普讨论范围内，我们继续来看眼前正在实时演算的宇宙画面。';
-
-  var EARTH_TOPICS = [
-    { ayuan: '现在我们以北极上空的上帝俯视视角，看太阳、月球与地球三者的相位关系。', axing: '太阳、月球、地球和时间的相位被画在了同一张表盘上，能直接读到此刻的日月地同行状态。', q: '大家所在的城市现在是几点？' },
-    { ayuan: '地球上划分了 24 个时区，每个时区相对空间里 24 个点，每 15 度弧长就是一小时。', axing: '所以这张表盘不用算时差，指到哪个数字，就是哪个时区的当地时间。', q: '你那边现在是白天还是夜晚？' },
-    { ayuan: '月球绕地球运转，大约每 29 天半完成一次月相周期。', axing: '所以我们看到的上弦月、凸月、满月，都是三球真实位置变化的结果。', q: '今晚的月亮是什么形状？' },
-    { ayuan: '月球和太阳的引力作用在地球上形成引潮力，这是可以客观计算的物理现象。', axing: '时间景观最早的起点，就是从日月地的相位关系里，看见了时间运转的规律。', q: '想了解月相还是潮汐？' }
+  const view = window.TIMEVIEW === 'solar' ? 'solar' : 'earth', $ = id => document.getElementById(id);
+  const roles = [{name:'阿远',voice:'male',tag:'白桦 · 原理讲解'},{name:'阿星',voice:'female',tag:'冰糖 · 观察引导'}];
+  const chapters = [
+    ['00:00–02:00','引导与开场','earth','先看引导视频，再找一座熟悉的城市。','大家好，我是AI解说阿远。今天从地球的时间地图出发，认识太阳系，再观察一个大家选择的历史日期。','我是AI解说阿星。我们会提出几个小问题，你可以作答，也可以提交日期。先看看眼前的地球，能找到你熟悉的城市吗？'],
+    ['02:00–05:00','认识时间地图','earth','先小时，再分秒，最后确认日期和时区。','先看小时刻度，再看分钟和秒钟。读取城市时间前，要确认时区和日期。政治时区并不完全按照每十五度经度来划分。','跟着下面三张城市时钟一起读。先读小时，再读分秒，最后读出日期，不用一下记住所有按钮。'],
+    ['05:00–12:00','读取世界时间','earth','北京 → 伦敦 → 纽约，比较同一个瞬间。','同一瞬间，各城市的当地时间可能不同，日期也可能不同。伦敦和纽约还要按所选日期考虑夏令时。','同一时刻的三个城市已经并排显示。先读北京，再读伦敦和纽约，留意它们是不是同一天。'],
+    ['12:00–18:00','时间互动 · 两道题','earth','先回答时差问题，再提交日期对照。','第一题，伦敦和北京的时差是否全年不变？第二题，请给一个日期，看看三个城市的时间表达。','先完成一道，再看下一道。确认日期后，底部时间和画面一起更新；没有回答时，我们用明确标注的演示日期。'],
+    ['18:00–24:00','春夏秋冬','earth','比较南北半球，再观察夏至与冬至附近。','地轴倾斜与地球公转使日照条件随季节变化。南北半球季节相反，不能把季节简单归因于距离太阳远近。','先比较南北半球，再看北京夏季与冬季的白昼。点选代表日期，让时间地图停下来，慢慢观察。'],
+    ['24:00–28:00','轨道与 XYZ','solar','轨道 → X → Y → Z，逐层建立空间方向。','先用轨道理解运动路径，再用坐标轴建立空间方向。轴标注以当前可视化为准，不直接等同于未经核对的天文参考系。','每次只展开一层。最后转到侧视角观察Z方向，看看平面以外多了什么信息。'],
+    ['28:00–36:00','八大行星与冥王星','solar','从水星向外，逐站打开信息卡。','沿轨道从内向外观察八大行星，关注相对位置与公转周期。冥王星属于矮行星，不计入八大行星。','每到一站，先观察一个特点，再回到全景找到它的位置。画面的大小与距离经过缩放，适合帮助理解。'],
+    ['36:00–41:00','星座与星宿','solar','两种图层分开看，每种先认一个例子。','星座与星宿反映不同文化组织和认识星空的方式。我们从观察与文化记录的角度讲解，不延伸到个人性格或命运。','先看一种星空图案，再换另一种。请点击画面中的标注观察；屏幕上的示意连线不代表恒星之间真的相连。'],
+    ['41:00–44:00','更远的探索','solar','旅行者号与三体主题：实物、示意、小说。','旅行者号让我们认识深空探测的尺度。三体主题需要区分真实的恒星系统知识和小说中的故事设定。','这里展示的是教学模型，预设轨迹不是实时观测。未来可以围绕探测器、邻近恒星和星际距离继续探索。'],
+    ['44:00–47:00','生日天象示范','solar','演示日期：2000-01-01，12:00，北京时间。','我们查看所选日期的天象与历法信息，形成一份可核对的记录，不作个人评价或未来预测。','先看底部日期，再看图景，最后看报告。只提供日期时，明确采用北京时间十二点，不把它说成实际出生时刻。'],
+    ['47:00–57:00','两位观众的日期','solar','案例 A 与 B，每个建议五分钟，逐个确认。','请提交一个公历日期。我们先核对参数，再观察画面，最后读出有计算依据的月相和历法信息。','一次只看一个案例。第二份记录可以和第一份对照，但只比较天象，不比较两位观众。没有提交时可以使用标注的备用案例。'],
+    ['57:00–60:00','回到现在','solar','恢复当前时间，选择下次想探索的主题。','今天练习了读取城市时间，认识季节、轨道和空间方向，也观察了特定日期的天象记录。','下一次你想继续看世界时间、太阳系，还是更远的星空？选择一个方向，作为下一堂课的参考。']
   ];
-  var SOLAR_TOPICS = [
-    { ayuan: '现在我们以上帝俯视视角观察太阳系排布，行星在真实空间里不存在地面视角的“连线现象”。', axing: '我们在地面看到的行星连珠，只是二维投影效果，在这里能看到宇宙最真实的三维运行状态。', q: '大家想看哪颗行星？' },
-    { ayuan: '演算依据 IAU 国际天文学联合会标准，以及 NASA DE440 高精度星历参数。', axing: '结合项目自有坐标系规则，把它们变成眼前这个能实时演算、任意回溯的太阳系。', q: '想回到哪个历史时刻？' },
-    { ayuan: '引擎支持前后五千年的天象推演，时间轴可以任意回溯与前进。', axing: '长周期演算受轨道摄动精度约束，越靠近现在越精确。', q: '唐朝、宋朝，还是你出生的那一天？' },
-    { ayuan: '接下来演示核心功能——生日天象宇宙码，可精准演算任意公历日期的太阳系真实排布。', axing: '每个人都拥有属于自己出生当天的专属宇宙景观。', q: '你的生日是哪天？' }
-  ];
-
-  var WELCOME = VIEW === 'solar'
-    ? { ayuan: '欢迎来到时间景观太阳系直播间，我们正在上帝俯视视角下实时演算所有行星的真实运行轨迹。', axing: '今天带大家体验星际漫游、生日天象、历史天象溯源和天文科普，欢迎点选下方问题互动。' }
-    : { ayuan: '欢迎来到时间景观，我们正以北极上空的视角，看太阳、月球与地球同行的时间规律。', axing: '今天带大家看懂时区、月相、潮汐和节气，欢迎点选下方问题互动。' };
-
-  var TOPICS = VIEW === 'solar' ? SOLAR_TOPICS : EARTH_TOPICS;
-
-  /* ========== 语音（服务端 MiMo TTS） ========== */
-  var muted = false, started = false, talkGen = 0, topicIndex = 0;
-  var currentAudio = null;
-  function estTime(t) { return Math.min(6500, Math.max(1600, t.length * 200)); }
-  function b64ToBlob(b64, type) {
-    var bin = atob(b64);
-    var bytes = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new Blob([bytes], { type: type });
+  let saved={}; try{saved=JSON.parse(sessionStorage.getItem('tv-course')||'{}');}catch(_){}
+  let chapter=Number.isInteger(saved.chapter)?Math.max(0,Math.min(11,saved.chapter)):(view==='solar'?5:0);
+  let muted=!!saved.muted, generation=0, cancelSpeech=null, waitTimer=null, running=false, elapsed=0;
+  let pending=null, report=null, reportToken=0, cases=[], caseSlot='A';
+  function persist(open){try{sessionStorage.setItem('tv-course',JSON.stringify({chapter,muted,open}));}catch(_){}}
+  const style=document.createElement('style');
+  style.textContent=`
+  #tv-assist{--ink:#edf1e8;--muted:#a1b4bb;--line:#ffffff20;--gold:#e5c681;position:fixed;right:16px;top:58px;bottom:68px;width:370px;max-width:calc(100vw - 24px);z-index:22;color:var(--ink);font:13px/1.6 'Microsoft YaHei','PingFang SC',sans-serif;display:none;background:rgba(12,24,32,.97);border:1px solid #b8c8c735;border-radius:18px;box-shadow:0 22px 70px #0007;overflow:hidden}
+  #tv-assist.on{display:flex;flex-direction:column}#tv-assist *{box-sizing:border-box}#tv-assist button,#tv-assist input,#tv-assist select{font:inherit}#tv-assist button{cursor:pointer;border:1px solid var(--line);border-radius:8px;background:#ffffff07;color:var(--ink);padding:7px 10px}#tv-assist button:hover{border-color:var(--gold);background:#e5c68112}#tv-assist button:focus-visible,#tv-assist input:focus-visible,#tv-assist select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}#tv-assist button:disabled{opacity:.4;cursor:default}#tv-assist .primary{background:var(--gold);color:#182329;border-color:var(--gold);font-weight:700}#tv-assist header{padding:17px 18px 12px;border-bottom:1px solid var(--line)}#tv-assist .row{display:flex;align-items:center;gap:8px}#tv-assist .spread{justify-content:space-between}#tv-assist .eyebrow{font-size:10px;letter-spacing:2px;color:var(--gold)}#tv-assist h2{font-family:'STSong','SimSun',serif;font-size:23px;letter-spacing:2px;margin:4px 0 10px;font-weight:500}#tv-assist .muted{color:var(--muted);font-size:12px}#tv-assist .roles{display:flex;gap:15px;font-size:11px}#tv-assist .roles b{color:#91d9d5}#tv-assist .roles span:nth-child(2) b{color:var(--gold)}#tv-assist nav{display:flex;padding:0 16px;gap:12px;border-bottom:1px solid var(--line)}#tv-assist nav button{flex:1;border:0;border-radius:0;padding:12px 0;color:var(--muted)}#tv-assist nav button[aria-selected=true]{border-bottom:2px solid var(--gold);color:var(--gold)}#tv-assist .body{overflow:auto;min-height:0;flex:1;padding:16px 18px;overscroll-behavior:contain;scrollbar-width:thin}#tv-assist [hidden]{display:none!important}#tv-assist h3{font-size:18px;font-weight:500;margin:8px 0}#tv-assist p{margin:8px 0}#tv-assist .card{padding:12px;border:1px solid var(--line);border-radius:10px;margin:10px 0;background:#ffffff03}#tv-assist .chip{color:var(--gold);font-size:11px}#tv-assist select,#tv-assist input{background:#142732;color:var(--ink);border:1px solid #ffffff35;border-radius:7px;padding:9px;max-width:100%;color-scheme:dark}#tvChapter{width:100%;margin:10px 0}#tv-assist .controls{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:7px}#tv-assist .line{border-left:2px solid #83c7c7;padding:0 0 0 11px;margin:15px 0}#tv-assist .line.female{border-color:var(--gold)}#tv-assist .line strong{color:#a6ddda;font-size:12px}#tv-assist .line.female strong{color:var(--gold)}#tv-assist .line p{font-size:14px;line-height:1.85}#tv-assist .actions{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}#tv-assist .actions button{font-size:12px}#tv-assist .clock{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}#tv-assist .clock div{background:#ffffff06;border-radius:8px;padding:8px 5px;text-align:center}#tv-assist .clock b{display:block;font:17px Georgia,serif;color:var(--gold)}#tv-assist .clock small{display:block;font-size:9px;color:var(--muted)}#tv-assist .progress{height:3px;background:#ffffff15;margin-top:12px}#tvBar{height:100%;background:var(--gold);width:0}#tv-assist footer{padding:12px 18px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}#tvNotice{min-height:20px;color:#e5c681}#tv-assist label{display:block;font-size:12px;margin-top:10px}#tv-assist form input{width:100%;margin-top:4px}#tv-fab{position:fixed;right:16px;top:50%;z-index:21;border:1px solid #e5c68177;border-radius:12px;padding:13px 10px;background:#13252e;color:#e5c681;writing-mode:vertical-rl;letter-spacing:3px;cursor:pointer}#tv-fab.hide{display:none}@media(max-width:600px){#tv-assist{right:8px;top:50px;bottom:64px;width:350px}#tv-assist header{padding:12px 16px}#tv-assist h2{font-size:20px;margin:2px 0 6px}}
+  `;document.head.append(style);
+  const panel=document.createElement('aside');panel.id='tv-assist';panel.setAttribute('aria-label','AI双角色互动课程');
+  panel.innerHTML=`<header><div class="row spread"><span class="eyebrow">TIMEVIEW / 互动体验课</span><div class="row"><button id="tvMute" aria-label="切换语音">语音开</button><button id="tvClose" aria-label="收起课程">×</button></div></div><h2>跟着时间，读懂宇宙</h2><div class="roles"><span><b>● 阿远</b> · 白桦</span><span><b>● 阿星</b> · 冰糖</span><span class="muted">AI 双角色</span></div></header>
+  <nav role="tablist" aria-label="课程面板"><button role="tab" id="tab-course" aria-controls="pane-course" data-tab="course" aria-selected="true">课程</button><button role="tab" id="tab-interact" aria-controls="pane-interact" data-tab="interact" aria-selected="false">当堂互动</button><button role="tab" id="tab-report" aria-controls="pane-report" data-tab="report" aria-selected="false">天象报告</button></nav>
+  <div class="body"><section id="pane-course" role="tabpanel" aria-labelledby="tab-course"><div class="row spread"><span class="chip" id="tvStep"></span><span class="muted" id="tvElapsed">讲解 00:00</span></div><select id="tvChapter" aria-label="选择课程章节"></select><div class="controls"><button id="tvPrev">上一节</button><button id="tvPlay" class="primary">开始讲解</button><button id="tvNext">下一节</button></div><div class="progress"><div id="tvBar"></div></div><p class="muted">约 60 分钟 · 按学习节奏推进，观察后点击下一节</p><div class="card"><span class="chip">此刻看什么</span><p id="tvCue"></p><div id="tvActions" class="actions"></div></div><div id="tvClocks" class="clock"></div><div id="tvLog" aria-live="polite"></div><button id="tvToInteract" style="width:100%">进入本节互动 →</button></section>
+  <section id="pane-interact" role="tabpanel" aria-labelledby="tab-interact" hidden><span class="chip" id="tvInteractLabel"></span><h3>停一下，一起观察</h3><p class="muted">AI 提问后留出 8 秒思考；只回应实际提交的答案。</p><div id="tvQuestions" class="actions"></div><div id="tvAnswer" class="card" aria-live="polite">选择一道题开始。</div><form id="tvDateForm"><h3 id="tvDateTitle">提交一个日期</h3><p class="muted">统一采用北京时间（UTC+08:00）。不提供时刻时采用 12:00，仅作演示。</p><label for="tvDate">公历日期（1900–2100）</label><input id="tvDate" type="date" min="1900-01-01" max="2100-12-31" required><label for="tvTime">时刻（可选）</label><input id="tvTime" type="time"><div class="actions"><button type="submit" class="primary">核对日期</button><button type="button" id="tvExample">使用演示日期</button></div></form><div id="tvDateConfirm" class="card" hidden><p id="tvDateSummary"></p><button id="tvApplyDate" class="primary">确认并更新画面</button></div><div id="tvCases" class="actions"></div><div id="tvVote" hidden><p>下一次想探索什么？</p><div class="actions"><button>世界时间</button><button>太阳系</button><button>更远的星空</button></div><p id="tvVoteResult" class="muted"></p></div></section>
+  <section id="pane-report" role="tabpanel" aria-labelledby="tab-report" hidden><span class="chip">可核对的天象记录</span><h3>生日当天的天文快照</h3><p class="muted">只记录天象与历法，不作性格判断或未来预测。</p><div id="tvReport"><div class="card">在「当堂互动」中确认日期，画面更新后生成报告。</div></div><div class="actions"><button id="tvDownload" disabled>下载报告</button><button id="tvBackDate">选择日期</button></div></section></div><footer><div id="tvNotice" role="status">准备就绪，开始你的时间之旅。</div><span>画面为教学模型 · 日期可回溯 · 生日不持久化保存</span></footer>`;
+  document.body.append(panel);const fab=document.createElement('button');fab.id='tv-fab';fab.textContent='互动课堂';document.body.append(fab);
+  ['mousedown','touchstart','touchmove','wheel','click'].forEach(type=>panel.addEventListener(type,e=>e.stopPropagation(),{passive:true}));
+  function notice(t){$('tvNotice').textContent=t;}
+  function tab(name){['course','interact','report'].forEach(t=>{$('pane-'+t).hidden=t!==name;$('tab-'+t).setAttribute('aria-selected',String(t===name));});}
+  panel.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+  function stop(){generation++;if(cancelSpeech)cancelSpeech();cancelSpeech=null;clearInterval(waitTimer);waitTimer=null;running=false;$('tvPlay').textContent='继续 / 重讲';}
+  async function speak(text,role,gen){if(gen!==generation)return;return new Promise(resolve=>{
+    const controller=new AbortController();let audio,url,timer,done=false;
+    const finish=()=>{if(done)return;done=true;clearTimeout(timer);controller.abort();if(audio)audio.pause();if(url)URL.revokeObjectURL(url);if(cancelSpeech===finish)cancelSpeech=null;resolve();};cancelSpeech=finish;
+    if(muted){timer=setTimeout(finish,Math.min(9000,Math.max(1500,text.length*70)));return;}
+    timer=setTimeout(()=>{notice('语音暂时不可用，可继续阅读文字。');finish();},45000);
+    fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice:role.voice}),signal:controller.signal}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(j=>{
+      if(done||gen!==generation)return finish();if(!j.audio)throw Error();url=URL.createObjectURL(new Blob([Uint8Array.from(atob(j.audio),c=>c.charCodeAt(0))],{type:'audio/mpeg'}));audio=new Audio(url);audio.onended=finish;audio.onerror=finish;audio.onloadedmetadata=()=>{clearTimeout(timer);timer=setTimeout(finish,(audio.duration+5)*1000);};audio.play().catch(()=>{notice('声音未能播放，请重试；文字讲解已保留。');finish();});
+    }).catch(()=>{if(!done){notice('语音连接失败，文字讲解已保留。');finish();}});
+  });}
+  function line(role,text){const el=document.createElement('div');el.className='line '+(role.voice==='female'?'female':'');const title=document.createElement('strong');title.textContent=role.name+' · '+role.tag;const p=document.createElement('p');p.textContent=text;el.append(title,p);$('tvLog').append(el);}
+  function bridge(){if(!window.TimeviewCourse)throw Error('画面正在加载，请稍后重试。');return window.TimeviewCourse;}
+  function action(fn){try{fn(bridge());}catch(e){notice(e.message);}}
+  function button(parent,label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;parent.append(b);return b;}
+  function switchChapter(i){stop();reportToken++;chapter=i;persist(true);if(chapters[i][2]!==view){const ts=window.TimeviewCourse?window.TimeviewCourse.time():Date.now();location.href=(chapters[i][2]==='earth'?'app':'solar-system.html')+'?t='+Math.round(ts);return;}render();}
+  function clocks(){if(!window.TimeviewCourse)return;const date=new Date(window.TimeviewCourse.time());$('tvClocks').replaceChildren();[['北京','Asia/Shanghai'],['伦敦','Europe/London'],['纽约','America/New_York']].forEach(([name,zone])=>{const d=document.createElement('div'),b=document.createElement('b'),s=document.createElement('small');b.textContent=new Intl.DateTimeFormat('en-GB',{timeZone:zone,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(date);s.textContent=new Intl.DateTimeFormat('zh-CN',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(date);d.append(name,b,s);$('tvClocks').append(d);});}
+  function render(){$('tvPlay').textContent='开始讲解';const c=chapters[chapter];$('tvChapter').value=String(chapter);$('tvStep').textContent=String(chapter+1).padStart(2,'0')+' / 12 · '+c[0];$('tvCue').textContent=c[3];$('tvBar').style.width=((chapter+1)/12*100)+'%';$('tvPrev').disabled=chapter===0;$('tvNext').disabled=chapter===11;$('tvClocks').hidden=chapter>4;$('tvLog').replaceChildren();line(roles[0],c[4]);line(roles[1],c[5]);const a=$('tvActions');a.replaceChildren();
+    if(chapter===0)button(a,'播放开场视频',()=>{stop();if(window.replayIntro)window.replayIntro();});
+    if(chapter===4){button(a,'夏至附近 · 6月21日',()=>setExample('2026-06-21'));button(a,'冬至附近 · 12月22日',()=>setExample('2026-12-22'));}
+    if(chapter===5)['轨道','X轴','Y轴','Z轴与侧视'].forEach((label,i)=>button(a,label,()=>action(b=>b.axes(i))));
+    if(chapter===6)[['水星','mercury'],['金星','venus'],['地球','earth'],['火星','mars'],['木星','jupiter'],['土星','saturn'],['天王星','uranus'],['海王星','neptune'],['冥王星','pluto']].forEach(([name,key])=>button(a,name,()=>action(b=>b.planet(key))));
+    if(chapter===7){button(a,'看星座',()=>action(b=>{b.layer('xiusu',false);b.layer('zodiac',true);}));button(a,'看星宿',()=>action(b=>{b.layer('zodiac',false);b.layer('xiusu',true);}));}
+    if(chapter===8){button(a,'旅行者号',()=>action(b=>{b.layer('threeBody',false);b.layer('voyager',true);}));button(a,'三体主题示意',()=>action(b=>{b.layer('voyager',false);b.layer('threeBody',true);}));}
+    if(chapter===9)button(a,'演示 2000-01-01',()=>setExample('2000-01-01'));
+    if(chapter===10)['A','B'].forEach(slot=>button(a,'案例 '+slot,()=>{caseSlot=slot;$('tvDateTitle').textContent='观众日期 · 案例 '+slot;tab('interact');notice('请提交案例 '+slot+' 的日期。');}));
+    if(chapter===11)button(a,'恢复当前时间',()=>action(b=>{invalidateReport();b.now();clocks();}));
+    $('tvInteractLabel').textContent=c[1];$('tvDateForm').hidden=![3,4,9,10].includes(chapter);$('tvDateConfirm').hidden=true;$('tvVote').hidden=chapter!==11;$('tvDateTitle').textContent=chapter===10?'观众日期 · 案例 '+caseSlot:'提交一个日期';renderQuestions();clocks();
   }
-  function speak(text, who) {
-    return new Promise(function (resolve) {
-      if (muted) { setTimeout(resolve, estTime(text)); return; }
-      fetch('api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, voice: who.voice })
-      }).then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-        .then(function (j) {
-          if (j.error || !j.audio) throw new Error(j.error || 'no audio');
-          var url = URL.createObjectURL(b64ToBlob(j.audio, 'audio/mpeg'));
-          var a = new Audio(url);
-          currentAudio = a;
-          var done = false;
-          function fin() { if (!done) { done = true; URL.revokeObjectURL(url); resolve(); } }
-          a.onended = fin; a.onerror = fin;
-          var guard = setTimeout(fin, estTime(text) + 6000);
-          a.onended = function () { clearTimeout(guard); fin(); };
-          a.onerror = function () { clearTimeout(guard); fin(); };
-          var pr = a.play(); if (pr && pr.catch) pr.catch(fin);
-        })
-        .catch(function () { resolve(); }); // TTS 失败静默降级（仅显示文字）
-    });
+  const questions={3:[['北京和伦敦的时差全年不变吗？',['全年不变','可能随夏令时变化'],1,'英国实行夏令时的日期范围内，伦敦的UTC偏移会变化。城市时钟已按所选日期处理。'],['想换到哪一天观察？',null,0,'我们使用演示日期 2000-01-01，一起比较三个城市。']],4:[['南北半球的季节一样吗？',['相同','相反'],1,'南北半球的季节相反，主要与地轴倾斜和公转造成的日照差异有关。'],['北京夏至附近通常比冬至附近白昼更长吗？',['是','否'],0,'是。地轴倾斜使北京在北半球夏季获得更长的日照时间。']]};
+  function renderQuestions(){$('tvQuestions').replaceChildren();$('tvAnswer').textContent='选择一道题开始。';const qs=questions[chapter]||[];qs.forEach((q,i)=>button($('tvQuestions'),'第 '+(i+1)+' 题 · '+q[0],()=>ask(q)));if(!qs.length)$('tvAnswer').textContent=chapter===10?'依次提交案例 A、B，每个案例建议观察 5 分钟。':'本节以观察为主，可以重听讲解或操作课程中的画面按钮。';}
+  async function ask(q){stop();const gen=generation;$('tvAnswer').textContent=q[0];await speak(q[0],roles[1],gen);if(gen!==generation)return;let seconds=8;const host=$('tvAnswer');host.replaceChildren();const label=document.createElement('p');host.append(label);label.textContent='留 8 秒想一想：'+q[0];
+    const respond=index=>{if(gen!==generation)return;clearInterval(waitTimer);waitTimer=null;host.textContent=index===null?'还没有收到回答。我们一起看：'+q[3]:(index===q[2]?'回答正确。':'再观察一下。')+q[3];speak(host.textContent,roles[0],gen);if(!q[1])setExample('2000-01-01');};
+    if(q[1])q[1].forEach((choice,i)=>button(host,choice,()=>respond(i)));else button(host,'我来提供日期',()=>{clearInterval(waitTimer);host.textContent='请在下面输入日期并核对。';$('tvDate').focus();});
+    waitTimer=setInterval(()=>{seconds--;label.textContent='还有 '+seconds+' 秒：'+q[0];if(seconds<=0)respond(null);},1000);
   }
-  function stopSpeech() { if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; } }
-
-  /* ========== 样式：右侧抽屉 + 对话流 + 问题列表 ========== */
-  var W = 320;
-  var CSS = [
-    '#tv-assist{position:fixed;top:48px;right:0;bottom:60px;width:' + W + 'px;max-width:90vw;z-index:18;transform:translateX(110%);transition:transform .26s ease;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;display:flex}',
-    '#tv-assist.on{transform:translateX(0)}',
-    '#tv-assist .tv-panel{flex:1;display:flex;flex-direction:column;gap:10px;background:rgba(7,18,34,.92);backdrop-filter:blur(14px);border:1px solid rgba(95,214,240,.28);border-right:none;border-radius:16px 0 0 16px;padding:14px;box-shadow:-10px 0 36px rgba(0,0,0,.45)}',
-    '#tv-assist .tv-head{display:flex;align-items:center;gap:7px;flex:none}',
-    '#tv-assist .tv-live{display:flex;align-items:center;gap:5px;color:#eaf6ff;font-size:12.5px;font-weight:700}',
-    '#tv-assist .tv-dot{width:7px;height:7px;border-radius:50%;background:#39e08a;box-shadow:0 0 8px #39e08a;animation:tvpulse 1.8s infinite}',
-    '@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.35}}',
-    '#tv-assist .tv-ai{color:#5fd6f0}',
-    '#tv-assist .tv-status{font-size:11px;padding:2px 8px;border-radius:999px;color:#9fe0b8;background:rgba(90,210,140,.14)}',
-    '#tv-assist .tv-status.off{color:#ffc9c9;background:rgba(255,140,140,.14)}',
-    '#tv-assist .tv-sp{flex:1}',
-    '#tv-assist .tv-head button{font-size:12px;color:#bfe4f5;background:rgba(95,214,240,.08);border:1px solid rgba(95,214,240,.3);border-radius:999px;padding:4px 9px;cursor:pointer;line-height:1}',
-    '#tv-assist .tv-log{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding-right:3px}',
-    '#tv-assist .tv-log::-webkit-scrollbar{width:4px}',
-    '#tv-assist .tv-log::-webkit-scrollbar-thumb{background:rgba(95,214,240,.25);border-radius:2px}',
-    '#tv-assist .tv-line{display:flex;gap:9px;align-items:flex-start;animation:tvrise .25s ease}',
-    '@keyframes tvrise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}',
-    '#tv-assist .tv-ava{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#04121c}',
-    '#tv-assist .tv-line.ayuan .tv-ava{background:linear-gradient(135deg,#5fd6f0,#2aa9c8)}',
-    '#tv-assist .tv-line.axing .tv-ava{background:linear-gradient(135deg,#ff9ebc,#e0608f)}',
-    '#tv-assist .tv-body{flex:1;min-width:0}',
-    '#tv-assist .tv-nm{font-size:11px;font-weight:700;color:#5fd6f0;margin-bottom:2px}',
-    '#tv-assist .tv-line.axing .tv-nm{color:#ff9ebc}',
-    '#tv-assist .tv-tx{font-size:14px;color:#eaf6ff;line-height:1.5;word-break:break-word}',
-    '#tv-assist .tv-line.aud .tv-tx{color:#9fe0b8;font-size:13px;background:rgba(90,210,140,.1);border:1px solid rgba(90,210,140,.22);border-radius:9px;padding:6px 10px}',
-    '#tv-assist .tv-line.hint .tv-tx{color:#7fa8c4;font-size:12px}',
-    '#tv-assist .tv-next{flex:none;display:block;width:100%;padding:10px;font-size:13.5px;font-weight:700;cursor:pointer;border-radius:11px;color:#04121c;background:linear-gradient(135deg,#5fd6f0,#2aa9c8);border:none}',
-    '#tv-assist .tv-qa{flex:none;display:flex;flex-direction:column;gap:6px;max-height:40vh;min-height:0}',
-    '#tv-assist .tv-qa-h{font-size:11.5px;font-weight:700;color:#5fd6f0;flex:none}',
-    '#tv-assist .tv-qa-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding-right:2px}',
-    '#tv-assist .tv-qa-list::-webkit-scrollbar{width:4px}',
-    '#tv-assist .tv-qa-list::-webkit-scrollbar-thumb{background:rgba(95,214,240,.25);border-radius:2px}',
-    '#tv-assist .tv-qa-cat{flex:none}',
-    '#tv-assist .tv-qa-cat-h{font-size:11px;color:#7fa8c4;margin:4px 0 3px;padding-left:2px}',
-    '#tv-assist .tv-qa-q{display:block;width:100%;text-align:left;padding:6px 9px;font-size:12px;cursor:pointer;border-radius:8px;color:#bfe4f5;background:rgba(95,214,240,.05);border:1px solid rgba(95,214,240,.18);margin-bottom:4px;line-height:1.4}',
-    '#tv-assist .tv-qa-q:hover{background:rgba(95,214,240,.14);color:#eaf6ff}',
-    '#tv-assist .tv-qa-refresh{flex:none;padding:6px;font-size:12px;cursor:pointer;border-radius:8px;color:#9ab8dc;background:rgba(95,214,240,.05);border:1px solid rgba(95,214,240,.2)}',
-    '#tv-assist .tv-qa-refresh:hover{color:#eaf6ff;background:rgba(95,214,240,.14)}',
-    '#tv-fab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:19;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}',
-    '#tv-fab button{writing-mode:vertical-rl;letter-spacing:2px;padding:13px 8px;font-size:13px;font-weight:700;cursor:pointer;color:#04121c;background:linear-gradient(180deg,#5fd6f0,#2aa9c8);border:none;border-radius:14px 0 0 14px;box-shadow:-4px 0 16px rgba(95,214,240,.3)}',
-    '#tv-fab.hide{opacity:0;pointer-events:none}'
-  ].join('\n');
-  var styleEl = document.createElement('style');
-  styleEl.textContent = CSS;
-  document.head.appendChild(styleEl);
-
-  /* ========== 界面 ========== */
-  function h(html) { var d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
-  var fab = h('<div id="tv-fab"><button id="tvFabBtn">🎙 解说</button></div>');
-  document.body.appendChild(fab);
-  var panel = h(
-    '<div id="tv-assist"><div class="tv-panel">' +
-      '<div class="tv-head">' +
-        '<span class="tv-live"><span class="tv-dot"></span><span class="tv-ai">AI 虚拟解说</span></span>' +
-        '<span class="tv-status off" id="tvStatus">…</span>' +
-        '<span class="tv-sp"></span>' +
-        '<button id="tvMute">🔊</button>' +
-        '<button id="tvClose">✕</button>' +
-      '</div>' +
-      '<div class="tv-log" id="tvLog"></div>' +
-      '<button class="tv-next" id="tvNext">▶ 下一个话题</button>' +
-      '<div class="tv-qa">' +
-        '<div class="tv-qa-h">📚 知识库问答 · 点选即答</div>' +
-        '<div class="tv-qa-list" id="tvQaList"></div>' +
-        '<button class="tv-qa-refresh" id="tvQaRefresh">🔀 换一批</button>' +
-      '</div>' +
-    '</div></div>'
-  );
-  document.body.appendChild(panel);
-
-  var $ = function (id) { return document.getElementById(id); };
-  var logEl = $('tvLog');
-
-  /* ========== 对话流渲染 ========== */
-  function clearLog() { logEl.innerHTML = ''; }
-  function scrollLog() { logEl.scrollTop = logEl.scrollHeight; }
-  function addLine(who, text) {
-    var d = document.createElement('div');
-    d.className = 'tv-line ' + who.id;
-    if (who.id === 'aud') {
-      var at = document.createElement('div'); at.className = 'tv-tx'; at.textContent = text;
-      d.appendChild(at);
-    } else {
-      var ava = document.createElement('div'); ava.className = 'tv-ava'; ava.textContent = who.id === 'ayuan' ? '远' : '星';
-      var body = document.createElement('div'); body.className = 'tv-body';
-      var nm = document.createElement('div'); nm.className = 'tv-nm'; nm.textContent = who.name + ' · ' + who.tag;
-      var tx = document.createElement('div'); tx.className = 'tv-tx'; tx.textContent = text;
-      body.appendChild(nm); body.appendChild(tx);
-      d.appendChild(ava); d.appendChild(body);
-    }
-    logEl.appendChild(d);
-    scrollLog();
+  function prepareDate(example){const date=$('tvDate').value,time=$('tvTime').value||'12:00',ts=Date.parse(date+'T'+time+':00+08:00');if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<'1900-01-01'||date>'2100-12-31'||!Number.isFinite(ts)||new Date(ts+480*60000).toISOString().slice(0,10)!==date){notice('请输入 1900–2100 年间有效的公历日期。');return;}pending={ts,date,time,example,defaultTime:!$('tvTime').value,slot:caseSlot};$('tvDateSummary').textContent=(example?'演示日期':'观众提交')+' · '+date+' '+time+' 北京时间（UTC+08:00）'+(pending.defaultTime?'；12:00为演示时刻，非出生时刻。':'；采用所填时刻。');$('tvDateConfirm').hidden=false;}
+  function setExample(date){tab('interact');$('tvDateForm').hidden=false;$('tvDate').value=date;$('tvTime').value='';prepareDate(true);}
+  function reportText(r){return ['生日当天的天文快照',r.example?'来源：演示日期':'来源：观众提交',r.date+' '+r.time+' 北京时间 UTC+08:00',r.defaultTime?'采用默认演示时刻12:00，不代表实际出生时刻。':'采用用户填写时刻。','月相：'+r.data.moonPhase,'月龄约：'+r.data.moonAge+' 天','照亮比例约：'+r.data.moonIllum+'%','农历：'+r.data.lunar,'节气区间：'+r.data.solarTerm,'计算来源：项目 astro.js / lunar.js；月相采用近似轨道计算。太阳系图为缩放教学示意，不作为精密星历或当地可见性判断。','不包含性格、运势或未来预测。'].join('\n');}
+  function invalidateReport(){stop();report=null;reportToken++;$('tvDownload').disabled=true;$('tvReport').textContent='画面时间已改变，请重新确认日期生成一致的报告。';}
+  async function applyDate(){if(!pending)return;stop();const gen=generation;const item={...pending};try{bridge().setTime(item.ts);}catch(e){notice(e.message);return;}const token=++reportToken;report=null;$('tvDownload').disabled=true;$('tvDateConfirm').hidden=true;clocks();tab('report');$('tvReport').textContent='画面日期已更新，正在计算同一时刻的报告…';notice('已暂停时间推进，正在核对天象。');
+    try{const response=await fetch('api/course-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts:item.ts}),signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error();const data=await response.json();if(token!==reportToken)return;if(Math.abs(bridge().time()-item.ts)>1000)throw Error();report={...item,data};$('tvReport').replaceChildren();const p=document.createElement('div');p.className='card';p.style.whiteSpace='pre-line';p.textContent=reportText(report);$('tvReport').append(p);$('tvDownload').disabled=false;notice('报告与画面采用同一时刻，已生成。');if(chapter===10){cases=cases.filter(x=>x.slot!==item.slot);cases.push(report);caseSlot=item.slot==='A'?'B':'A';$('tvDateTitle').textContent='观众日期 · 案例 '+caseSlot;$('tvCases').replaceChildren();cases.forEach(c=>button($('tvCases'),'案例 '+c.slot+' · '+c.date,()=>{pending=c;applyDate();}));}await speak('底部时间已更新为'+item.date+'。这份报告记录当天的天象，不作个人判断。',roles[1],gen);if(gen===generation)await speak('模型计算的月相是'+data.moonPhase+'，照亮比例约百分之'+data.moonIllum+'。这是近似天文记录。',roles[0],gen);
+    }catch(_){if(token===reportToken){$('tvReport').textContent='报告未生成，或画面时间已经改变。请重新确认日期后重试。';notice('未生成报告，不进行结果解说。');}}
   }
-
-  /* ========== 说话编排（可被打断） ========== */
-  function interrupt() { talkGen++; stopSpeech(); }
-  async function sayLine(who, text, gen) {
-    addLine(who, text);
-    await speak(text, who);
-    return gen === talkGen;
-  }
-
-  async function welcome() {
-    var gen = ++talkGen;
-    clearLog();
-    if (!(await sayLine(AYUAN, WELCOME.ayuan, gen))) return;
-    if (!(await sayLine(AXING, WELCOME.axing, gen))) return;
-  }
-  async function nextTopic() {
-    var gen = ++talkGen;
-    clearLog();
-    var t = TOPICS[topicIndex % TOPICS.length]; topicIndex++;
-    if (!(await sayLine(AYUAN, t.ayuan, gen))) return;
-    if (!(await sayLine(AXING, t.axing, gen))) return;
-    if (!(await sayLine(AXING, t.q, gen))) return;
-  }
-
-  /* ========== 知识库问答：点选即答 ========== */
-  var qaItems = [];
-  var Q_NUM = 2;  // 每次随机显示 2 条问题
-  function loadQA() {
-    fetch('api/qa').then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(function (j) { qaItems = j.items || []; renderQA(); })
-      .catch(function () { qaItems = []; renderQA(); });
-  }
-  function pickRandom(arr, n) {
-    var a = arr.slice();
-    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
-    return a.slice(0, Math.min(n, a.length));
-  }
-  function renderQA() {
-    var el = $('tvQaList'); if (!el) return;
-    el.innerHTML = '';
-    if (!qaItems.length) { el.innerHTML = '<div style="font-size:12px;color:#7fa8c4;padding:4px 2px">知识库为空，请在维护页面添加。</div>'; return; }
-    pickRandom(qaItems, Q_NUM).forEach(function (k) {
-      var q = document.createElement('button'); q.className = 'tv-qa-q'; q.textContent = k.question;
-      q.addEventListener('click', function () { answer(k); });
-      el.appendChild(q);
-    });
-  }
-  function answer(k) {
-    var who = k.role === 'axing' ? AXING : AYUAN;
-    interrupt();
-    addLine({ id: 'aud' }, k.question);
-    addLine(who, k.answer);
-    speak(k.answer, who);
-  }
-
-  function start() { if (!started) { started = true; welcome(); } }
-
-  /* ========== 事件 ========== */
-  function openDrawer() { panel.classList.add('on'); fab.classList.add('hide'); start(); loadQA(); }
-  function closeDrawer() { panel.classList.remove('on'); fab.classList.remove('hide'); interrupt(); }
-  $('tvFabBtn').addEventListener('click', openDrawer);
-  $('tvClose').addEventListener('click', closeDrawer);
-  $('tvNext').addEventListener('click', function () { if (!started) { started = true; } nextTopic(); });
-  $('tvMute').addEventListener('click', function () { muted = !muted; $('tvMute').textContent = muted ? '🔇' : '🔊'; if (muted) stopSpeech(); });
-  $('tvQaRefresh').addEventListener('click', renderQA);
-
-  /* ========== 状态 ========== */
-  fetch('api/health').then(function (r) { return r.json(); }).then(function (j) {
-    var el = $('tvStatus');
-    if (j && j.tts) { el.textContent = '🔊 语音在线'; el.className = 'tv-status'; }
-    else { el.textContent = '🔇 仅文字'; el.className = 'tv-status off'; }
-  }).catch(function () { var el = $('tvStatus'); el.textContent = '🔇 仅文字'; el.className = 'tv-status off'; });
+  chapters.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c[0]+' '+c[1];$('tvChapter').append(o);});
+  $('tvChapter').onchange=e=>switchChapter(+e.target.value);$('tvPrev').onclick=()=>switchChapter(chapter-1);$('tvNext').onclick=()=>switchChapter(chapter+1);
+  $('tvPlay').onclick=async()=>{if(running){stop();notice('讲解已暂停，可继续重讲本节。');return;}if(chapters[chapter][2]!==view){switchChapter(chapter);return;}if(window.introActive||($('introOverlay')&&$('introOverlay').style.display!=='none'&&$('introOverlay').offsetHeight)){notice('请先看完或跳过引导视频，再开始讲解。');return;}stop();running=true;$('tvPlay').textContent='暂停讲解';notice('正在讲解，可随时暂停。');const gen=generation;await speak(chapters[chapter][4],roles[0],gen);if(gen!==generation)return;await speak(chapters[chapter][5],roles[1],gen);if(gen!==generation)return;running=false;$('tvPlay').textContent='重听本节';notice('讲解结束。观察画面后，可以互动或进入下一节。');};
+  $('tvMute').onclick=()=>{muted=!muted;stop();$('tvMute').textContent=muted?'仅文字':'语音开';persist(true);};$('tvMute').textContent=muted?'仅文字':'语音开';
+  fab.onclick=()=>{panel.classList.add('on');fab.classList.add('hide');persist(true);};$('tvClose').onclick=()=>{stop();panel.classList.remove('on');fab.classList.remove('hide');persist(false);fab.focus();};panel.addEventListener('keydown',e=>{if(e.key==='Escape')$('tvClose').click();});
+  $('tvToInteract').onclick=()=>tab('interact');$('tvBackDate').onclick=()=>{tab('interact');$('tvDateForm').hidden=false;};$('tvDateForm').onsubmit=e=>{e.preventDefault();prepareDate(false);};$('tvExample').onclick=()=>setExample(caseSlot==='A'?'2000-01-01':'2024-06-21');$('tvApplyDate').onclick=applyDate;
+  $('tvDownload').onclick=()=>{if(!report)return;const url=URL.createObjectURL(new Blob([reportText(report)],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='天文快照-'+report.date+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  $('tvVote').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('tvVoteResult').textContent='本机已选择：'+b.textContent+'。';try{sessionStorage.setItem('tv-course-interest',b.textContent);}catch(_){}});
+  setInterval(()=>{if(panel.classList.contains('on')){if(running)elapsed++;$('tvElapsed').textContent='讲解 '+String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');clocks();}if(report&&window.TimeviewCourse&&Math.abs(window.TimeviewCourse.time()-report.ts)>1000)invalidateReport();},1000);
+  window.addEventListener('pagehide',()=>{persist(panel.classList.contains('on'));stop();});
+  render();if(saved.open){panel.classList.add('on');fab.classList.add('hide');}
 })();

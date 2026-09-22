@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "3.34";
+const VERSION = "3.35";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -223,6 +223,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (p === "/api/health") return sendJson(res, { ok: true, ai: !!LLM_API_KEY, tts: !!TTS_API_KEY, kb: KB.length, model: LLM_MODEL, fortune: _fm, fortuneMode: FORTUNE_MODE });
+
+  // 课程报告只返回经过白名单筛选的计算结果；不调用大模型或命理解读。
+  if (p === "/api/course-report" && req.method === "POST") {
+    try {
+      const { ts } = await readBody(req);
+      if (typeof ts !== "number" || !Number.isFinite(ts) ||
+          ts < Date.parse("1900-01-01T00:00:00+08:00") ||
+          ts > Date.parse("2100-12-31T23:59:59+08:00")) {
+        return sendJson(res, { error: "请选择1900至2100年间的有效日期" }, 400);
+      }
+      const a = computeAstro(ts, 480);
+      return sendJson(res, { ts, tzMin: 480, moonPhase: a.moonPhase,
+        moonAge: a.moonAge, moonIllum: a.moonIllum,
+        lunar: L.fmtLunar(ts, { min: 480 }) || "暂无可靠数据", solarTerm: a.solarTerm,
+        source: "astro.js / lunar.js", model: "教学近似模型" });
+    } catch (_) { return sendJson(res, { error: "天文计算暂不可用，请重试" }, 500); }
+  }
 
   // ===== 知识库问答：列表 + 增删改查（写入 knowledge.json）=====
   if (p === "/api/qa") {

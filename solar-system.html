@@ -504,7 +504,9 @@ const p2 = n => String(n).padStart(2, '0');
 function formatInput(d) { return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
 function updateDateText() {
   const d = new Date(EPOCH_MS + simElapsed * 1000);
-  document.getElementById('dateText').textContent = formatInput(d);
+  document.getElementById('dateText').textContent = window.courseBeijingTime
+    ? new Date(d.getTime() + 480 * 60000).toISOString().slice(0,19).replace('T',' ') + ' UTC+8 北京'
+    : formatInput(d);
   updateLunar();
 }
 
@@ -844,7 +846,7 @@ initLunarPicker();
 
 // 从地球视角跳转过来时，把日期/时间带过来（URL ?t=<ms>）
 (function applyIncomingTime() {
-  const m = location.search.match(/[?&]t=(\d+)/);
+  const m = location.search.match(/[?&]t=(-?\d+)/);
   if (!m) return;
   const t = parseInt(m[1], 10);
   if (isNaN(t)) return;
@@ -1471,6 +1473,30 @@ function animate() {
 }
 // 初始化：所有图层默认隐藏（轨道/标签/坐标轴/节气/星座/星宿/三体星系/旅行者号）
 for (const key in layerConfig) layerConfig[key].set(false);
+// 课程桥接位于模块内部，所有日期均传递同一个 UTC 时间戳。
+window.TimeviewCourse = {
+  time: () => EPOCH_MS + simElapsed * 1000,
+  setTime: (ts) => {
+    if (!Number.isFinite(ts)) throw new Error('无效日期');
+    window.courseBeijingTime = true;
+    simElapsed = (ts - EPOCH_MS) / 1000; paused = true;
+    document.getElementById('pPlay').textContent = '▶';
+    updateDateText(); updateLunar();
+  },
+  now: () => document.getElementById('pNow').click(),
+  layer: (key, visible) => { if (layerConfig[key]) layerConfig[key].set(visible); },
+  axes: (step) => {
+    layerConfig.orbits.set(true); layerConfig.axes.set(step > 0);
+    [xLine, xLabel].forEach(o => o.visible = step >= 1);
+    [yLine, yLabel].forEach(o => o.visible = step >= 2);
+    [zLine, zLabel].forEach(o => o.visible = step >= 3);
+    spinX = step >= 3 ? -0.75 : 0; spinXVel = 0; spinZVel = 0;
+  },
+  planet: (key) => {
+    layerConfig.orbits.set(true); layerConfig.labels.set(true);
+    showCard(key, Math.max(20, innerWidth / 2 - 180), innerHeight / 2);
+  }
+};
 animate();
 </script>
 

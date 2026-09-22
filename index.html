@@ -1381,7 +1381,7 @@ document.getElementById('guideOverlay').onclick = closeGuide;
 // ========== 启动 ==========
 // 从太阳视角跳转过来时，带入日期/时间（URL ?t=<ms>）
 (function applyIncomingTime() {
-  const m = location.search.match(/[?&]t=(\d+)/);
+  const m = location.search.match(/[?&]t=(-?\d+)/);
   if (!m) return;
   const t = parseInt(m[1], 10);
   if (isNaN(t)) return;
@@ -1462,7 +1462,20 @@ document.querySelectorAll('a[href*="solar-system"]').forEach(el => {
 });
 </script>
 
-<script>window.TIMEVIEW='earth';</script>
+<script>
+window.TIMEVIEW='earth';
+window.TimeviewCourse = {
+  time: () => state.t,
+  setTime: (ts) => {
+    if (!Number.isFinite(ts)) throw new Error('无效日期');
+    tzIdx = 0; tz = TIMEZONES[0];
+    document.getElementById('tzBtn').textContent = '🕓 ' + tz.label;
+    state.t = ts; dispT = ts; anchorT = ts; state.playing = false;
+    document.getElementById('pPlay').textContent = '▶';
+  },
+  now: () => document.getElementById('pNow').click()
+};
+</script>
 <script src="assistant.js"></script>
 </body>
 </html>
