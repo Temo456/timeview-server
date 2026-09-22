@@ -511,7 +511,7 @@ function loadImage(img, url) {
 
 // Simplified Chang'e-1 icon and orbit, animated for teaching rather than telemetry.
 const changEIcon = new Image();
-loadImage(changEIcon, 'textures/change-orbiter.svg');
+loadImage(changEIcon, 'textures/change-orbiter.svg?v=3.52');
 let changEPhase = 0;
 function drawChangE(mx, my, mr, front) {
   const orbit = mr + 8, depth = Math.sin(changEPhase);
@@ -528,7 +528,7 @@ function drawChangE(mx, my, mr, front) {
     ctx.translate(x, y);
     ctx.rotate(-Math.PI / 10 + depth * 0.06);
     if (changEIcon.complete && changEIcon.naturalWidth) ctx.drawImage(changEIcon, -size/2, -size*0.3125, size, size*0.625);
-    else {ctx.scale(size/24,size/24);ctx.fillStyle='#568dc4';ctx.fillRect(-12,-4,24,8);ctx.fillStyle='#ecd190';ctx.fillRect(-4,-6,8,12);}
+    else {ctx.scale(size/24,size/24);ctx.fillStyle='#fff';ctx.fillRect(-12,-4,24,8);ctx.fillRect(-4,-6,8,12);}
     ctx.restore();
   }
 }
