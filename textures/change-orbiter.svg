@@ -1,6 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="80" viewBox="0 0 128 80">
   <title>嫦娥一号绕月探测器示意</title>
-  <g fill="#bcb394" stroke="#bcb394" stroke-linejoin="round" stroke-linecap="round">
+  <defs>
+    <filter id="outline" x="-10%" y="-15%" width="120%" height="130%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="edge"/>
+      <feFlood flood-color="#292e35" result="ink"/>
+      <feComposite in="ink" in2="edge" operator="in" result="border"/>
+      <feMerge><feMergeNode in="border"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#outline)" fill="#bcb394" stroke="#bcb394" stroke-linejoin="round" stroke-linecap="round">
     <path d="M42 40H85" fill="none" stroke-width="4"/>
     <path d="M4 26H43V53H4Z M85 26H124V53H85Z" stroke-width="1.8"/>
     <path d="M51 23L69 17L79 27V54L61 62L51 51Z" stroke-width="1.4"/>
