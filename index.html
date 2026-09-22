@@ -521,7 +521,7 @@ function drawChangE(mx, my, mr, front) {
   const oy = depth * orbit * 0.24 * perspective;
   const x = mx + ox * Math.cos(tilt) - oy * Math.sin(tilt);
   const y = my + ox * Math.sin(tilt) + oy * Math.cos(tilt);
-  const size = Math.max(20, Math.min(34, mr * 1.2)) * (0.90 + depth * 0.18);
+  const size = Math.max(12, Math.min(20, mr * 0.72)) * (0.90 + depth * 0.18);
   if (front === (depth >= 0)) {
     ctx.save(); ctx.globalAlpha = 1;
     ctx.translate(x, y);

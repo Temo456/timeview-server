@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "3.48";
+const VERSION = "3.49";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
