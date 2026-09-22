@@ -670,11 +670,13 @@ function drawEarth(d, date) {
   ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip(); ctx.translate(cx, cy);
   const south = state.hemi < 0;
   const eimg = getEarthImg();
-  ctx.rotate(south ? merid + 150 * RAD : merid);
+  // 地图底图统一逆时针校正15°；标记和刻度使用各自的绘制坐标。
+  const mapRotation = (south ? merid + 150 * RAD : merid) - 15 * RAD;
+  ctx.rotate(mapRotation);
   const RR = R * 1.08;
   if (isEarthReady()) { ctx.drawImage(eimg, -RR, -RR, 2 * RR, 2 * RR); }
   else { ctx.drawImage(earthTex, -RR, -RR, 2 * RR, 2 * RR); }
-  ctx.rotate(south ? -merid - 150 * RAD : -merid); ctx.restore();
+  ctx.restore();
 
   // 地球加载中动画（不随地球旋转；至少显示 2s）
   if (!isEarthReady() || Date.now() - earthLoadStart < 2000) {
