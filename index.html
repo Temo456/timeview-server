@@ -184,6 +184,7 @@ if ('serviceWorker' in navigator) {
       ov.style.opacity = '1';
       vid.style.visibility = 'hidden';
       window.introActive = false;
+      window.dispatchEvent(new Event('timeview:intro-finished'));
     }, 800);
   }
 
@@ -1464,6 +1465,20 @@ document.querySelectorAll('a[href*="solar-system"]').forEach(el => {
 
 <script>
 window.TIMEVIEW='earth';
+function resetScreensaverToNow() {
+  if (!document.body.classList.contains('scrsv')) return;
+  setView('earth'); state.hemi = 1; earthZoom = 1; showCities = true;
+  tzIdx = 0; tz = TIMEZONES[0]; inertia = 0; tlDrag = false;
+  document.getElementById('pNow').click();
+  document.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾';
+  document.querySelectorAll('.spd-opt').forEach(o => o.classList.toggle('on', o.dataset.u === 'sec'));
+  document.getElementById('tzBtn').textContent = '🕓 ' + tz.label;
+  document.getElementById('btnHemi').textContent = '🧭 北';
+  document.getElementById('btnCities').style.color = '#5fd6f0';
+  loadEarthPole();
+}
+window.addEventListener('timeview:intro-finished', resetScreensaverToNow);
+if (!window.introActive) resetScreensaverToNow();
 window.TimeviewCourse = {
   time: () => state.t,
   setTime: (ts) => {

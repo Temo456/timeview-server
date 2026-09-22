@@ -1,6 +1,8 @@
 /* 时间景观 · 双角色课程。自然连续讲解，观众只在对话邀请时输入。 */
 (async function () {
   'use strict';
+  // 屏保只展示实时表盘，不运行隐藏的课程或自动切换日期。
+  if (document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1') return;
   const view = window.TIMEVIEW === 'solar' ? 'solar' : 'earth', $ = id => document.getElementById(id);
   const roles = [{name:'阿远',voice:'male',tag:'白桦 · 原理讲解'},{name:'阿星',voice:'female',tag:'冰糖 · 观察引导'}];
   const chapters = [
