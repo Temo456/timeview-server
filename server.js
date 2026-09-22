@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "3.42";
+const VERSION = "3.43";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -276,7 +276,8 @@ const server = http.createServer(async (req, res) => {
   if (p === "/api/tts" && req.method === "POST") {
     try {
       const b = await readBody(req);
-      const text = (b.text || "").toString().trim().slice(0, 600);
+      const text = (b.text || "").toString().trim();
+      if (text.length > 1000) return sendJson(res, { error: "每次语音合成最多1000字，请分段提交" }, 400);
       if (!text) return sendJson(res, { error: "empty" }, 400);
       if (!TTS_API_KEY) return sendJson(res, { error: "no TTS_API_KEY" }, 503);
       const voice = (b.voice === "female" || b.voice === "axing") ? TTS_VOICE_FEMALE : TTS_VOICE_MALE;

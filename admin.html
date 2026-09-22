@@ -196,7 +196,7 @@ load();
   function field(parent,label,value,setter,kind='textarea'){
     const wrap=document.createElement('div'),l=document.createElement('label'),el=document.createElement(kind==='date'?'input':kind);
     l.className='course-label';l.textContent=label;
-    el.value=value;el.setAttribute('aria-label',label);if(kind==='date'){el.type='date';el.min='1900-01-01';el.max='2100-12-31';}else el.maxLength=kind==='input'?40:400;
+    el.value=value;el.setAttribute('aria-label',label);if(kind==='date'){el.type='date';el.min='1900-01-01';el.max='2100-12-31';}else el.maxLength=kind==='input'?40:1000;
     el.oninput=()=>{setter(el.value);changed();};l.append(el);wrap.append(l);parent.append(wrap);return el;
   }
   function render(){
@@ -212,7 +212,7 @@ load();
         if(line.text){
           const row=document.createElement('label');row.className='role-row';row.textContent='讲解角色 ';const select=document.createElement('select');select.setAttribute('aria-label','讲解角色');
           [['ayuan','阿远 · 白桦'],['axing','阿星 · 冰糖']].forEach(([value,name])=>{const o=document.createElement('option');o.value=value;o.textContent=name;select.append(o);});select.value=line.role;select.onchange=()=>{line.role=select.value;changed();};row.append(select);block.append(row);
-          field(block,'台词（最多400字）',line.text,v=>line.text=v);
+          field(block,'台词（最多1000字）',line.text,v=>line.text=v);
           if(line.text.includes('{{城市时间}}')){const n=document.createElement('p');n.className='course-note';n.textContent='{{城市时间}} 会自动替换为北京、伦敦、纽约的实际读数。';block.append(n);}
         }
         if(line.answer)field(block,'回答后的讲解（阿远）',line.answer,v=>line.answer=v);

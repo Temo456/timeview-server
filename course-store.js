@@ -8,7 +8,7 @@ const tokens = {date:['来源','日期','时间说明'],report:['月相','照亮
 function validate(input) {
   if (!input || !Array.isArray(input.chapters) || !Array.isArray(input.lines) ||
       input.chapters.length !== defaults.chapters.length || input.lines.length !== defaults.lines.length) throw Error('课程结构不匹配，请重新加载后台');
-  function text(value, label, max=400, allowed=[]) {
+  function text(value, label, max=1000, allowed=[]) {
     if (typeof value !== 'string' || !value.trim() || value.trim().length > max) throw Error(label+'需填写1至'+max+'字');
     for (const m of value.matchAll(/\{\{([^{}]+)\}\}/g)) if (!allowed.includes(m[1])) throw Error(label+'含未知占位符：'+m[0]);
     return value.trim();
@@ -21,7 +21,7 @@ function validate(input) {
     const item=input.lines[i];if(!item||item.id!==base.id||item.type!==base.type||item.chapter!==base.chapter)throw Error('段落结构不匹配');
     if(!['ayuan','axing'].includes(item.role))throw Error('请选择阿远或阿星');
     const row={...base,role:item.role};
-    if(base.text)row.text=text(item.text,'第'+(i+1)+'段台词',400,base.text.includes('{{城市时间}}')?['城市时间']:[]);
+    if(base.text)row.text=text(item.text,'第'+(i+1)+'段台词',1000,base.text.includes('{{城市时间}}')?['城市时间']:[]);
     if(base.answer)row.answer=text(item.answer,'第'+(i+1)+'段回应');
     if(base.fallback){
       const d=item.fallback,ts=Date.parse(d+'T12:00:00Z');
@@ -31,7 +31,7 @@ function validate(input) {
     return row;
   });
   const templates={};
-  for(const name of Object.keys(defaults.templates)) templates[name]=text(input.templates?.[name],'衔接语 '+name,400,tokens[name]||[]);
+  for(const name of Object.keys(defaults.templates)) templates[name]=text(input.templates?.[name],'衔接语 '+name,1000,tokens[name]||[]);
   return {chapters,lines,templates};
 }
 

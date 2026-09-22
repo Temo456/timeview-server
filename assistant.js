@@ -112,6 +112,7 @@
   #tv-assist{position:fixed;right:18px;top:68px;bottom:76px;width:330px;max-width:calc(100vw - 28px);z-index:22;display:none;flex-direction:column;color:#eaf0ed;background:linear-gradient(160deg,#112129ed,#0a171fef);border:1px solid #c7d7d523;border-radius:18px;box-shadow:0 16px 60px #0005;font:14px/1.85 'Microsoft YaHei','PingFang SC',sans-serif;overflow:hidden;backdrop-filter:blur(18px)}
   #tv-assist.on{display:flex}#tv-assist *{box-sizing:border-box}#tv-assist [hidden]{display:none!important}#tv-assist header{padding:18px 20px 13px;border-bottom:1px solid #ffffff10}#tv-assist .top{display:flex;justify-content:space-between;align-items:center;gap:10px}#tv-assist .kicker{color:#c6b58a;letter-spacing:2px;font-size:10px}#tv-assist h2{font:22px/1.5 'STSong','SimSun',serif;margin:5px 0;color:#f1eee3}#tv-assist .sub{font-size:11px;color:#95aaaF}#tv-assist button{font:inherit;color:#afc3c6;background:none;border:none;cursor:pointer;padding:6px 9px;border-radius:6px}#tv-assist button:hover{color:#f2dbab;background:#ffffff09}#tv-assist button:focus-visible,#tv-assist input:focus-visible{outline:2px solid #d9bf87;outline-offset:2px}#tv-assist .body{flex:1;min-height:0;overflow:auto;padding:6px 20px 20px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#ffffff20 transparent}#tv-assist .line{padding:14px 0;border-bottom:1px solid #ffffff09;animation:tvArrive .45s ease}#tv-assist .speaker{font-size:11px;color:#8dc4c4;display:flex;gap:7px;align-items:center}#tv-assist .female .speaker{color:#dcc18c}#tv-assist .line p{margin:5px 0 0;line-height:1.95}#tv-assist .audience{font-size:12px;color:#a0b0b5;text-align:right;padding:12px 0}#tv-assist footer{border-top:1px solid #ffffff10;padding:12px 18px}#tv-assist .controls{display:flex;align-items:center;justify-content:space-between;font-size:12px}#tvStatus{color:#a3b6b9;font-size:11px}#tv-assist form{display:flex;gap:8px;margin-top:10px}#tv-assist input{flex:1;min-width:0;background:#ffffff07;color:#edf1ec;border:1px solid #ffffff25;padding:10px;border-radius:9px;font:13px 'Microsoft YaHei',sans-serif}#tv-assist form button{color:#ead3a2;flex:none}#tvPrompt{font-size:11px;color:#cab991;margin-top:6px}#tvReport{font-size:12px;padding:12px;margin-top:14px;border:1px solid #dac49130;border-radius:10px;background:#e5c68105;white-space:pre-line;color:#cdd7d4}#tvReport a{color:#e2c991;text-decoration:none;display:block;margin-top:8px}#tv-fab{position:fixed;right:16px;top:50%;z-index:21;border:1px solid #d9c18d44;border-radius:20px;padding:12px 14px;background:#12232d;color:#e1c895;cursor:pointer;font:13px 'Microsoft YaHei',sans-serif}#tv-fab.hide{display:none}@keyframes tvArrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){#tv-assist .line{animation:none}}@media(max-width:600px){#tv-assist{right:10px;top:auto;bottom:76px;width:calc(100vw - 20px);height:45vh}#tv-assist h2{font-size:20px}#tv-assist header{padding:12px 16px}#tv-assist .body{padding:4px 16px 16px}}`;
   style.textContent += `#tv-assist .course-card{position:relative!important;left:auto!important;top:auto!important;width:auto;max-height:24vh;overflow:auto;margin:8px 14px;flex-shrink:0}#tv-assist .stage-nav{padding:4px 18px 8px;flex-shrink:0;border-bottom:1px solid #ffffff10}#tv-assist .stage-nav input{width:100%;padding:0;accent-color:#dcc18c}#tvStageLabel{display:block;font-size:11px;color:#b6c7c8}#tv-assist header,#tv-assist footer{flex-shrink:0}#tv-assist input[type=date]{color-scheme:dark}@media(max-width:600px){#tv-assist header{padding:5px 12px}#tv-assist h2{font-size:16px;margin:0}#tv-assist .sub{display:none}#tv-assist .course-card{max-height:15vh}#tv-assist footer{padding:5px 12px}}`;
+  style.textContent += `#tv-assist .reading-chunk{background:#d9bf8714;border-radius:3px}#tv-assist .reading-word{color:#fff2cc;background:#b88a365c;border-radius:3px;box-shadow:0 0 0 2px #b88a3620}`;
   document.head.append(style);
   const panel=document.createElement('aside');panel.id='tv-assist';panel.setAttribute('aria-label','阿远与阿星的讲解');
   panel.innerHTML=`<header><div class="top"><span class="kicker">时间景观 · AI 双人讲解</span><button id="tvClose" aria-label="收起并暂停讲解">×</button></div><h2 id="tvTitle">一起读懂眼前的宇宙</h2><span class="sub">阿远 · 白桦　 /　 阿星 · 冰糖</span></header><nav class="stage-nav" aria-label="课程环节"><label id="tvStageLabel" for="tvStage"></label><input id="tvStage" type="range" min="0" max="11" step="1" aria-label="选择讲解环节"></nav><div class="body" id="tvBody"><div id="tvLog" role="log" aria-live="polite"></div><div id="tvReport" hidden></div></div><footer><div class="controls"><span id="tvStatus" role="status">等你一起出发</span><div><button id="tvPlay">开始听</button><button id="tvMute" aria-label="切换声音">声音开</button></div></div><form id="tvReplyForm" hidden><input id="tvReply" aria-label="回复阿星" autocomplete="off" maxlength="120"><button type="submit" aria-label="发送回复">发送</button></form><div id="tvPrompt" hidden></div></footer>`;
@@ -125,10 +126,11 @@
     const p=document.createElement('p');p.textContent=text;el.append(p);$('tvLog').append(el);
     while($('tvLog').children.length>6)$('tvLog').firstChild.remove();
     $('tvBody').scrollTop=$('tvBody').scrollHeight;
+    return p;
   }
   function valid(gen){return running&&generation===gen;}
   function pause(message='已暂停，准备好就继续'){
-    running=false;generation++;if(cancel)cancel();cancel=null;
+    running=false;generation++;if(cancel)cancel();cancel=null;cancelAudioRequests();
     $('tvReplyForm').hidden=true;$('tvPrompt').hidden=true;$('tvPlay').textContent='继续听';
     status(message);persist(false);
   }
@@ -137,38 +139,92 @@
     let done=false;const end=()=>{if(done)return;done=true;clearTimeout(timer);if(cancel===end)cancel=null;resolve();};
     const timer=setTimeout(end,ms);cancel=end;
   });}
-  const audioCache=new Map();
+  const audioCache=new Map(), audioRequests=new Set();
+  function cancelAudioRequests(){for(const controller of audioRequests)controller.abort();audioRequests.clear();audioCache.clear();}
+  // Short first segment reduces time to first speech; subsequent segments retain sentence boundaries.
+  function speechChunks(text){
+    const chars=Array.from(text),chunks=[];
+    while(chars.length){
+      const limit=chunks.length?140:60;
+      let end=Math.min(limit,chars.length);
+      if(end<chars.length){
+        const sentence=chars.slice(0,end).join('');
+        const stops=[...sentence.matchAll(/[。！？!?；;，,：:\n]/gu)];
+        const stop=stops.filter(m=>Array.from(sentence.slice(0,m.index+1)).length>=Math.min(20,end/2)).pop();
+        if(stop)end=Array.from(sentence.slice(0,stop.index+1)).length;
+      }
+      chunks.push(chars.splice(0,end).join(''));
+    }
+    return chunks;
+  }
   function getAudio(text,who){
     const k=who+':'+text;
     if(!audioCache.has(k)){
-      const p=fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice:roles[who].voice}),signal:AbortSignal.timeout(25000)})
-        .then(r=>{if(!r.ok)throw Error();return r.json();}).then(j=>{if(!j.audio)throw Error();return j.audio;}).catch(()=>null);
+      const controller=new AbortController();audioRequests.add(controller);
+      const timer=setTimeout(()=>controller.abort(),25000);
+      const p=fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice:roles[who].voice}),signal:controller.signal})
+        .then(r=>{if(!r.ok)throw Error();return r.json();}).then(j=>{if(!j.audio)throw Error();return j.audio;})
+        .catch(()=>{if(audioCache.get(k)===p)audioCache.delete(k);return null;})
+        .finally(()=>{clearTimeout(timer);audioRequests.delete(controller);});
       audioCache.set(k,p);if(audioCache.size>4)audioCache.delete(audioCache.keys().next().value);
     }
     return audioCache.get(k);
   }
+  function markSpeech(paragraph,chunks){
+    const segmenter=typeof Intl.Segmenter==='function'?new Intl.Segmenter('zh-CN',{granularity:'word'}):null;
+    paragraph.replaceChildren();
+    return chunks.map(text=>{
+      const span=document.createElement('span');span.className='speech-chunk';
+      const parts=segmenter?Array.from(segmenter.segment(text),s=>s.segment):Array.from(text);
+      const words=parts.map(part=>{const word=document.createElement('span');word.textContent=part;span.append(word);return word;});
+      paragraph.append(span);return {span,words};
+    });
+  }
+  function followSpeech(target){
+    const body=$('tvBody'),box=body.getBoundingClientRect(),rect=target.getBoundingClientRect();
+    if(rect.top<box.top+8||rect.bottom>box.bottom-8)body.scrollTop+=rect.top-box.top-body.clientHeight*.35;
+  }
   async function speak(text,who,gen){
     if(!valid(gen))return;
-    append(who,text);status((who?'阿星':'阿远')+'正在讲');
-    if(muted){await delay(Math.max(3200,text.length*190),gen);return;}
-    // 播放当前句时，准备下一句，减少角色接话时的等待。
-    const next=steps[cursor+1];if(next&&next.type==='say'&&typeof next.text==='string')getAudio(next.text,next.who);
-    const b64=await new Promise(resolve=>{
-      let done=false;const end=value=>{if(done)return;done=true;if(cancel===abort)cancel=null;resolve(value);};
-      const abort=()=>end(null);cancel=abort;getAudio(text,who).then(end);
-    });
-    if(!valid(gen))return;
-    if(!b64){status('语音暂不可用，先一起读文字');await delay(Math.max(3500,text.length*190),gen);return;}
-    await new Promise(resolve=>{
-      let url,audio,timer,done=false;
-      const end=()=>{if(done)return;done=true;clearTimeout(timer);if(audio)audio.pause();if(url)URL.revokeObjectURL(url);if(cancel===end)cancel=null;resolve();};cancel=end;
-      try{
-        url=URL.createObjectURL(new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:'audio/mpeg'}));audio=new Audio(url);
-        timer=setTimeout(()=>{pause('声音播放中断，点继续重听这句话');},90000);
-        audio.onended=end;audio.onerror=()=>pause('声音播放中断，点继续重听这句话');
-        audio.play().catch(()=>{if(valid(gen))pause('点一下继续听，即可开启声音');else end();});
-      }catch(_){pause('声音未能播放，点继续重试');}
-    });
+    const paragraph=append(who,text);
+    if(muted){status((who?'阿星':'阿远')+'正在讲');await delay(Math.max(3200,text.length*190),gen);return;}
+    const chunks=speechChunks(text);
+    const marks=markSpeech(paragraph,chunks);
+    for(let i=0;i<chunks.length&&valid(gen);i++){
+      status('正在准备'+(who?'阿星':'阿远')+'的语音…');
+      // Request the current segment first, with at most one segment of lookahead.
+      const pending=getAudio(chunks[i],who);
+      if(i+1<chunks.length)getAudio(chunks[i+1],who);
+      else {const next=steps[cursor+1];if(next&&next.type==='say'&&typeof next.text==='string')getAudio(speechChunks(next.text)[0],next.who);}
+      const b64=await new Promise(resolve=>{
+        let done=false;const end=value=>{if(done)return;done=true;if(cancel===abort)cancel=null;resolve(value);};
+        const abort=()=>end(null);cancel=abort;pending.then(end);
+      });
+      if(!valid(gen))return;
+      if(!b64){status('这一小段语音暂不可用，先一起读文字');await delay(Math.max(3500,chunks[i].length*190),gen);continue;}
+      status((who?'阿星':'阿远')+'正在讲'+(chunks.length>1?' · '+(i+1)+'/'+chunks.length:''));
+      await new Promise(resolve=>{
+        let url,audio,timer,highlightTimer,activeWord=null,done=false;
+        const mark=marks[i],weights=mark.words.map(w=>Math.max(1,Array.from(w.textContent).length)),total=weights.reduce((a,b)=>a+b,0);
+        // MiMo's current response has no word timestamps: estimate word position
+        // from actual media playback time, never from a wall-clock timer.
+        const highlight=()=>{
+          if(done||!valid(gen))return;
+          mark.span.classList.add('reading-chunk');
+          if(!Number.isFinite(audio.duration)||audio.duration<=0)return;
+          const position=Math.max(0,Math.min(1,audio.currentTime/audio.duration))*total;
+          let sum=0,index=0;for(;index<weights.length-1;index++){sum+=weights[index];if(sum>position)break;}
+          const word=mark.words[index];if(word!==activeWord){activeWord?.classList.remove('reading-word');activeWord=word;word.classList.add('reading-word');followSpeech(word);}
+        };
+        const end=()=>{if(done)return;done=true;clearTimeout(timer);clearInterval(highlightTimer);mark.span.classList.remove('reading-chunk');activeWord?.classList.remove('reading-word');if(audio)audio.pause();if(url)URL.revokeObjectURL(url);if(cancel===end)cancel=null;resolve();};cancel=end;
+        try{
+          url=URL.createObjectURL(new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:'audio/mpeg'}));audio=new Audio(url);
+          timer=setTimeout(()=>{pause('声音播放中断，点继续重听这句话');},90000);
+          audio.onended=end;audio.onerror=()=>pause('声音播放中断，点继续重听这句话');
+          audio.play().then(()=>{if(done||!valid(gen))return;followSpeech(mark.words[0]);highlight();highlightTimer=setInterval(highlight,80);}).catch(()=>{if(valid(gen))pause('点一下继续听，即可开启声音');else end();});
+        }catch(_){pause('声音未能播放，点继续重试');}
+      });
+    }
   }
   async function waitReply(step,gen){
     if(!valid(gen))return null;
@@ -262,8 +318,8 @@
   panel.addEventListener('keydown',e=>{if(e.key==='Escape')$('tvClose').click();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&running&&!navigating)pause('先暂停，回来后继续听');});
   document.addEventListener('play',e=>{if(e.target.id==='introVid'&&running){resumeAfterIntro=true;pause('先看开场，看完我们接着聊');}},true);
-  window.addEventListener('timeview:course-restart',()=>{navigating=true;running=false;generation++;if(cancel)cancel();cancel=null;});
-  window.addEventListener('pagehide',()=>{if(!navigating&&!window.courseRestarting)persist(running);running=false;generation++;if(cancel)cancel();});
+  window.addEventListener('timeview:course-restart',()=>{navigating=true;running=false;generation++;if(cancel)cancel();cancel=null;cancelAudioRequests();});
+  window.addEventListener('pagehide',()=>{if(!navigating&&!window.courseRestarting)persist(running);running=false;generation++;if(cancel)cancel();cancelAudioRequests();});
   // 开场结束或跳过后自然接入；不覆盖观众主动收起/暂停的选择。
   setInterval(()=>{
     const intro=window.introActive||($('introOverlay')&&$('introOverlay').offsetHeight);
