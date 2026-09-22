@@ -1,5 +1,5 @@
 /* 时间景观 · 双角色课程。自然连续讲解，观众只在对话邀请时输入。 */
-(function () {
+(async function () {
   'use strict';
   const view = window.TIMEVIEW === 'solar' ? 'solar' : 'earth', $ = id => document.getElementById(id);
   const roles = [{name:'阿远',voice:'male',tag:'白桦 · 原理讲解'},{name:'阿星',voice:'female',tag:'冰糖 · 观察引导'}];
@@ -79,6 +79,30 @@
       ask(ch,'下一次你想继续了解世界时间、太阳系，还是更远的星空？可以留下一句话。','我们今天先到这里。以后可以沿着这些方向，继续认识时间与宇宙。');
     }
   }
+  let scriptTemplates = {"date": "{{来源}}{{日期}}，{{时间说明}}底部时间和画面已经一起更新了。", "dateObservation": "同一时刻，各地用不同的当地时间表达。请再看一眼北京、伦敦与纽约，日期有没有变化？", "report": "这一天，模型计算的月相是{{月相}}，照亮比例约百分之{{照亮比例}}。报告已经放在对话下面，你可以慢慢看，也可以留下这份记录。", "reportFailure": "这次报告没有准备好，我们先观察画面，不猜测具体结果。", "received": "收到你的想法，我们一起看看。", "noAnswer": "没关系，我们一起看。"};
+
+  function fillTemplate(text, values) {
+    return text.replace(/\{\{([^{}]+)\}\}/g, (_,name) => String(values[name] ?? ''));
+  }
+  // 每次打开页面获取已发布版本；当前页使用同一份快照，讲解中不替换台词。
+  try {
+    const response = await fetch('api/course-script', {cache:'no-store', signal:AbortSignal.timeout(5000)});
+    if (!response.ok) throw Error('script unavailable');
+    const script = await response.json();
+    if (script.lines?.length !== steps.length || script.chapters?.length !== chapters.length) throw Error('script mismatch');
+    script.chapters.forEach((c,i)=>{chapters[i][1]=c.title;});
+    script.lines.forEach((line,i)=>{
+      const step=steps[i];
+      if(line.id!=='step-'+i || step.type!==line.type)throw Error('step mismatch');
+      if(typeof step.text==='function') {
+        step.text=()=>fillTemplate(line.text, {'城市时间':[['北京','Asia/Shanghai'],['伦敦','Europe/London'],['纽约','America/New_York']].map(([n,z])=>n+'是'+new Intl.DateTimeFormat('zh-CN',{timeZone:z,month:'long',day:'numeric',hour:'numeric',minute:'numeric',hour12:false}).format(new Date(scene().time()))).join('，')});
+      } else if(step.text) step.text=line.text;
+      step.who=line.role==='axing'?1:0;
+      if(step.answer)step.answer=line.answer;
+      if(step.fallback)step.fallback=line.fallback;
+    });
+    scriptTemplates={...scriptTemplates,...script.templates};
+  } catch (_) { /* 后台暂时不可达时，保留内置的完整讲解。 */ }
   if(cursor<0 || cursor>=steps.length || chapters[steps[cursor].ch][2]!==view) cursor=steps.findIndex(s=>chapters[s.ch][2]===view);
   // 日期不写入会话存储；刷新到报告步骤时重新邀请输入。
   function persist(resume=running) { try { sessionStorage.setItem(key,JSON.stringify({cursor,muted,closed,resume})); } catch (_) {} }
@@ -176,13 +200,13 @@
     currentDate=item;report=null;$('tvReport').hidden=true;
     scene().setTime(item.ts);
     if(view==='solar'){cleanSolar();layer('orbits',true);layer('labels',true);}
-    await speak((item.example?'我们用一个演示日期，':'你提供的是')+item.date+'，'+(item.defaultTime?'以北京时间中午十二点作演示，不代表实际出生时刻。':'采用北京时间'+item.time+'。')+'底部时间和画面已经一起更新了。',1,gen);
+    await speak(fillTemplate(scriptTemplates.date,{'来源':item.example?'我们用一个演示日期，':'你提供的是','日期':item.date,'时间说明':item.defaultTime?'以北京时间中午十二点作演示，不代表实际出生时刻。':'采用北京时间'+item.time+'。'}),1,gen);
     if(!valid(gen))return;
-    if(!birthday){await speak('同一时刻，各地用不同的当地时间表达。请再看一眼北京、伦敦与纽约，日期有没有变化？',0,gen);return;}
+    if(!birthday){await speak(scriptTemplates.dateObservation,0,gen);return;}
     status('正在准备这一天的天象记录');
     const response=await fetch('api/course-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts:item.ts}),signal:AbortSignal.timeout(15000)}).catch(()=>null);
     if(!valid(gen))return;
-    if(!response||!response.ok){await speak('这次报告没有准备好，我们先观察画面，不猜测具体结果。',0,gen);return;}
+    if(!response||!response.ok){await speak(scriptTemplates.reportFailure,0,gen);return;}
     const data=await response.json();if(!valid(gen))return;
     if(Math.abs(scene().time()-item.ts)>1000){await speak('画面的日期发生了变化，我们先不把这份报告与当前画面混在一起。',0,gen);return;}
     report={...item,data};
@@ -190,7 +214,7 @@
     $('tvReport').textContent=text;$('tvReport').hidden=false;
     const download=document.createElement('a');download.href='#';download.textContent='留存这份天象记录 ↓';
     download.onclick=e=>{e.preventDefault();const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='天文快照-'+item.date+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};$('tvReport').append(download);
-    await speak('这一天，模型计算的月相是'+data.moonPhase+'，照亮比例约百分之'+data.moonIllum+'。报告已经放在对话下面，你可以慢慢看，也可以留下这份记录。',0,gen);
+    await speak(fillTemplate(scriptTemplates.report,{'月相':data.moonPhase,'照亮比例':data.moonIllum}),0,gen);
     await delay(6000,gen);
   }
   async function run(){
@@ -207,12 +231,12 @@
         if(s.action)s.action();
         if(s.type==='say'){await speak(typeof s.text==='function'?s.text():s.text,s.who,gen);}
         else if(s.type==='ask'){
-          await speak(s.text,1,gen);const reply=await waitReply(s,gen);if(!valid(gen))return;
+          await speak(s.text,s.who,gen);const reply=await waitReply(s,gen);if(!valid(gen))return;
           if(reply)append(2,reply);
-          await speak((reply?'收到你的想法，我们一起看看。':'没关系，我们一起看。')+s.answer,0,gen);
+          await speak((reply?scriptTemplates.received:scriptTemplates.noAnswer)+s.answer,0,gen);
         }else if(s.type==='date'||s.type==='example'){
           let reply=null;
-          if(s.type==='date'){await speak(s.text,1,gen);reply=await waitReply(s,gen);}
+          if(s.type==='date'){await speak(s.text,s.who,gen);reply=await waitReply(s,gen);}
           if(!valid(gen))return;
           if(reply)append(2,reply);
           const item={...parseDate(reply||s.fallback),example:!reply};

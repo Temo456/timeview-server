@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "3.37";
+const VERSION = "3.38";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -68,6 +68,7 @@ let KB = [];
 try { KB = JSON.parse(fs.readFileSync(path.join(ROOT, "knowledge.json"), "utf-8")); } catch (e) {}
 function saveKB() { try { fs.writeFileSync(path.join(ROOT, "knowledge.json"), JSON.stringify(KB, null, 2)); } catch (e) {} }
 const DATA_DIR = process.env.DATA_DIR || ROOT;
+const courseStore = require('./course-store')(DATA_DIR, clean(process.env.COURSE_ADMIN_TOKEN));
 const ARCH = path.join(DATA_DIR, "archives.json");
 function loadArch() { try { return JSON.parse(fs.readFileSync(ARCH, "utf-8")); } catch (e) { return []; } }
 function saveArch(a) { try { fs.writeFileSync(ARCH, JSON.stringify(a)); } catch (e) {} }
@@ -223,6 +224,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (p === "/api/health") return sendJson(res, { ok: true, ai: !!LLM_API_KEY, tts: !!TTS_API_KEY, kb: KB.length, model: LLM_MODEL, fortune: _fm, fortuneMode: FORTUNE_MODE });
+
+  if (p === "/api/course-script") return courseStore.handle(req, res, sendJson, readBody);
 
   // 课程报告只返回经过白名单筛选的计算结果；不调用大模型或命理解读。
   if (p === "/api/course-report" && req.method === "POST") {
@@ -575,6 +578,11 @@ const server = http.createServer(async (req, res) => {
   let fp = path.join(ROOT, decodeURIComponent(p));
   if (!fp.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
   const ext = path.extname(fp).toLowerCase();
+  // 管理口令、环境配置和原子写入的临时文件不作为静态资源公开。
+  if (path.relative(ROOT, fp).split(/[\\/]/).some(s => s.startsWith('.')) ||
+      ['.env', '.key', '.pem', '.previous', '.tmp'].includes(ext)) {
+    res.writeHead(403); return res.end('forbidden');
+  }
   // 音视频等媒体：支持 Range 请求（用于流式播放）
   if (ext === ".mp4" || ext === ".mp3" || ext === ".wav" || ext === ".webm") {
     fs.stat(fp, (err, st) => {

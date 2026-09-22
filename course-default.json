@@ -1,0 +1,549 @@
+{
+  "chapters": [
+    {
+      "id": 0,
+      "title": "引导与开场"
+    },
+    {
+      "id": 1,
+      "title": "认识时间地图"
+    },
+    {
+      "id": 2,
+      "title": "读取世界时间"
+    },
+    {
+      "id": 3,
+      "title": "时间互动 · 两道题"
+    },
+    {
+      "id": 4,
+      "title": "春夏秋冬"
+    },
+    {
+      "id": 5,
+      "title": "轨道与 XYZ"
+    },
+    {
+      "id": 6,
+      "title": "八大行星与冥王星"
+    },
+    {
+      "id": 7,
+      "title": "星座与星宿"
+    },
+    {
+      "id": 8,
+      "title": "更远的探索"
+    },
+    {
+      "id": 9,
+      "title": "生日天象示范"
+    },
+    {
+      "id": 10,
+      "title": "两位观众的日期"
+    },
+    {
+      "id": 11,
+      "title": "回到现在"
+    }
+  ],
+  "lines": [
+    {
+      "id": "step-0",
+      "chapter": 0,
+      "type": "say",
+      "role": "ayuan",
+      "text": "大家好，我是AI解说阿远。今天从地球的时间地图出发，认识太阳系，再观察一个大家选择的历史日期。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-1",
+      "chapter": 0,
+      "type": "say",
+      "role": "axing",
+      "text": "我是AI解说阿星。我们会提出几个小问题，你可以作答，也可以提交日期。先看看眼前的地球，能找到你熟悉的城市吗？",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-2",
+      "chapter": 1,
+      "type": "say",
+      "role": "ayuan",
+      "text": "先看小时刻度，再看分钟和秒钟。读取城市时间前，要确认时区和日期。政治时区并不完全按照每十五度经度来划分。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-3",
+      "chapter": 1,
+      "type": "say",
+      "role": "axing",
+      "text": "我们一起读一读北京、伦敦和纽约的时间。先读小时，再读分秒，最后读出日期，不用一下记住所有按钮。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-4",
+      "chapter": 2,
+      "type": "say",
+      "role": "ayuan",
+      "text": "同一瞬间，各城市的当地时间可能不同，日期也可能不同。伦敦和纽约还要按所选日期考虑夏令时。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-5",
+      "chapter": 2,
+      "type": "say",
+      "role": "axing",
+      "text": "我们会依次读出同一时刻的三个城市。先读北京，再读伦敦和纽约，留意它们是不是同一天。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-6",
+      "chapter": 2,
+      "type": "say",
+      "role": "ayuan",
+      "text": "我们读一下画面上的同一瞬间。{{城市时间}}。注意，日期也要一起读出来。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-7",
+      "chapter": 3,
+      "type": "say",
+      "role": "ayuan",
+      "text": "刚才我们比较了三个城市的时间。接下来，想请你也一起观察这幅图。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-8",
+      "chapter": 3,
+      "type": "say",
+      "role": "axing",
+      "text": "不用急着回答。我们一次只看一个问题，你可以直接把想法写给我。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-9",
+      "chapter": 3,
+      "type": "ask",
+      "role": "axing",
+      "text": "先想一想，北京和伦敦的时差，全年都一样吗？可以直接告诉我你的想法。",
+      "answer": "伦敦会采用夏令时，所以它和北京的时差可能随日期变化。这里的城市时钟已经按所选日期处理。",
+      "fallback": ""
+    },
+    {
+      "id": "step-10",
+      "chapter": 3,
+      "type": "date",
+      "role": "axing",
+      "text": "我们换一天试试看。你想看哪个日期？输入公历年月日就可以。",
+      "answer": "",
+      "fallback": "2000-01-01"
+    },
+    {
+      "id": "step-11",
+      "chapter": 4,
+      "type": "say",
+      "role": "ayuan",
+      "text": "地轴倾斜与地球公转使日照条件随季节变化。南北半球季节相反，不能把季节简单归因于距离太阳远近。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-12",
+      "chapter": 4,
+      "type": "say",
+      "role": "axing",
+      "text": "先比较南北半球，再看北京夏季与冬季的白昼。我们会换到两个代表日期，把时间地图停下来，慢慢观察。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-13",
+      "chapter": 4,
+      "type": "ask",
+      "role": "axing",
+      "text": "北半球是夏天的时候，南半球也一样吗？",
+      "answer": "南北半球的季节相反。地轴倾斜，让两边获得日照的情况随公转发生变化。",
+      "fallback": ""
+    },
+    {
+      "id": "step-14",
+      "chapter": 4,
+      "type": "say",
+      "role": "axing",
+      "text": "先停在六月二十一日，夏至附近，看看日照方向。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-15",
+      "chapter": 4,
+      "type": "say",
+      "role": "ayuan",
+      "text": "再换到十二月二十二日，冬至附近。把两个时刻放在一起想一想，日照条件已经改变了。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-16",
+      "chapter": 4,
+      "type": "ask",
+      "role": "axing",
+      "text": "北京在夏至附近，通常比冬至附近白昼更长吗？",
+      "answer": "是的。北京位于北半球，地轴倾斜使这里在夏季通常有更长的白昼。",
+      "fallback": ""
+    },
+    {
+      "id": "step-17",
+      "chapter": 4,
+      "type": "say",
+      "role": "axing",
+      "text": "接下来，我们把视野拉远，离开地球，去看看太阳系。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-18",
+      "chapter": 5,
+      "type": "say",
+      "role": "ayuan",
+      "text": "到了太阳系，我们先看行星走过的轨道。再加上几个方向，帮助我们把这个空间看清楚。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-19",
+      "chapter": 5,
+      "type": "say",
+      "role": "axing",
+      "text": "我会一层一层展开，你跟着看就好。最后转一点角度，看看平面以外又多了什么。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-20",
+      "chapter": 5,
+      "type": "say",
+      "role": "ayuan",
+      "text": "先看轨道，每一圈帮助我们辨认一条运动路径。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-21",
+      "chapter": 5,
+      "type": "say",
+      "role": "axing",
+      "text": "现在展开X轴，先确定一个空间方向。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-22",
+      "chapter": 5,
+      "type": "say",
+      "role": "ayuan",
+      "text": "再加上Y轴，两条轴帮助我们读懂这个平面。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-23",
+      "chapter": 5,
+      "type": "say",
+      "role": "axing",
+      "text": "最后看Z轴。我们转一点角度，让第三个方向更容易看清。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-24",
+      "chapter": 6,
+      "type": "say",
+      "role": "ayuan",
+      "text": "沿轨道从内向外观察八大行星，关注相对位置与公转周期。冥王星属于矮行星，不计入八大行星。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-25",
+      "chapter": 6,
+      "type": "say",
+      "role": "axing",
+      "text": "每到一站，先观察一个特点，再回到全景找到它的位置。画面的大小与距离经过缩放，适合帮助理解。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-26",
+      "chapter": 6,
+      "type": "say",
+      "role": "ayuan",
+      "text": "这一站是水星。它最靠近太阳。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-27",
+      "chapter": 6,
+      "type": "say",
+      "role": "axing",
+      "text": "这一站是金星。它有浓密的大气。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-28",
+      "chapter": 6,
+      "type": "say",
+      "role": "ayuan",
+      "text": "这一站是地球。这是我们生活的星球。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-29",
+      "chapter": 6,
+      "type": "say",
+      "role": "axing",
+      "text": "这一站是火星。它的表面呈现红色。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-30",
+      "chapter": 6,
+      "type": "say",
+      "role": "ayuan",
+      "text": "这一站是木星。它是太阳系里最大的行星。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-31",
+      "chapter": 6,
+      "type": "say",
+      "role": "axing",
+      "text": "这一站是土星。它的环是很鲜明的特征。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-32",
+      "chapter": 6,
+      "type": "say",
+      "role": "ayuan",
+      "text": "这一站是天王星。它的自转轴倾斜得很明显。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-33",
+      "chapter": 6,
+      "type": "say",
+      "role": "axing",
+      "text": "这一站是海王星。它是八大行星中距离太阳最远的一颗。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-34",
+      "chapter": 6,
+      "type": "say",
+      "role": "ayuan",
+      "text": "这一站是冥王星。它属于矮行星。先看看它在画面里的位置，再读一读旁边的信息。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-35",
+      "chapter": 7,
+      "type": "say",
+      "role": "ayuan",
+      "text": "星座与星宿反映不同文化组织和认识星空的方式。我们从观察与文化记录的角度讲解，不延伸到个人性格或命运。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-36",
+      "chapter": 7,
+      "type": "say",
+      "role": "axing",
+      "text": "先看一种星空图案，再换另一种。我们先辨认画面中的标注；屏幕上的示意连线不代表恒星之间真的相连。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-37",
+      "chapter": 7,
+      "type": "say",
+      "role": "axing",
+      "text": "先看星座图层。人们把天空分区，也用熟悉的图案帮助记忆。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-38",
+      "chapter": 7,
+      "type": "say",
+      "role": "ayuan",
+      "text": "现在换成星宿。换一种文化中的星空组织方式，仍然是在认识同一片天空。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-39",
+      "chapter": 8,
+      "type": "say",
+      "role": "ayuan",
+      "text": "旅行者号让我们认识深空探测的尺度。三体主题需要区分真实的恒星系统知识和小说中的故事设定。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-40",
+      "chapter": 8,
+      "type": "say",
+      "role": "axing",
+      "text": "这里展示的是教学模型，预设轨迹不是实时观测。未来可以围绕探测器、邻近恒星和星际距离继续探索。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-41",
+      "chapter": 8,
+      "type": "say",
+      "role": "axing",
+      "text": "先看看旅行者号的示意位置。我们借它理解深空探测的尺度，这不是探测器的实时遥测画面。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-42",
+      "chapter": 8,
+      "type": "say",
+      "role": "ayuan",
+      "text": "再看三体主题。这里的动态演示帮助理解多颗恒星的概念，不是对小说情节或真实轨道的精确复现。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-43",
+      "chapter": 9,
+      "type": "say",
+      "role": "ayuan",
+      "text": "我们查看所选日期的天象与历法信息，形成一份可核对的记录，不作个人评价或未来预测。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-44",
+      "chapter": 9,
+      "type": "say",
+      "role": "axing",
+      "text": "先看底部日期，再看图景，最后看报告。只提供日期时，明确采用北京时间十二点，不把它说成实际出生时刻。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-45",
+      "chapter": 9,
+      "type": "example",
+      "role": "ayuan",
+      "text": "",
+      "answer": "",
+      "fallback": "2000-01-01"
+    },
+    {
+      "id": "step-46",
+      "chapter": 10,
+      "type": "say",
+      "role": "ayuan",
+      "text": "刚才看的是演示日期。现在我们可以换成你熟悉的一天，看看那时的月亮和行星。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-47",
+      "chapter": 10,
+      "type": "say",
+      "role": "axing",
+      "text": "我们一次只看一个日期。如果你还没想好，也没关系，我会先找个例子，陪你一起看。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-48",
+      "chapter": 10,
+      "type": "date",
+      "role": "axing",
+      "text": "现在轮到你了。可以输入一个生日，我们一起看看那一天。只写日期也可以，统一用北京时间中午十二点作演示。",
+      "answer": "",
+      "fallback": "2000-01-01"
+    },
+    {
+      "id": "step-49",
+      "chapter": 10,
+      "type": "date",
+      "role": "axing",
+      "text": "我们再看一个日期。还有哪位观众愿意分享？",
+      "answer": "",
+      "fallback": "2024-06-21"
+    },
+    {
+      "id": "step-50",
+      "chapter": 11,
+      "type": "say",
+      "role": "ayuan",
+      "text": "今天练习了读取城市时间，认识季节、轨道和空间方向，也观察了特定日期的天象记录。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-51",
+      "chapter": 11,
+      "type": "say",
+      "role": "axing",
+      "text": "下一次你想继续看世界时间、太阳系，还是更远的星空？你可以告诉我，作为下一堂课的参考。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-52",
+      "chapter": 11,
+      "type": "say",
+      "role": "ayuan",
+      "text": "现在让时间恢复流动，回到今天。",
+      "answer": "",
+      "fallback": ""
+    },
+    {
+      "id": "step-53",
+      "chapter": 11,
+      "type": "ask",
+      "role": "axing",
+      "text": "下一次你想继续了解世界时间、太阳系，还是更远的星空？可以留下一句话。",
+      "answer": "我们今天先到这里。以后可以沿着这些方向，继续认识时间与宇宙。",
+      "fallback": ""
+    }
+  ],
+  "revision": 0,
+  "templates": {
+    "date": "{{来源}}{{日期}}，{{时间说明}}底部时间和画面已经一起更新了。",
+    "dateObservation": "同一时刻，各地用不同的当地时间表达。请再看一眼北京、伦敦与纽约，日期有没有变化？",
+    "report": "这一天，模型计算的月相是{{月相}}，照亮比例约百分之{{照亮比例}}。报告已经放在对话下面，你可以慢慢看，也可以留下这份记录。",
+    "reportFailure": "这次报告没有准备好，我们先观察画面，不猜测具体结果。",
+    "received": "收到你的想法，我们一起看看。",
+    "noAnswer": "没关系，我们一起看。"
+  }
+}
