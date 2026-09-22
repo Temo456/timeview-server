@@ -514,7 +514,7 @@ const changEIcon = new Image();
 loadImage(changEIcon, 'textures/change-orbiter.svg');
 let changEPhase = 0;
 function drawChangE(mx, my, mr, front) {
-  const orbit = mr + 20, depth = Math.sin(changEPhase);
+  const orbit = mr + 8, depth = Math.sin(changEPhase);
   // Project a tilted orbital plane. Draw its far half beneath the opaque Moon.
   const perspective = 1 + depth * 0.14, tilt = -Math.PI / 6;
   const ox = Math.cos(changEPhase) * orbit * perspective;
