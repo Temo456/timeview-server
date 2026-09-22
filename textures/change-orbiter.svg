@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="80" viewBox="0 0 128 80">
   <title>嫦娥一号绕月探测器示意</title>
-  <g fill="#abb3bc" stroke="#abb3bc" stroke-linejoin="round" stroke-linecap="round">
+  <g fill="#bcb394" stroke="#bcb394" stroke-linejoin="round" stroke-linecap="round">
     <path d="M42 40H85" fill="none" stroke-width="4"/>
     <path d="M4 26H43V53H4Z M85 26H124V53H85Z" stroke-width="1.8"/>
     <path d="M51 23L69 17L79 27V54L61 62L51 51Z" stroke-width="1.4"/>
