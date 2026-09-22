@@ -229,6 +229,7 @@ if ('serviceWorker' in navigator) {
     played = sessionStorage.getItem('introPlayed');
     sessionStorage.setItem('introPlayed', '1');
   } catch (_) {} // 禁用存储时仍允许播放和跳过。
+  if (new URLSearchParams(location.search).get('restart') === '1') played = false;
   if (!played) start(true);
 })();
 </script>
@@ -1471,7 +1472,9 @@ document.querySelectorAll('a[href*="solar-system"]').forEach(el => {
 <script>
 window.TIMEVIEW='earth';
 function resetScreensaverToNow() {
-  if (!document.body.classList.contains('scrsv')) return;
+  const restarting = new URLSearchParams(location.search).get('restart') === '1';
+  if (!document.body.classList.contains('scrsv') && !restarting) return;
+  if (restarting) { state.playing = true; try { sessionStorage.setItem('tv-clock-paused','0'); } catch (_) {} }
   setView('earth'); state.hemi = 1; earthZoom = 1; showCities = true;
   tzIdx = 0; tz = TIMEZONES[0]; inertia = 0; tlDrag = false;
   document.getElementById('pNow').click();
@@ -1494,6 +1497,20 @@ window.TimeviewCourse = {
     document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
   },
   now: () => document.getElementById('pNow').click()
+};
+</script>
+<script>
+// “开场”是整场重启；不携带旧的日期、视角或课程进度。
+window.replayIntro = function () {
+  window.courseRestarting = true;
+  window.dispatchEvent(new Event('timeview:course-restart'));
+  try {
+    sessionStorage.removeItem('introPlayed');
+    sessionStorage.setItem('tv-clock-paused', '0');
+    sessionStorage.setItem('tv-natural-course-v1', JSON.stringify({cursor:0,muted:false,closed:false,resume:true}));
+  } catch (_) {}
+  const screensaver = document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1';
+  location.replace('app?restart=1' + (screensaver ? '&scrsv=1' : ''));
 };
 </script>
 <script src="assistant.js"></script>

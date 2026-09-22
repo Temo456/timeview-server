@@ -1535,6 +1535,20 @@ animate();
 </script>
 
 <script>window.TIMEVIEW='solar';</script>
+<script>
+// “开场”是整场重启；不携带旧的日期、视角或课程进度。
+window.replayIntro = function () {
+  window.courseRestarting = true;
+  window.dispatchEvent(new Event('timeview:course-restart'));
+  try {
+    sessionStorage.removeItem('introPlayed');
+    sessionStorage.setItem('tv-clock-paused', '0');
+    sessionStorage.setItem('tv-natural-course-v1', JSON.stringify({cursor:0,muted:false,closed:false,resume:true}));
+  } catch (_) {}
+  const screensaver = document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1';
+  location.replace('app?restart=1' + (screensaver ? '&scrsv=1' : ''));
+};
+</script>
 <script src="assistant.js"></script>
 </body>
 </html>

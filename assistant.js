@@ -8,7 +8,7 @@
   const chapters = [
     ['00:00–02:00','引导与开场','earth','先看引导视频，再找一座熟悉的城市。','大家好，我是AI解说阿远。今天从地球的时间地图出发，认识太阳系，再观察一个大家选择的历史日期。','我是AI解说阿星。我们会提出几个小问题，你可以作答，也可以提交日期。先看看眼前的地球，能找到你熟悉的城市吗？'],
     ['02:00–05:00','认识时间地图','earth','先小时，再分秒，最后确认日期和时区。','先看小时刻度，再看分钟和秒钟。读取城市时间前，要确认时区和日期。政治时区并不完全按照每十五度经度来划分。','我们一起读一读北京、伦敦和纽约的时间。先读小时，再读分秒，最后读出日期，不用一下记住所有按钮。'],
-    ['05:00–12:00','读取世界时间','earth','北京 → 伦敦 → 纽约，比较同一个瞬间。','同一瞬间，各城市的当地时间可能不同，日期也可能不同。伦敦和纽约还要按所选日期考虑夏令时。','我们会依次读出同一时刻的三个城市。先读北京，再读伦敦和纽约，留意它们是不是同一天。'],
+    ['05:00–12:00','读取世界时间','earth','北京 → 伦敦 → 纽约，比较同一个瞬间。','同一瞬间，各城市的当地时间可能不同，日期也可能不同。我们对照画面，依次读取北京、伦敦和纽约的时间。','我们会依次读出同一时刻的三个城市。先读北京，再读伦敦和纽约，留意它们是不是同一天。'],
     ['12:00–18:00','时间互动 · 两道题','earth','先回答时差问题，再提交日期对照。','刚才我们比较了三个城市的时间。接下来，想请你也一起观察这幅图。','不用急着回答。我们一次只看一个问题，你可以直接把想法写给我。'],
     ['18:00–24:00','春夏秋冬','earth','比较南北半球，再观察夏至与冬至附近。','地轴倾斜与地球公转使日照条件随季节变化。南北半球季节相反，不能把季节简单归因于距离太阳远近。','先比较南北半球，再看北京夏季与冬季的白昼。我们会换到两个代表日期，把时间地图停下来，慢慢观察。'],
     ['24:00–28:00','轨道与 XYZ','solar','轨道 → X → Y → Z，逐层建立空间方向。','到了太阳系，我们先看行星走过的轨道。再加上几个方向，帮助我们把这个空间看清楚。','我会一层一层展开，你跟着看就好。最后转一点角度，看看平面以外又多了什么。'],
@@ -43,7 +43,7 @@
       });
     }
     if (ch === 3) {
-      ask(ch, '先想一想，北京和伦敦的时差，全年都一样吗？可以直接告诉我你的想法。', '伦敦会采用夏令时，所以它和北京的时差可能随日期变化。这里的城市时钟已经按所选日期处理。');
+      ask(ch, '先看一看，北京、伦敦和纽约显示的是同一天吗？可以直接告诉我你的观察。', '同一瞬间，不同城市可能处在不同的日期。我们一起核对画面上的年月日，再比较小时和分钟。');
       date(ch, '我们换一天试试看。你想看哪个日期？输入公历年月日就可以。', '2000-01-01', false);
     }
     if (ch === 4) {
@@ -262,7 +262,8 @@
   panel.addEventListener('keydown',e=>{if(e.key==='Escape')$('tvClose').click();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&running&&!navigating)pause('先暂停，回来后继续听');});
   document.addEventListener('play',e=>{if(e.target.id==='introVid'&&running){resumeAfterIntro=true;pause('先看开场，看完我们接着聊');}},true);
-  window.addEventListener('pagehide',()=>{if(!navigating)persist(running);running=false;generation++;if(cancel)cancel();});
+  window.addEventListener('timeview:course-restart',()=>{navigating=true;running=false;generation++;if(cancel)cancel();cancel=null;});
+  window.addEventListener('pagehide',()=>{if(!navigating&&!window.courseRestarting)persist(running);running=false;generation++;if(cancel)cancel();});
   // 开场结束或跳过后自然接入；不覆盖观众主动收起/暂停的选择。
   setInterval(()=>{
     const intro=window.introActive||($('introOverlay')&&$('introOverlay').offsetHeight);
