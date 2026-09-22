@@ -491,11 +491,11 @@ let dispT = Date.now(), anchorT = Date.now();
 let tlSpan = 100, tlDrag = false, inertia = 0;
 const SPD = { sec: 1000, hour: 3600e3, day: 86400e3, month: 86400e3 * 30, year: 86400e3 * 365.25 };
 let curUnit = 'day';
-const TIMEZONES = [
-  { label: 'UTC+8 北京', min: 480 }, { label: 'UTC+0 伦敦', min: 0 }, { label: 'UTC+9 东京', min: 540 },
-  { label: 'UTC+5:30 印度', min: 330 }, { label: 'UTC+1 中欧', min: 60 }, { label: 'UTC-5 纽约', min: -300 },
-  { label: 'UTC-8 洛杉矶', min: -480 }
-];
+const TIMEZONES = [['北京','Asia/Shanghai'],['伦敦','Europe/London'],['东京','Asia/Tokyo'],['印度','Asia/Kolkata'],['中欧','Europe/Berlin'],['纽约','America/New_York'],['洛杉矶','America/Los_Angeles']].map(([city,zone])=>({city,zone,min:0,label:'',formatter:new Intl.DateTimeFormat('en-GB',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'})}));
+function zoneOffset(zone,ts){const parts=Object.fromEntries(zone.formatter.formatToParts(new Date(ts)).map(p=>[p.type,p.value]));return Math.round((Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute,+parts.second)-Math.floor(ts/1000)*1000)/60000);}
+let zoneMinute = null;
+function refreshZones(ts){const minute=Math.floor(ts/60000);if(minute===zoneMinute)return;zoneMinute=minute;TIMEZONES.forEach(z=>{z.min=zoneOffset(z,ts);const n=Math.abs(z.min);z.label='UTC'+(z.min>=0?'+':'-')+Math.floor(n/60)+(n%60?':'+String(n%60).padStart(2,'0'):'')+' '+z.city;});}
+refreshZones(Date.now());
 let tzIdx = 0, tz = TIMEZONES[0];
 
 // ========== 图片加载（浏览器自动缓存，无需 Cache API）==========
@@ -543,6 +543,7 @@ function frame(now) {
   }
   if (window.introActive) return;
   dispT += (state.t - dispT) * (1 - Math.exp(-8 * dt));
+  refreshZones(dispT); document.getElementById('tzBtn').textContent='🕓 '+tz.label;
   const d = dnum(dispT), date = new Date(dispT + tz.min * 60000);
 
   // ===== 星空旅行模式 =====
@@ -1002,8 +1003,10 @@ document.getElementById('dpToday').onclick = function() {
 function jumpToDate() {
   var ts = document.getElementById('dpTime').value || '12:00';
   var hm = ts.split(':');
-  var base = Date.UTC(dpYear, dpMonth, dpSelected, 0, 0, 0) - (tz ? tz.min : 0) * 60000;
-  state.t = base + ((+hm[0]||0) * 60 + (+hm[1]||0)) * 60000;
+  var local = Date.UTC(dpYear, dpMonth, dpSelected, +hm[0]||0, +hm[1]||0);
+  var target=local-tz.min*60000;
+  for(var i=0;i<3;i++) target=local-zoneOffset(tz,target)*60000;
+  state.t=target; refreshZones(target);
   dispT = state.t; anchorT = state.t;
   document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
 }

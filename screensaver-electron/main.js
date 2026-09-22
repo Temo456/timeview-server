@@ -57,7 +57,9 @@ if (argv.indexOf('/c') >= 0) {
       webPreferences: { contextIsolation: true, nodeIntegration: false }
     });
     win.setMenuBarVisibility(false);
-    win.loadURL(readUrl());
+    const url = new URL(readUrl()); url.searchParams.set('scrsv', '1');
+    win.loadURL(url.toString());
+    win.webContents.setAudioMuted(true);
     win.once('ready-to-show', function () { win.show(); });
 
     // 退出检测：鼠标移动（全局轮询，前 400ms 忽略防止误退）
