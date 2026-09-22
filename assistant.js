@@ -19,6 +19,7 @@
   ];
   let saved={}; try{saved=JSON.parse(sessionStorage.getItem('tv-course')||'{}');}catch(_){}
   let chapter=Number.isInteger(saved.chapter)?Math.max(0,Math.min(11,saved.chapter)):(view==='solar'?5:0);
+  if(chapters[chapter][2]!==view)chapter=view==='solar'?5:0;
   let muted=!!saved.muted, generation=0, cancelSpeech=null, waitTimer=null, running=false, elapsed=0;
   let pending=null, report=null, reportToken=0, cases=[], caseSlot='A';
   function persist(open){try{sessionStorage.setItem('tv-course',JSON.stringify({chapter,muted,open}));}catch(_){}}
@@ -87,9 +88,11 @@
   $('tvMute').onclick=()=>{muted=!muted;stop();$('tvMute').textContent=muted?'仅文字':'语音开';persist(true);};$('tvMute').textContent=muted?'仅文字':'语音开';
   fab.onclick=()=>{panel.classList.add('on');fab.classList.add('hide');persist(true);};$('tvClose').onclick=()=>{stop();panel.classList.remove('on');fab.classList.remove('hide');persist(false);fab.focus();};panel.addEventListener('keydown',e=>{if(e.key==='Escape')$('tvClose').click();});
   $('tvToInteract').onclick=()=>tab('interact');$('tvBackDate').onclick=()=>{tab('interact');$('tvDateForm').hidden=false;};$('tvDateForm').onsubmit=e=>{e.preventDefault();prepareDate(false);};$('tvExample').onclick=()=>setExample(caseSlot==='A'?'2000-01-01':'2024-06-21');$('tvApplyDate').onclick=applyDate;
+  ['tvDate','tvTime'].forEach(id=>$(id).addEventListener('input',()=>{pending=null;$('tvDateConfirm').hidden=true;}));
   $('tvDownload').onclick=()=>{if(!report)return;const url=URL.createObjectURL(new Blob([reportText(report)],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='天文快照-'+report.date+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
   $('tvVote').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('tvVoteResult').textContent='本机已选择：'+b.textContent+'。';try{sessionStorage.setItem('tv-course-interest',b.textContent);}catch(_){}});
   setInterval(()=>{if(panel.classList.contains('on')){if(running)elapsed++;$('tvElapsed').textContent='讲解 '+String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');clocks();}if(report&&window.TimeviewCourse&&Math.abs(window.TimeviewCourse.time()-report.ts)>1000)invalidateReport();},1000);
   window.addEventListener('pagehide',()=>{persist(panel.classList.contains('on'));stop();});
+  document.addEventListener('play',e=>{if(e.target.id==='introVid')stop();},true);
   render();if(saved.open){panel.classList.add('on');fab.classList.add('hide');}
 })();
