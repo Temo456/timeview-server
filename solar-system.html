@@ -22,7 +22,6 @@
   .bar-btn.on{color:#5fd6f0;border-color:rgba(95,214,240,.4)}
   .bar-play{width:36px;height:36px;border-radius:50%;border:none;background:linear-gradient(135deg,#2aa9c8,#1c7fa0);color:#fff;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .bar-play:active{transform:scale(.92)}
-  #lunarText{font-size:11px;font-weight:400;color:#c9bc98;margin-top:3px;white-space:normal}
   .bar-date{flex:1;font-size:12px;font-weight:700;color:#eaf6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:60px;cursor:pointer;border-radius:12px;padding:4px 8px;background:rgba(95,214,240,.06)}
   .bar-sep{width:1px;height:18px;background:rgba(95,214,240,.15);flex-shrink:0}
   .bar-spd{font-size:11px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:14px;padding:5px 10px;background:rgba(10,24,42,.5);cursor:pointer;white-space:nowrap;flex-shrink:0}
@@ -140,7 +139,7 @@
 <!-- 底部工具条 -->
 <div class="bottombar">
   <a href="index.html?from=solar" class="bar-btn" style="color:#5fd6f0;text-decoration:none">🌍 地球</a>
-  <div class="bar-date" id="dateText"><div id="solarDateText"></div><div id="lunarText"></div></div>
+  <div class="bar-date" id="dateText"></div>
   <div class="bar-sep"></div>
   <div class="bar-btn" id="pPrev">‹‹</div>
   <div class="bar-btn" id="pSlow">◀◀</div>
@@ -514,11 +513,10 @@ function showConstellationCard(c) {
 const p2 = n => String(n).padStart(2, '0');
 function formatInput(d) { return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
 function updateDateText() {
-  const d = new Date(EPOCH_MS + simElapsed * 1000);
-  document.getElementById('solarDateText').textContent = window.courseBeijingTime
-    ? new Date(d.getTime() + 480 * 60000).toISOString().slice(0,19).replace('T',' ') + ' UTC+8 北京'
-    : formatInput(d);
+  const ts=EPOCH_MS+simElapsed*1000;
+  const dateStr=new Date(ts+480*60000).toISOString().slice(0,19).replace('T',' ')+' UTC+8 北京';
   updateLunar();
+  document.getElementById('dateText').textContent=dateStr+lunarDisplaySuffix;
 }
 
 /* ============ 农历转换 ============ */
@@ -595,17 +593,16 @@ function lunarToSolar(y, m, d, isLeap) {
   return globalThis.TimeviewLunar.lunarToSolar(y,m,d,isLeap);
 }
 
-let lunarDisplayKey='';
+let lunarDisplayKey='', lunarDisplaySuffix='';
 function updateLunar() {
-  const ts=EPOCH_MS+simElapsed*1000, date=new Date(ts);
-  const offset=window.courseBeijingTime?480:-date.getTimezoneOffset();
-  const key=Math.floor(ts/60000)+':'+offset;
+  const ts=EPOCH_MS+simElapsed*1000;
+  const key=Math.floor(ts/60000);
   if(key===lunarDisplayKey)return;
   lunarDisplayKey=key;
-  const localDay=ts+offset*60000;
-  const lunar=localDay>=Date.UTC(1900,0,31)?globalThis.TimeviewLunar.fmtLunar(ts,{min:offset}):'';
+  const date=new Date(ts+480*60000);
+  const lunar=globalThis.TimeviewLunar.solarToLunar(date.getUTCFullYear(),date.getUTCMonth()+1,date.getUTCDate());
   const term=globalThis.TimeviewAstro.solarTerm(globalThis.TimeviewAstro.dnum(ts));
-  document.getElementById('lunarText').textContent=(lunar||'农历暂无数据')+' · 当前节气：'+term.name;
+  lunarDisplaySuffix=(lunar?' · '+(lunar.isLeap?'闰':'')+LUNAR_MONTH_NAMES[lunar.month-1]+LUNAR_DAY_NAMES[lunar.day-1]:'')+' · '+term.name;
 }
 
 /* 底部工具条按钮 */
