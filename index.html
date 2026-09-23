@@ -511,7 +511,7 @@ function loadImage(img, url) {
 
 // Simplified Chang'e-1 icon and orbit, animated for teaching rather than telemetry.
 const changEIcon = new Image();
-loadImage(changEIcon, 'textures/change-orbiter.svg?v=3.55');
+loadImage(changEIcon, 'textures/change-orbiter.svg?v=3.56');
 let changEPhase = 0;
 function drawChangE(mx, my, mr, front) {
   const orbit = mr + 8, depth = Math.sin(changEPhase);
@@ -522,12 +522,12 @@ function drawChangE(mx, my, mr, front) {
   const oy = depth * orbit * 0.42;
   const x = mx + ox * Math.cos(tilt) - oy * Math.sin(tilt);
   const y = my + ox * Math.sin(tilt) + oy * Math.cos(tilt);
-  const size = Math.max(10, Math.min(17, mr * 0.60)) * (1 + depth * 0.03);
+  const size = Math.max(16, Math.min(24, mr * 0.82)) * (1 + depth * 0.03);
   if (front === (depth >= 0)) {
     ctx.save(); ctx.globalAlpha = 1;
     ctx.translate(x, y);
     ctx.rotate(-Math.PI / 10 + depth * 0.06);
-    if (changEIcon.complete && changEIcon.naturalWidth) ctx.drawImage(changEIcon, -size/2, -size*0.3125, size, size*0.625);
+    if (changEIcon.complete && changEIcon.naturalWidth) ctx.drawImage(changEIcon, -size/2, -size/3, size, size*2/3);
     else {ctx.scale(size/24,size/24);ctx.fillStyle='#bcb394';ctx.fillRect(-12,-4,24,8);ctx.fillRect(-4,-6,8,12);}
     ctx.restore();
   }
@@ -572,7 +572,7 @@ function frame(now) {
     if (inertia) { state.t += inertia * dt; inertia *= Math.exp(-1.4 * dt); if (Math.abs(inertia) < 1000) inertia = 0; }
   }
   if (window.introActive) return;
-  if (state.playing) changEPhase = (changEPhase + dt * Math.PI * 2 / 24) % (Math.PI * 2);
+  if (state.playing) changEPhase = (changEPhase + dt * Math.PI * 2 / 10) % (Math.PI * 2);
   dispT += (state.t - dispT) * (1 - Math.exp(-8 * dt));
   refreshZones(dispT); document.getElementById('tzBtn').textContent='🕓 '+tz.label;
   const d = dnum(dispT), date = new Date(dispT + tz.min * 60000);
