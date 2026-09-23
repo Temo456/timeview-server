@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 24 16">
   <title>嫦娥绕月探测器简化图标</title>
   <path d="M7 9H17" fill="none" stroke="#37342c" stroke-width="2.4"/>
-  <g fill="#bcb394" stroke="#37342c" stroke-width="1" stroke-linejoin="round">
+  <g fill="#ccc7b5" stroke="#37342c" stroke-width="1" stroke-linejoin="round">
     <rect x="1" y="6" width="7" height="6" rx=".5"/>
     <rect x="16" y="6" width="7" height="6" rx=".5"/>
     <path d="M11 5V3L9 1H14L13 5"/>
