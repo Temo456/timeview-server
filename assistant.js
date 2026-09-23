@@ -311,14 +311,14 @@
   $('tvMute').onclick=()=>{muted=!muted;$('tvMute').textContent=muted?'声音关':'声音开';const resume=running;pause();if(resume)run();else persist(false);};
   $('tvMute').textContent=muted?'声音关':'声音开';
   panel.addEventListener('keydown',e=>{if(e.key==='Escape')$('tvClose').click();});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden&&running&&!navigating)pause('先暂停，回来后继续听');});
+  // 切换窗口或标签页时继续讲解；暂停由观众主动控制。
   document.addEventListener('play',e=>{if(e.target.id==='introVid'&&running){resumeAfterIntro=true;pause('先看开场，看完我们接着聊');}},true);
   window.addEventListener('timeview:course-restart',()=>{navigating=true;running=false;generation++;if(cancel)cancel();cancel=null;cancelAudioRequests();});
   window.addEventListener('pagehide',()=>{if(!navigating&&!window.courseRestarting)persist(running);running=false;generation++;if(cancel)cancel();cancelAudioRequests();});
   // 开场结束或跳过后自然接入；不覆盖观众主动收起/暂停的选择。
   setInterval(()=>{
     const intro=window.introActive||($('introOverlay')&&$('introOverlay').offsetHeight);
-    if(resumeAfterIntro&&!intro&&!closed&&!document.hidden){resumeAfterIntro=false;run();}
+    if(resumeAfterIntro&&!intro&&!closed){resumeAfterIntro=false;run();}
     if(!welcomed&&!closed&&!intro&&window.TimeviewCourse){welcomed=true;open(saved.resume!==false);}
   },500);
   if(!closed){panel.classList.add('on');fab.classList.add('hide');}
