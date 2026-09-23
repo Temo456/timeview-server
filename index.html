@@ -140,6 +140,8 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
   .bar-date{order:-1;flex-basis:100%;min-width:0}
   .bar-sep{display:none}
 }
+/* 金色丝线皮肤：界面文字压成白色（画布里的表盘已直接改色，这里只处理 HTML 界面元素） */
+body.golden-skin > *:not(#cv):not(#gl){filter:grayscale(1) contrast(1.5)}
 </style>
 </head>
 <body>
@@ -238,6 +240,7 @@ if ('serviceWorker' in navigator) {
 <!-- 2D 画布（地球表盘） -->
 <canvas id="cv"></canvas>
 <canvas id="gl"></canvas>
+<div id="earthLoading" style="display:none;position:fixed;top:52px;right:12px;z-index:25;font-size:12px;color:#9ab8dc;padding:3px 10px;background:rgba(8,20,36,.65);border-radius:10px;pointer-events:none">地球界面正在加载中…</div>
 
 <!-- 顶部栏 -->
 <div class="topbar" id="topbar">
@@ -564,7 +567,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - lastT) / 1000, 0.05);
   lastT = now;
-  // ???????????????? Canvas / WebGL ?????????????
+  // 开场视频完全覆盖页面时，暂停背景 Canvas / WebGL 绘制，给视频解码留出资源。
 
   // 时间推进
   if (!tlDrag) {
@@ -602,8 +605,11 @@ const TEXBASE = 'textures/';
 const EARTH_SKINS = ['satellite','admin','cartoon'];
 const SKIN_NAMES = { satellite:'卫星', admin:'行政', cartoon:'卡通', golden:'金色丝线', tellurian:'地球仪' };
 let curSkin = 'satellite';
+function updateEarthLoading() {
+  const el = document.getElementById('earthLoading');
+  if (el) el.style.display = isEarthReady() ? 'none' : 'block';
+}
 const earthImgCache = {}; // key: 'skin_hemi' → Image
-let earthLoadStart = Date.now();
 function earthCacheKey(skin, hemi) { return skin + '_' + (hemi > 0 ? 'n' : 's'); }
 function getEarthTexName(skin, hemi) {
   const pole = hemi > 0 ? 'earth-north-pole' : 'earth-south-pole';
@@ -620,10 +626,12 @@ function isEarthReady() {
 function loadEarthPole() {
   const key = earthCacheKey(curSkin, state.hemi);
   if (earthImgCache[key] && earthImgCache[key].complete && earthImgCache[key].naturalWidth > 0) return;
-  earthLoadStart = Date.now();
   const img = new Image();
   earthImgCache[key] = img;
+  img.onload = () => updateEarthLoading();
+  img.onerror = () => updateEarthLoading();
   img.src = TEXBASE + getEarthTexName(curSkin, state.hemi);
+  updateEarthLoading();
 }
 loadEarthPole();
 
@@ -669,6 +677,7 @@ function drawMoonLit(mx, my, r, illum, rot) {
 function drawEarth(d, date) {
   const scrsv = document.body.classList.contains('scrsv');
   const cx = scrsv ? W * 0.68 : W / 2, cy = H * EARTH_CFG.centerY, R = Math.min(W, H) * EARTH_CFG.earthScale * earthZoom;
+  const G = curSkin === 'golden';  // 金色丝线皮肤：文字白、线条金黄、背景黑
   const utcDate = new Date(dispT);  // 不加时区偏移，纯 UTC
   const utch = utcDate.getUTCHours() + utcDate.getUTCMinutes() / 60;
   const merid = (90 - utch * 15) * RAD;
@@ -677,10 +686,14 @@ function drawEarth(d, date) {
   const ph = moonPhase(d, _ln ? _ln.day : null);
   if (!earthTex) earthTex = makeEarthTex();
 
-  // 背景
-  let g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.8);
-  g.addColorStop(0, '#0c1a38'); g.addColorStop(0.6, '#081024'); g.addColorStop(1, '#050a18');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 背景（金色丝线皮肤用纯黑，配合金色蒙版让外太空保持黑色）
+  if (curSkin === 'golden') {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  } else {
+    let g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.8);
+    g.addColorStop(0, '#0c1a38'); g.addColorStop(0.6, '#081024'); g.addColorStop(1, '#050a18');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
   for (const s of stars2d) { ctx.globalAlpha = s.a; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill(); }
   ctx.globalAlpha = 1;
 
@@ -703,31 +716,13 @@ function drawEarth(d, date) {
   else { ctx.drawImage(earthTex, -RR, -RR, 2 * RR, 2 * RR); }
   ctx.restore();
 
-  // 地球加载中动画（不随地球旋转；至少显示 2s）
-  if (!isEarthReady() || Date.now() - earthLoadStart < 2000) {
-    const t = Date.now() / 1000;
-    // 外圈旋转弧线（醒目）
-    ctx.strokeStyle = '#8cd7ff';
-    ctx.lineWidth = Math.max(4, R * 0.08);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(cx, cy, R * 0.52, t * 3, t * 3 + Math.PI * 1.5);
-    ctx.stroke();
-    // 内圈反向弧线
-    ctx.strokeStyle = 'rgba(210,235,255,.6)';
-    ctx.lineWidth = Math.max(3, R * 0.045);
-    ctx.beginPath();
-    ctx.arc(cx, cy, R * 0.38, -t * 2.4, -t * 2.4 + Math.PI * 1.6);
-    ctx.stroke();
-  }
-
   // 地球光晕
   let ag = ctx.createRadialGradient(cx, cy, R * EARTH_CFG.earthGlowInner, cx, cy, R * EARTH_CFG.earthGlowOuter);
-  ag.addColorStop(0, 'rgba(90,200,255,0)'); ag.addColorStop(0.5, 'rgba(90,200,255,.18)'); ag.addColorStop(1, 'rgba(90,200,255,0)');
+  ag.addColorStop(0, 'rgba(90,200,255,0)'); ag.addColorStop(0.5, G ? 'rgba(230,194,0,.20)' : 'rgba(90,200,255,.18)'); ag.addColorStop(1, 'rgba(90,200,255,0)');
   ctx.fillStyle = ag; ctx.beginPath(); ctx.arc(cx, cy, R * EARTH_CFG.earthGlowOuter, 0, 7); ctx.fill();
 
   // 地球边框
-  ctx.strokeStyle = 'rgba(95,214,240,.3)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx, cy, R * EARTH_CFG.earthBorderScale, 0, 7); ctx.stroke();
+  ctx.strokeStyle = G ? 'rgba(230,194,0,.55)' : 'rgba(95,214,240,.3)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx, cy, R * EARTH_CFG.earthBorderScale, 0, 7); ctx.stroke();
 
   // 时间刻度环（和小程序完全一致：0点正下方，逆时针 1-6-12-18-23）
   const hRing = EARTH_CFG.hourRingScale, hDot = EARTH_CFG.hourDotScale;
@@ -735,20 +730,20 @@ function drawEarth(d, date) {
   for (let h = 0; h < 24; h++) {
     const a = clockAngle(h), nx = Math.sin(a), ny = -Math.cos(a);
     // 小圆点
-    ctx.fillStyle = 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * R * hDot, ny * R * hDot, 1.4, 0, 7); ctx.fill();
+    ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * R * hDot, ny * R * hDot, 1.4, 0, 7); ctx.fill();
     // 双数=数字（不旋转，水平），单数=竖线（旋转朝向圆心）
     if (h % 2 === 0) {
-      ctx.fillStyle = 'rgba(165,212,238,.92)'; ctx.font = EARTH_CFG.hourNumSize + 'px sans-serif';
+      ctx.fillStyle = G ? '#fff' : 'rgba(165,212,238,.92)'; ctx.font = EARTH_CFG.hourNumSize + 'px sans-serif';
       ctx.fillText(String(h).padStart(2, '0'), nx * R * hRing, ny * R * hRing);
     } else {
       ctx.save(); ctx.translate(nx * R * hRing, ny * R * hRing); ctx.rotate(a);
-      ctx.fillStyle = 'rgba(135,185,214,.78)'; ctx.font = 'bold ' + (EARTH_CFG.hourNumSize + 1) + 'px sans-serif';
+      ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(135,185,214,.78)'; ctx.font = 'bold ' + (EARTH_CFG.hourNumSize + 1) + 'px sans-serif';
       ctx.fillText('|', 0, 0); ctx.restore();
     }
   }
   // 时区指针（和小程序一致）
   const ptr = (hh, col) => { const a = clockAngle(hh); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(Math.sin(a) * R * EARTH_CFG.ptrTipScale, -Math.cos(a) * R * EARTH_CFG.ptrTipScale); ctx.lineTo(Math.sin(a - 0.035) * R, -Math.cos(a - 0.035) * R); ctx.lineTo(Math.sin(a + 0.035) * R, -Math.cos(a + 0.035) * R); ctx.closePath(); ctx.fill(); };
-  ptr(utch, '#5fd6f0'); ptr(utch + tz.min / 60, '#ffd24a');
+  ptr(utch, G ? '#e6c200' : '#5fd6f0'); ptr(utch + tz.min / 60, '#ffd24a');
   ctx.restore();
 
   // 城市标注
@@ -793,7 +788,7 @@ function drawEarth(d, date) {
     }
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(6,14,30,.72)'; ctx.fillRect(lx - tw / 2 - 3, ly - 6, tw + 6, 12);
-    ctx.fillStyle = c.star ? '#ffd7d3' : '#fff7e0';
+    ctx.fillStyle = G ? '#fff' : (c.star ? '#ffd7d3' : '#fff7e0');
     ctx.fillText(c.cn, lx, ly);
     ctx.globalAlpha = 1;
   }
@@ -802,24 +797,24 @@ function drawEarth(d, date) {
   // 中央时钟表盘
   const rc = R * EARTH_CFG.clockScale;
   ctx.save(); ctx.translate(cx, cy);
-  ctx.beginPath(); ctx.arc(0, 0, rc, 0, 7); ctx.fillStyle = '#f7faff'; ctx.fill();
-  ctx.strokeStyle = 'rgba(60,90,120,.6)'; ctx.lineWidth = 1.2; ctx.stroke();
-  for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * Math.PI; ctx.strokeStyle = 'rgba(40,60,90,.5)'; ctx.lineWidth = i % 3 === 0 ? 1.5 : 0.7; ctx.beginPath(); ctx.moveTo(Math.sin(a) * rc * 0.82, -Math.cos(a) * rc * 0.82); ctx.lineTo(Math.sin(a) * rc * 0.95, -Math.cos(a) * rc * 0.95); ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(0, 0, rc, 0, 7); ctx.fillStyle = G ? '#000' : '#f7faff'; ctx.fill();
+  ctx.strokeStyle = G ? 'rgba(230,194,0,.6)' : 'rgba(60,90,120,.6)'; ctx.lineWidth = 1.2; ctx.stroke();
+  for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * Math.PI; ctx.strokeStyle = G ? 'rgba(230,194,0,.5)' : 'rgba(40,60,90,.5)'; ctx.lineWidth = i % 3 === 0 ? 1.5 : 0.7; ctx.beginPath(); ctx.moveTo(Math.sin(a) * rc * 0.82, -Math.cos(a) * rc * 0.82); ctx.lineTo(Math.sin(a) * rc * 0.95, -Math.cos(a) * rc * 0.95); ctx.stroke(); }
   // 分钟刻度 0/10/20/30/40/50
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold ' + Math.max(6, Math.round(rc * 0.18)) + 'px sans-serif';
-  ctx.fillStyle = 'rgba(28,43,68,.95)';
+  ctx.fillStyle = G ? '#fff' : 'rgba(28,43,68,.95)';
   for (let m = 0; m < 60; m += 10) { const ma = (m / 60) * 2 * Math.PI; ctx.fillText(String(m), Math.sin(ma) * rc * 0.66, -Math.cos(ma) * rc * 0.66); }
-  ctx.fillStyle = 'rgba(28,43,68,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = G ? '#fff' : 'rgba(28,43,68,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold ' + Math.max(7, Math.round(rc * 0.24)) + 'px sans-serif';
   ctx.fillText(p2(date.getUTCMonth() + 1) + '.' + p2(date.getUTCDate()), 0, rc * 0.45);
   const minu = date.getUTCMinutes() + date.getUTCSeconds() / 60;
   const sec = date.getUTCSeconds() + date.getUTCMilliseconds() / 1000;
-  let a = minu / 60 * 2 * Math.PI; ctx.strokeStyle = '#1c2b44'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  let a = minu / 60 * 2 * Math.PI; ctx.strokeStyle = G ? '#e6c200' : '#1c2b44'; ctx.lineWidth = 2; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(a) * rc * 0.6, -Math.cos(a) * rc * 0.6); ctx.stroke();
-  a = sec / 60 * 2 * Math.PI; ctx.strokeStyle = '#e0453a'; ctx.lineWidth = 1;
+  a = sec / 60 * 2 * Math.PI; ctx.strokeStyle = G ? '#e6c200' : '#e0453a'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(-Math.sin(a) * rc * 0.12, Math.cos(a) * rc * 0.12); ctx.lineTo(Math.sin(a) * rc * 0.78, -Math.cos(a) * rc * 0.78); ctx.stroke();
-  ctx.fillStyle = '#1c2b44'; ctx.beginPath(); ctx.arc(0, 0, rc * 0.07, 0, 7); ctx.fill();
+  ctx.fillStyle = G ? '#e6c200' : '#1c2b44'; ctx.beginPath(); ctx.arc(0, 0, rc * 0.07, 0, 7); ctx.fill();
   ctx.restore();
 
   // 月球
@@ -1351,6 +1346,7 @@ document.getElementById('btnSkin').onclick = (e) => {
 document.querySelectorAll('.skin-opt').forEach(el => {
   el.onclick = () => {
     curSkin = el.dataset.skin;
+    document.body.classList.toggle('golden-skin', curSkin === 'golden');
     document.getElementById('btnSkin').textContent = '🌐 ' + SKIN_NAMES[curSkin];
     document.querySelectorAll('.skin-opt').forEach(o => o.classList.toggle('on', o.dataset.skin === curSkin));
     loadEarthPole();

@@ -126,12 +126,15 @@
 </style>
 </head>
 <body>
+<div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" src="textures/disney-up-to-timeview.mp4" autoplay muted playsinline style="width:100%;height:100%;object-fit:contain"></video><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
+<script>(function(){var ov=document.getElementById('introOverlay'),vid=document.getElementById('introVid'),skip=document.getElementById('introSkip');if(!ov||!vid)return;function hide(){ov.style.opacity='0';try{vid.pause()}catch(e){}setTimeout(function(){ov.style.display='none';ov.style.opacity='1'},800)}vid.addEventListener('ended',hide);if(skip)skip.addEventListener('click',hide);window.replayIntro=function(){ov.style.display='block';ov.style.opacity='1';vid.currentTime=0;vid.muted=false;var p=vid.play();if(p&&p.catch)p.catch(function(){vid.muted=true;vid.play().catch(hide)})};if(!sessionStorage.getItem('introPlayed')){sessionStorage.setItem('introPlayed','1');ov.style.display='block';vid.muted=true;var q=vid.play();if(q&&q.catch)q.catch(hide)}})();</script>
 <div id="scene"></div>
 
 <!-- 顶栏 -->
 <div style="position:fixed;top:0;left:0;right:0;z-index:20;padding:env(safe-area-inset-top) 12px 0;display:flex;align-items:center;height:44px;background:linear-gradient(180deg,rgba(5,8,15,.92),transparent);pointer-events:none">
   <span style="font-size:16px;font-weight:800;color:#eaf6ff;text-shadow:0 0 12px rgba(95,214,240,.5)">时间景观 · 太阳系</span>
   <div style="margin-left:auto;display:flex;gap:6px;align-items:center;pointer-events:auto">
+    <button onclick="replayIntro()" style="font-size:11px;color:#5fd6f0;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px;background:transparent;cursor:pointer">🎬 开场</button>
     <a href="index.html?from=solar" style="font-size:11px;color:#5fd6f0;text-decoration:none;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px">🌍 地球</a>
   </div>
 </div>
