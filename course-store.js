@@ -31,7 +31,9 @@ function validate(input) {
   });
   const templates={};
   for(const name of Object.keys(defaults.templates)) templates[name]=text(input.templates?.[name],'衔接语 '+name,1000,tokens[name]||[]);
-  return {chapters,lines,templates};
+  const settings={...defaults.settings,...input.settings};
+  for(const name of Object.keys(defaults.settings))if(!Number.isInteger(settings[name])||settings[name]<1||settings[name]>600)throw Error('等待时长需为1至600秒的整数');
+  return {chapters,lines,templates,settings};
 }
 
 module.exports = function createCourseStore(dataDir) {
@@ -48,7 +50,7 @@ module.exports = function createCourseStore(dataDir) {
       try{
         const body=await readBody(req);
         if(body.revision!==current.revision)return sendJson(res,{error:'其他窗口已经更新内容，请保留本次修改并重新加载后合并'},409);
-        const next={...validate(body),revision:current.revision+1,updatedAt:new Date().toISOString()};
+        const next={...validate({...body,settings:body.settings??current.settings}),revision:current.revision+1,updatedAt:new Date().toISOString()};
         const temp=file+'.tmp';
         try{fs.mkdirSync(dataDir,{recursive:true});if(fs.existsSync(file))fs.copyFileSync(file,file+'.previous');fs.writeFileSync(temp,JSON.stringify(next,null,2)+'\n',{mode:0o600});fs.renameSync(temp,file);}catch(_){return sendJson(res,{error:'服务器保存失败，原内容未替换，请重试'},500);}
         current=next;return sendJson(res,{ok:true,revision:next.revision,updatedAt:next.updatedAt});

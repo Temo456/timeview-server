@@ -545,5 +545,10 @@
     "reportFailure": "这次报告没有准备好，我们先观察画面，不猜测具体结果。",
     "received": "收到你的想法，我们一起看看。",
     "noAnswer": "没关系，我们一起看。"
+  },
+  "settings": {
+    "replySeconds": 8,
+    "dateReplySeconds": 60,
+    "editingSeconds": 60
   }
 }

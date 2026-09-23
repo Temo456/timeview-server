@@ -194,13 +194,19 @@ load();
   $('courseTab').onclick=()=>mode(true);$('qaTab').onclick=()=>mode(false);mode(true);
   function changed(){dirty=true;message('有未发布的修改');}
   function field(parent,label,value,setter,kind='textarea'){
-    const wrap=document.createElement('div'),l=document.createElement('label'),el=document.createElement(kind==='date'?'input':kind);
+    const wrap=document.createElement('div'),l=document.createElement('label'),el=document.createElement(['date','number'].includes(kind)?'input':kind);
     l.className='course-label';l.textContent=label;
-    el.value=value;el.setAttribute('aria-label',label);if(kind==='date'){el.type='date';el.min='1900-01-01';el.max='2100-12-31';}else el.maxLength=kind==='input'?40:1000;
+    el.value=value;el.setAttribute('aria-label',label);if(kind==='date'){el.type='date';el.min='1900-01-01';el.max='2100-12-31';}else if(kind==='number'){el.type='number';el.min=1;el.max=600;el.step=1;}else el.maxLength=kind==='input'?40:1000;
     el.oninput=()=>{setter(el.value);changed();};l.append(el);wrap.append(l);parent.append(wrap);return el;
   }
   function render(){
     $('courseFields').replaceChildren();
+    content.settings={replySeconds:8,dateReplySeconds:60,editingSeconds:60,...content.settings};
+    const timing=document.createElement('details');timing.className='course-section';timing.open=true;
+    const heading=document.createElement('summary');heading.textContent='观众回复倒计时';timing.append(heading);
+    const timingBody=document.createElement('div');timingBody.className='f';timing.append(timingBody);
+    for(const [key,label] of [['replySeconds','普通提问等待（秒）'],['dateReplySeconds','选择日期等待（秒）'],['editingSeconds','开始输入后等待（秒）']])field(timingBody,label,content.settings[key],v=>content.settings[key]=Number(v),'number');
+    const hint=document.createElement('p');hint.className='course-note';hint.textContent='范围1–600秒。输入内容时重新计时；倒计时结束后继续讲解。发布后重新打开体验页面生效。';timingBody.append(hint);$('courseFields').append(timing);
     content.chapters.forEach((ch,i)=>{
       const details=document.createElement('details');details.className='course-section';details.open=i===0;
       const summary=document.createElement('summary');summary.textContent=String(i+1).padStart(2,'0')+' · '+ch.title;details.append(summary);

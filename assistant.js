@@ -22,6 +22,8 @@
   const key = 'tv-natural-course-v1';
   let saved = {};
   try { saved = JSON.parse(sessionStorage.getItem(key) || '{}'); } catch (_) {}
+  if(new URLSearchParams(location.search).get('restart')==='1')saved={cursor:0,muted:false,closed:true,resume:false};
+  let replySettings={replySeconds:8,dateReplySeconds:60,editingSeconds:60};
   let cursor = Number.isInteger(saved.cursor) ? saved.cursor : 0;
   let muted = !!saved.muted, running = false, generation = 0, cancel = null;
   let closed = !!saved.closed, navigating = false, welcomed = false, lastChapter = -1, resumeAfterIntro = false;
@@ -34,7 +36,7 @@
   function layer(name, on) { scene().layer(name, on); }
   function cleanSolar() { scene().focus?.('planets'); ['axes','zodiac','xiusu','threeBody','voyager'].forEach(n=>layer(n,false)); $('planetCard').style.display='none'; }
   for (let ch = 0; ch < chapters.length; ch++) {
-    say(ch, 0, chapters[ch][4], () => { if(view==='solar') cleanSolar(); });
+    say(ch, 0, chapters[ch][4], () => { if(view==='solar'){cleanSolar();if(ch===6)scene().axes(2);} });
     say(ch, 1, chapters[ch][5]);
     if (ch === 2) {
       say(ch, 0, () => {
@@ -102,6 +104,7 @@
       if(step.answer)step.answer=line.answer;
       if(step.fallback)step.fallback=line.fallback;
     });
+    for(const name of Object.keys(replySettings)){const value=script.settings?.[name];if(Number.isInteger(value)&&value>=1&&value<=600)replySettings[name]=value;}
     scriptTemplates={...scriptTemplates,...script.templates};
   } catch (_) { /* 后台暂时不可达时，保留内置的完整讲解。 */ }
   if(cursor<0 || cursor>=steps.length || chapters[steps[cursor].ch][2]!==view) cursor=steps.findIndex(s=>chapters[s.ch][2]===view);
@@ -116,7 +119,7 @@
   style.textContent += `#tv-assist .stage-nav{position:relative;padding:8px 18px 12px}#tvStageLabel{color:#b9c8ca;font-size:11px;letter-spacing:.3px}#tv-assist .cue-track{position:relative;display:flex;justify-content:space-between;margin-top:5px;height:28px;isolation:isolate}#tv-assist .cue-track:before{content:'';position:absolute;top:13px;left:12px;right:12px;height:1px;background:linear-gradient(to right,#d8bd84 var(--progress,0%),#49616b var(--progress,0%));z-index:-1}#tv-assist .cue-point{position:relative;width:24px;min-width:0;height:28px;padding:0;border-radius:5px;background:transparent;display:grid;place-items:center}#tv-assist .cue-point:before{content:'';width:5px;height:5px;border:1px solid #81959c;background:#112129;border-radius:50%}#tv-assist .cue-point.past:before{background:#b8a273;border-color:#b8a273}#tv-assist .cue-point[aria-current=step]:before{width:8px;height:8px;background:#efd19a;border-color:#efd19a;box-shadow:0 0 0 4px #d7bd8520}#tv-assist .cue-point:hover:before,#tv-assist .cue-point:focus-visible:before{background:#fff0c7;border-color:#fff0c7}#tv-assist .cue-tooltip{position:absolute;bottom:49px;left:12px;right:12px;padding:7px 10px;background:#20343e;color:#f7e2b7;border:1px solid #c9b48250;border-radius:7px;font-size:12px;box-shadow:0 6px 18px #0004;pointer-events:none;z-index:2}`;
   document.head.append(style);
   const panel=document.createElement('aside');panel.id='tv-assist';panel.setAttribute('aria-label','阿远与阿星的讲解');
-  panel.innerHTML=`<header><div class="top"><span class="kicker">时间景观 · AI 双人讲解</span><button id="tvClose" aria-label="收起并暂停讲解">×</button></div><h2 id="tvTitle">一起读懂眼前的宇宙</h2><span class="sub">阿远 · 白桦　 /　 阿星 · 冰糖</span></header><nav class="stage-nav" aria-label="课程环节"><label id="tvStageLabel" for="tvStage"></label><div id="tvCues" class="cue-track" role="group" aria-label="选择讲解环节"></div><div id="tvCueTip" class="cue-tooltip" role="tooltip" hidden></div><input id="tvStage" type="hidden" value="0"></nav><div class="body" id="tvBody"><div id="tvLog" role="log" aria-live="polite"></div><div id="tvReport" hidden></div></div><footer><div class="controls"><span id="tvStatus" role="status">等你一起出发</span><div><button id="tvPlay">开始听</button><button id="tvMute" aria-label="切换声音">声音开</button></div></div><form id="tvReplyForm" hidden><input id="tvReply" aria-label="回复阿星" autocomplete="off" maxlength="120"><button type="submit" aria-label="发送回复">发送</button></form><div id="tvPrompt" hidden></div></footer>`;
+  panel.innerHTML=`<header><div class="top"><span class="kicker">时间景观 · AI 双人讲解</span><button id="tvClose" aria-label="收起并暂停讲解">×</button></div><h2 id="tvTitle">一起读懂眼前的宇宙</h2><span class="sub">阿远 · 白桦　 /　 阿星 · 冰糖</span></header><nav class="stage-nav" aria-label="课程环节"><label id="tvStageLabel" for="tvStage"></label><div id="tvCues" class="cue-track" role="group" aria-label="选择讲解环节"></div><div id="tvCueTip" class="cue-tooltip" role="tooltip" hidden></div><input id="tvStage" type="hidden" value="0"></nav><div class="body" id="tvBody"><div id="tvLog" role="log" aria-live="polite"></div><div id="tvReport" hidden></div></div><footer><div class="controls"><span id="tvStatus" role="status">等你一起出发</span><div><button id="tvPlay">开始听</button><button id="tvMute" aria-label="切换声音">声音开</button></div></div><form id="tvReplyForm" hidden><input id="tvReply" aria-label="回复阿星" autocomplete="off" maxlength="120"><button type="submit" aria-label="发送回复">发送</button></form><div id="tvPrompt" hidden></div><div id="tvCountdown" hidden style="font-size:12px;color:#d6c08e;margin-top:6px;font-variant-numeric:tabular-nums"></div></footer>`;
   document.body.append(panel);
   const fab=document.createElement('button');fab.id='tv-fab';fab.textContent='听阿远与阿星讲解';document.body.append(fab);
   ['mousedown','touchstart','touchmove','wheel','click'].forEach(t=>panel.addEventListener(t,e=>e.stopPropagation(),{passive:true}));
@@ -215,14 +218,16 @@
     $('tvPrompt').textContent=step.type==='date'?'公历日期；默认北京时间 12:00，仅作演示':'可以回复，也可以先听我们接着讲';
     status('等你说一句');
     return new Promise(resolve=>{
-      let timer,done=false;
-      const end=value=>{if(done)return;done=true;clearTimeout(timer);$('tvReplyForm').onsubmit=null;$('tvReply').oninput=null;$('tvReply').onfocus=null;$('tvReplyForm').hidden=true;$('tvPrompt').hidden=true;if(cancel===abort)cancel=null;resolve(value);};
+      let timer,tick,deadline,done=false;
+      const end=value=>{if(done)return;done=true;clearTimeout(timer);clearInterval(tick);$('tvCountdown').hidden=true;$('tvReplyForm').onsubmit=null;$('tvReply').oninput=null;$('tvReply').onfocus=null;$('tvReplyForm').hidden=true;$('tvPrompt').hidden=true;if(cancel===abort)cancel=null;resolve(value);};
       const abort=()=>end(null);cancel=abort;
-      const arm=ms=>{clearTimeout(timer);timer=setTimeout(()=>end(null),ms);};arm(step.type==='date'?60000:8000);
+      const draw=()=>{$('tvCountdown').textContent='剩余 '+Math.max(0,Math.ceil((deadline-Date.now())/1000))+' 秒';};
+      const arm=seconds=>{clearTimeout(timer);deadline=Date.now()+seconds*1000;$('tvCountdown').hidden=false;draw();timer=setTimeout(()=>end(null),seconds*1000);};
+      arm(step.type==='date'?replySettings.dateReplySeconds:replySettings.replySeconds);tick=setInterval(draw,250);
       // 开始输入后给足时间，不在观众打字时切走。
-      $('tvReply').onfocus=()=>arm(60000);$('tvReply').oninput=()=>arm(60000);
+      $('tvReply').onfocus=()=>arm(replySettings.editingSeconds);$('tvReply').oninput=()=>arm(replySettings.editingSeconds);
       $('tvReplyForm').onsubmit=e=>{e.preventDefault();const value=$('tvReply').value.trim();if(!value)return;
-        if(step.type==='date'&&!parseDate(value)){$('tvPrompt').textContent='请写有效的公历日期，如 1995-08-12（1900–2100年）';arm(60000);return;}
+        if(step.type==='date'&&!parseDate(value)){$('tvPrompt').textContent='请写有效的公历日期，如 1995-08-12（1900–2100年）';arm(replySettings.editingSeconds);return;}
         end(value);
       };
     });

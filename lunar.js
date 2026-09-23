@@ -49,6 +49,7 @@ function cDay(d) {
 function solarToLunar(y, m, d) {
   if (y < 1900 || y > 2100) return null;
   let offset = (Date.UTC(y, m - 1, d) - Date.UTC(1900, 0, 31)) / 86400000;
+  if (offset < 0) return null;
   let temp = 0, i;
   for (i = 1900; i < 2101 && offset > 0; i++) { temp = lYearDays(i); offset -= temp; }
   if (offset < 0) { offset += temp; i--; }
@@ -103,4 +104,7 @@ function lunarMonths(year) {
   return out;
 }
 
-module.exports = { solarToLunar, lunarToSolar, lunarMonths, fmtLunar, ganzhiYear, lDayStr: cDay };
+const TimeviewLunar = { solarToLunar, lunarToSolar, lunarMonths, fmtLunar, ganzhiYear, lDayStr: cDay };
+
+if (typeof module !== 'undefined' && module.exports) module.exports = TimeviewLunar;
+else globalThis.TimeviewLunar = TimeviewLunar;

@@ -82,8 +82,11 @@ function fmtDate(ms, tz) {
     p(dt.getUTCHours()) + ":" + p(dt.getUTCMinutes()) + ":" + p(dt.getUTCSeconds()) + (tz.label ? (" " + tz.label) : "");
 }
 
-module.exports = {
+const TimeviewAstro = {
   RAD, rev, J2000, dnum, sunLon, PLANETS, planetLon,
   fmtDate, TIMEZONES, SYN, moonLon, moonPhase, TERMS, solarTerm,
   SHICHEN, SHICHEN_RANGE, shichen
 };
+
+if (typeof module !== 'undefined' && module.exports) module.exports = TimeviewAstro;
+else globalThis.TimeviewAstro = TimeviewAstro;

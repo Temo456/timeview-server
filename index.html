@@ -1514,7 +1514,7 @@ window.replayIntro = function () {
   try {
     sessionStorage.removeItem('introPlayed');
     sessionStorage.setItem('tv-clock-paused', '0');
-    sessionStorage.setItem('tv-natural-course-v1', JSON.stringify({cursor:0,muted:false,closed:false,resume:true}));
+    sessionStorage.setItem('tv-natural-course-v1', JSON.stringify({cursor:0,muted:false,closed:true,resume:false}));
   } catch (_) {}
   const screensaver = document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1';
   location.replace('app?restart=1' + (screensaver ? '&scrsv=1' : ''));
