@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "3.60";
+const VERSION = "4.0.4";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -41,6 +41,22 @@ function zodiacOf(m, d) {
   const last = [19, 18, 20, 19, 20, 21, 22, 22, 21, 22, 21, 20];
   const signs = ["摩羯", "水瓶", "双鱼", "白羊", "金牛", "双子", "巨蟹", "狮子", "处女", "天秤", "天蝎", "射手", "摩羯"];
   return signs[d <= last[m - 1] ? m - 1 : m] + "座";
+}
+// Approximate the Moon's place among the 28 traditional sky sectors from
+// ecliptic longitude and the representative star coordinates used in the scene.
+// This is an educational pointer, not a historical almanac's day mansion.
+const MANSION_ANCHORS = [
+  [9.2,'壁宿'],[22.4,'奎宿'],[37.7,'娄宿'],[46.9,'胃宿'],[59.4,'昴宿'],[68.5,'毕宿'],[83.7,'觜宿'],[88.8,'参宿'],
+  [108.8,'井宿'],[125.7,'鬼宿'],[131.2,'柳宿'],[147.3,'星宿'],[155.7,'张宿'],[173.7,'翼宿'],[197.4,'轸宿'],
+  [203.8,'角宿'],[214.5,'亢宿'],[225.1,'氐宿'],[243.2,'房宿'],[247.8,'心宿'],[255.3,'尾宿'],[271.3,'箕宿'],
+  [273.2,'斗宿'],[304.0,'牛宿'],[311.7,'女宿'],[323.4,'虚宿'],[333.4,'危宿'],[353.5,'室宿']
+];
+function moonMansion(ts) {
+  const lon=A.moonLon(A.dnum(ts))*Math.PI/180,tilt=23.44*Math.PI/180;
+  const ra=(Math.atan2(Math.sin(lon)*Math.cos(tilt),Math.cos(lon))*180/Math.PI+360)%360;
+  let name=MANSION_ANCHORS[MANSION_ANCHORS.length-1][1];
+  for(const [start,sector] of MANSION_ANCHORS){if(ra<start)break;name=sector;}
+  return name+'附近';
 }
 // 由时间戳(ts，UTC 毫秒)+ 时区分钟偏移，算出与小程序一致的天文历法数据
 function computeAstro(ts, tzMin) {
@@ -79,6 +95,10 @@ const BHREF = (BASE || "") + "/";
 function injectBase(html){ return html.replace(/<head([^>]*)>/i, '<head$1><base href="' + BHREF + '">'); }
 // 版本号：紧跟「时间景观」品牌文字（左上角），以 sub 小字显示。release.html（v3.0 发布说明）与 wallpaper.html 不在此注入。
 function injectVersion(html){
+  // Version local scripts so an older controlling SW cannot mix old JS with new HTML.
+  html = html.replace(/(<script\b[^>]*\bsrc=["'])(?!https?:|\/\/|data:)([^"']+\.js)(["'])/gi,
+    (_,prefix,src,quote)=>prefix+src+'?v='+VERSION+quote);
+  html = html.replace(/<head([^>]*)>/i, '<head$1><link rel="icon" type="image/svg+xml" href="' + BHREF + 'favicon.svg"><link rel="alternate icon" href="' + BHREF + 'favicon.ico">');
   const sub = '<sub style="font-size:9px;color:#5fd6f0;margin-left:4px;letter-spacing:1px">v' + VERSION + '</sub>';
   html = html.replace('<span class="brand">时间景观</span>', '<span class="brand">时间景观 ' + sub + '</span>');   // 应用页 index.html 顶栏
   html = html.replace('>时间景观 · 太阳系</span>', '>时间景观 · 太阳系 ' + sub + '</span>');                       // 太阳系页 solar-system.html 顶栏
@@ -226,6 +246,8 @@ const server = http.createServer(async (req, res) => {
   if (p === "/api/health") return sendJson(res, { ok: true, ai: !!LLM_API_KEY, tts: !!TTS_API_KEY, kb: KB.length, model: LLM_MODEL, fortune: _fm, fortuneMode: FORTUNE_MODE });
 
   if (p === "/api/course-script") return courseStore.handle(req, res, sendJson, readBody);
+  if (p === "/api/courses") return courseStore.catalog(req, res, sendJson, readBody);
+  if (p === "/api/course-publishing") return courseStore.publish(req, res, sendJson, readBody);
 
   // 课程报告只返回经过白名单筛选的计算结果；不调用大模型或命理解读。
   if (p === "/api/course-report" && req.method === "POST") {
@@ -240,6 +262,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, { ts, tzMin: 480, moonPhase: a.moonPhase,
         moonAge: a.moonAge, moonIllum: a.moonIllum,
         lunar: L.fmtLunar(ts, { min: 480 }) || "暂无可靠数据", solarTerm: a.solarTerm,
+        moonMansion: moonMansion(ts),
         source: "astro.js / lunar.js", model: "教学近似模型" });
     } catch (_) { return sendJson(res, { error: "天文计算暂不可用，请重试" }, 500); }
   }

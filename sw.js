@@ -1,12 +1,13 @@
 // 缓存键：与 server.js 的 VERSION 同步 bump，否则老用户会被 SW 缓存挡住看不到新页面
-const C = "timeview-v3.60";
+const CACHE_PREFIX = "timeview:" + self.registration.scope + ":v";
+const C = CACHE_PREFIX + "4.0.4";
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["./","app","manifest.json","icon-192.png","icon-512.png"]).catch(()=>{})));
   self.skipWaiting();
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys()
-    .then(ks => Promise.all(ks.filter(k => k.startsWith("timeview-v") && k !== C).map(k => caches.delete(k))))
+    .then(ks => Promise.all(ks.filter(k => k.startsWith(CACHE_PREFIX) && k !== C).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", e => {

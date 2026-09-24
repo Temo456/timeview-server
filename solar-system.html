@@ -51,7 +51,7 @@
   .dp-btn{flex:1;text-align:center;padding:12px;font-size:13px;font-weight:600;cursor:pointer}
 
   /* 行星标签（HTML overlay：星球头顶文字） */
-  #labelsLayer { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #labelsLayer, #skyLabelsLayer, #termLabelsLayer { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
   .plabel {
     position: absolute; text-align: center;
     transform: translate(-50%, -100%);
@@ -63,6 +63,8 @@
   }
 
   /* 行星信息卡片 */
+  .term-label .name { color: #aabfc4; }
+  .term-label.active .name { color: #ffdb85; font-weight: 700; text-shadow: 0 0 8px #b87e30; }
   #planetCard {
     position: fixed; z-index: 20; display: none;
     background: rgba(16, 28, 50, 0.88);
@@ -88,6 +90,13 @@
   #planetCard .card-grid dt { font-size: 11px; color: #7fa8cc; }
   #planetCard .card-grid dd { font-size: 13px; color: #e0ecff; margin: 0; }
   #planetCard .card-desc { font-size: 12.5px; color: #b8d0e8; line-height: 1.6; }
+  #planetCard.course-card {
+    left: 18px; right: auto; top: 68px; bottom: auto;
+    width: var(--course-card-width, 320px);
+    max-height: var(--course-card-height, calc(100vh - 144px));
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  @media(max-width:600px) { #planetCard.course-card { left: 10px; top: 58px; } }
 
   /* 三体信息卡 */
   #threeBodyCard {
@@ -150,6 +159,7 @@
   <div class="bar-btn" id="pFast">▶▶</div>
   <div class="bar-btn" id="pNext">››</div>
   <div class="bar-btn" id="pNow" style="color:#f5c451">现在</div>
+  <button class="bar-btn" id="pReset" title="回到太阳系俯视全景">↺ 复位</button>
   <div class="bar-sep"></div>
   <div class="bar-spd" id="spdBtn">⚡ 秒/秒 ▾</div>
   <div class="bar-sep"></div>
@@ -161,6 +171,7 @@
   <div class="layer-opt" data-layer="orbits">◎ 轨道</div>
   <div class="layer-opt" data-layer="labels">🏷 标签</div>
   <div class="layer-opt" data-layer="axes">＋ 坐标轴</div>
+  <div class="layer-opt" data-layer="earthAxis">↗ 地轴</div>
   <div class="layer-opt" data-layer="terms">📅 节气</div>
   <div class="layer-opt" data-layer="zodiac">✦ 星座</div>
   <div class="layer-opt" data-layer="xiusu">✧ 星宿</div>
@@ -224,6 +235,7 @@
   <button class="tb-close" id="tbClose">✕</button>
   <div class="tb-title">三体星系</div>
   <div class="tb-sub">Alpha Centauri · 半人马座α · 距太阳4.37光年</div>
+  <div class="tb-sub">轨道分别加速 · 双星10秒一周 · 比邻星45秒一周</div>
   <div class="tb-grid">
     <dt>恒星A</dt><dd>南门二A (α Cen A)</dd>
     <dt>类型</dt><dd>G2V 主序星（类太阳）</dd>
@@ -238,14 +250,13 @@
     <dt>距离</dt><dd>4.246 光年（最近恒星）</dd>
     <dt>行星</dt><dd>比邻星b（宜居带行星）</dd>
   </div>
-  <div class="tb-desc">三体星系是距太阳系最近的恒星系统，由三颗恒星组成：南门二A、南门二B和比邻星。A和B互相绕转（周期约80年），比邻星在远处绕AB双星运行（周期约54.7万年）。
-
-刘慈欣科幻小说《三体》中，三体文明的母星位于该星系。由于三体运动的混沌性，三体人无法预测行星上的气候规律，经历了两百多次文明毁灭与重生。小说中"不要回答！不要回答！不要回答！"的警告信号即从比邻星方向发出。
-
-2022年天文学家在比邻星系发现了第二颗行星（比邻星c），进一步增加了该星系的科学关注度。</div>
+  <div class="tb-desc">南门二A、B围绕共同质心沿椭圆轨道运行，约80年一周，近处走得快、远处走得慢。比邻星在远处围绕双星运行，约55万年一周。<br><br>
+为了看清两种轨道，双星和比邻星分别加速展示，不能用画面中的快慢比较真实公转速度。外轨道距离经过压缩；轨道方向与起点用于教学，不对应日期栏中的实时位置。<br><br>
+小说《三体》设定了复杂的恒星运动与气候变化。真实的南门二系统具有相隔很远的内外轨道，不能把三颗恒星的运动简单画成随意摆动。</div>
 </div>
 
 <div id="labelsLayer"></div>
+<div id="skyLabelsLayer"></div>
 
 <script type="importmap">
 { "imports": {
@@ -429,6 +440,7 @@ canvasEl.addEventListener('pointercancel', () => { planetDrag = null; canvasEl._
 
 canvasEl.addEventListener('wheel', (e) => {
   e.preventDefault();
+  courseCameraMove = null;
   camera.position.z = clamp(camera.position.z * Math.pow(1.0015, e.deltaY), 10, 600);
 }, { passive: false });
 canvasEl.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -449,6 +461,7 @@ canvasEl.addEventListener('touchmove', (e) => {
     const dy = e.touches[0].clientY - e.touches[1].clientY;
     const dist = Math.hypot(dx, dy);
     if (_pinchDist > 0) {
+      courseCameraMove = null;
       camera.position.z = clamp(camera.position.z * (_pinchDist / dist), 10, 600);
     }
     _pinchDist = dist;
@@ -475,11 +488,11 @@ const cardEl = document.getElementById('planetCard');
 document.getElementById('cardClose').addEventListener('click', () => cardEl.style.display = 'none');
 
 function showCard(key, cx, cy, course = false) {
-  const panel = document.getElementById('tv-assist');
-  cardEl.classList.toggle('course-card', course && !!panel);
-  if (course && panel) panel.insertBefore(cardEl, document.getElementById('tvBody'));
-  else document.body.appendChild(cardEl);
   const info = INFO[key]; if (!info) return;
+  delete cardEl.dataset.skyLayer;
+  cardEl.classList.add('course-card');
+  document.body.appendChild(cardEl);
+  cardEl.style.transform = '';
   document.getElementById('cardName').textContent = info.name;
   document.getElementById('cardEn').textContent = info.en;
   const grid = document.getElementById('cardGrid');
@@ -488,28 +501,18 @@ function showCard(key, cx, cy, course = false) {
     grid.innerHTML += `<dt>${k}</dt><dd>${v}</dd>`;
   }
   document.getElementById('cardDesc').textContent = info.desc;
-  // 定位：靠近点击位置，不超出屏幕
-  cardEl.style.display = 'block';
-  const w = cardEl.offsetWidth || 300, h = cardEl.offsetHeight || 280;
-  let x = cx + 20, y = cy - 20;
-  if (x + w > innerWidth - 8) x = cx - w - 20;
-  if (x < 8) x = 8;
-  if (y + h > innerHeight - 8) y = innerHeight - h - 8;
-  if (y < 8) y = 8;
-  cardEl.style.left = x + 'px';
-  cardEl.style.top = y + 'px';
+  window.TimeviewCards.show(cardEl);
 }
 
 function showConstellationCard(c) {
-  cardEl.classList.remove('course-card'); document.body.appendChild(cardEl);
+  cardEl.dataset.skyLayer = c.type;
+  cardEl.classList.add('course-card'); document.body.appendChild(cardEl);
   const typeLabel = c.type === 'zodiac' ? '黄道星座' : '二十八星宿';
   document.getElementById('cardName').textContent = c.name;
   document.getElementById('cardEn').textContent = typeLabel;
   document.getElementById('cardGrid').innerHTML = '';
   document.getElementById('cardDesc').textContent = c.desc;
-  cardEl.style.left = '50%'; cardEl.style.top = '50%';
-  cardEl.style.transform = 'translate(-50%,-50%)';
-  cardEl.style.display = 'block';
+  window.TimeviewCards.show(cardEl);
 }
 
 /* ============ 控件 ============ */
@@ -639,16 +642,42 @@ document.addEventListener('click', (e) => {
 // 标签/节气切换
 // 图层弹窗
 let voyagerOn = false;
+let earthAxisPreference = null;
+try { const saved=localStorage.getItem('tv-earth-axis'); if(saved!==null)earthAxisPreference=saved==='1'; } catch (_) {}
+function setEarthAxis(visible) {
+  earthGuides.visible=!!visible;
+  document.querySelector('[data-layer="earthAxis"]')?.classList.toggle('on',!!visible);
+}
 const layerConfig = {
   labels: { get: () => labelsOn, set: (v) => { labelsOn = v; labelsLayer.style.display = v ? '' : 'none'; [xLabel, yLabel, zLabel].forEach(s => s.visible = v); } },
-  terms: { get: () => termsOn, set: (v) => { termsOn = v; for (const t of termLabelEls) t.el.style.display = v ? '' : 'none'; termLabelEl.style.display = v ? '' : 'none'; } },
+  terms: { get: () => termsOn, set: (v) => { termsOn = v; termLabelsLayer.style.display=v?'':'none'; } },
   orbits: { get: () => orbitsOn, set: (v) => { orbitsOn = v; for (const l of orbitLines) l.visible = v; } },
   axes: { get: () => axesOn, set: (v) => { axesOn = v; axesGroup.visible = v; } },
-  zodiac: { get: () => zodiacOn, set: (v) => { zodiacOn = v; zodiacGroup.visible = v; } },
-  xiusu: { get: () => xiusuOn, set: (v) => { xiusuOn = v; xiusuGroup.visible = v; } },
-  threeBody: { get: () => threeBodyOn, set: (v) => { threeBodyOn = v; threeBodyGroup.visible = v; } },
+  earthAxis: { get: () => earthGuides.visible, set: setEarthAxis },
+  zodiac: { get: () => zodiacOn, set: (v) => setSkyLayer('zodiac', v) },
+  xiusu: { get: () => xiusuOn, set: (v) => setSkyLayer('xiusu', v) },
+  threeBody: { get: () => threeBodyOn, set: (v) => {
+    threeBodyOn = v; threeBodyGroup.visible = v;
+    if (!v) document.getElementById('threeBodyCard').style.display = 'none';
+  } },
   voyager: { get: () => voyagerOn, set: (v) => { voyagerOn = v; vger1.group.visible = v; vger2.group.visible = v; vger1.trail.visible = v; vger2.trail.visible = v; } }
 };
+
+// Every entry point (lesson, report and manual controls) uses the same invariant.
+function setSkyLayer(key, visible) {
+  if (visible) {
+    cardEl.style.display='none';
+    document.getElementById('threeBodyCard').style.display='none';
+  }
+  if (key === 'zodiac') { zodiacOn = !!visible; if (visible) xiusuOn = false; }
+  else { xiusuOn = !!visible; if (visible) zodiacOn = false; }
+  zodiacGroup.visible = zodiacOn; xiusuGroup.visible = xiusuOn;
+  for (const cl of constellationLabels) cl.el.style.display = cl.group.visible ? '' : 'none';
+  for (const name of ['zodiac','xiusu']) {
+    document.querySelector(`[data-layer="${name}"]`)?.classList.toggle('on', name === 'zodiac' ? zodiacOn : xiusuOn);
+  }
+  if (cardEl.dataset.skyLayer && !(cardEl.dataset.skyLayer === 'zodiac' ? zodiacOn : xiusuOn)) cardEl.style.display = 'none';
+}
 
 document.getElementById('layerBtn').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -673,12 +702,19 @@ document.querySelectorAll('.layer-opt').forEach(el => {
     e.stopPropagation();
     const layer = el.dataset.layer;
     if (!layerConfig[layer]) return;
+    const skyChoice=['zodiac','xiusu'].includes(layer);
     const newVal = !layerConfig[layer].get();
+    if (layer==='earthAxis') {
+      earthAxisPreference=newVal;
+      try { localStorage.setItem('tv-earth-axis',newVal?'1':'0'); } catch (_) {}
+    }
+    if (newVal && ['zodiac','xiusu'].includes(layer)) window.TimeviewCards.hide();
     layerConfig[layer].set(newVal);
+    if(skyChoice) {
+      window.dispatchEvent(new Event('timeview:manual-view'));
+      if(newVal)focusCourse(layer);
+    }
     el.classList.toggle('on', newVal);
-    // 星座和星宿互斥
-    if (layer === 'zodiac' && newVal) { layerConfig.xiusu.set(false); }
-    if (layer === 'xiusu' && newVal) { layerConfig.zodiac.set(false); }
     // 同步checkbox样式
     document.querySelectorAll('.layer-opt').forEach(o => {
       const l = o.dataset.layer;
@@ -694,7 +730,7 @@ document.addEventListener('click', (e) => {
 });
 
 // 点击星座/星宿标签显示详情
-document.getElementById('labelsLayer').addEventListener('click', (e) => {
+document.getElementById('skyLabelsLayer').addEventListener('click', (e) => {
   const span = e.target.closest('.name');
   if (!span) return;
   for (const ct of constellationClickTargets) {
@@ -712,7 +748,7 @@ document.getElementById('scene').addEventListener('click', (e) => {
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects([tbStarA, tbStarB, tbStarC], false);
   if (hits.length > 0) {
-    document.getElementById('threeBodyCard').style.display = 'block';
+    window.TimeviewCards.show(document.getElementById('threeBodyCard'));
   }
 });
 document.getElementById('tbClose').onclick = () => { document.getElementById('threeBodyCard').style.display = 'none'; };
@@ -911,8 +947,8 @@ axesGroup.visible = false;
 const xLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1,0,0), new THREE.Vector3(1,0,0)]), new THREE.LineBasicMaterial({ color:0xff7b7b, transparent:true, opacity:0.55 }));
 const yLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-1,0), new THREE.Vector3(0,1,0)]), new THREE.LineBasicMaterial({ color:0x6fdf6f, transparent:true, opacity:0.55 }));
 const zLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-12), new THREE.Vector3(0,0,30)]), new THREE.LineBasicMaterial({ color:0x7ba8ff, transparent:true, opacity:0.6 }));
-const xLabel = makeTextSprite('X·春分', '#ffb3b3', 1.6);
-const yLabel = makeTextSprite('Y·夏至', '#b8f0b8', 1.6);
+const xLabel = makeTextSprite('X', '#ffb3b3', 1.6);
+const yLabel = makeTextSprite('Y', '#b8f0b8', 1.6);
 const zLabel = makeTextSprite('Z·北极', '#a0c0ff', 1.4);
 axesGroup.add(xLine, yLine, zLine, xLabel, yLabel, zLabel);
 worldGroup.add(axesGroup);
@@ -972,7 +1008,7 @@ const CONSTELLATIONS = [
   { name:'轸宿', type:'xiusu', desc:'南方朱雀第七宿，车轮。主星轸宿一(γ Crv, 2.59等)。南方朱雀之尾、二十八宿之末。主车骑。', stars:[[197.4,-18.0,0],[193.5,-12.2,0],[190.7,-14.5,0],[191.7,-19.7,0],[193.8,-18.3,0],[193.8,-11.7,0],[192.2,-21.7,0]], lines:[[0,1],[1,2],[2,3],[2,4],[1,5],[3,6]] }
 ];
 
-const R_CST = 220; // 星座球面半径
+const R_CST = 108; // 教学星空球紧邻冥王星轨道外侧，保留恒星角位置。
 const constellationGroup = new THREE.Group();
 const zodiacLinesMat = new THREE.LineBasicMaterial({ color:0xffcc44, transparent:true, opacity:0.6 });
 const xiusuLinesMat = new THREE.LineBasicMaterial({ color:0x66bbff, transparent:true, opacity:0.5 });
@@ -1025,7 +1061,7 @@ for (const c of CONSTELLATIONS) {
   const color = c.type === 'zodiac' ? '#ffdd77' : '#88ccff';
   el.innerHTML = `<span class="name" style="color:${color};cursor:pointer">${c.name}</span>`;
   el.style.pointerEvents = 'auto';
-  document.getElementById('labelsLayer').appendChild(el);
+  document.getElementById('skyLabelsLayer').appendChild(el);
   constellationLabels.push({ el, pos: labelPos, group });
   constellationClickTargets.push({ pos: labelPos.clone(), data: c, el });
 }
@@ -1087,63 +1123,47 @@ threeBodyGroup.add(tbStarA, tbGlowA, tbStarB, tbGlowB, tbStarC, tbGlowC);
 worldGroup.add(threeBodyGroup);
 
 // 三体标签
-const tbLabelA = makeTextSprite('南门二A', '#fff4e0', 1.8);
-const tbLabelB = makeTextSprite('南门二B', '#ffd090', 1.4);
-const tbLabelC = makeTextSprite('比邻星', '#ff6040', 1.2);
+const tbLabelA = makeTextSprite('南门二A', '#fff4e0', 3.0);
+const tbLabelB = makeTextSprite('南门二B', '#ffd090', 3.0);
+const tbLabelC = makeTextSprite('比邻星 · 轨道加速演示', '#ff9e80', 2.8);
 threeBodyGroup.add(tbLabelA, tbLabelB, tbLabelC);
 
-// 三体轨迹线
-const tbTrailGeo = new THREE.BufferGeometry();
-const tbTrailPositions = new Float32Array(300 * 3);
-tbTrailGeo.setAttribute('position', new THREE.BufferAttribute(tbTrailPositions, 3));
-const tbTrailLine = new THREE.Line(tbTrailGeo, new THREE.LineBasicMaterial({ color: 0xff8866, transparent: true, opacity: 0.3 }));
-threeBodyGroup.add(tbTrailLine);
-let tbTrailIdx = 0;
-
+// Each Kepler orbit is accelerated separately so the outer orbit is observable.
+const tbModel = window.TimeviewThreeBody;
+const tbInnerOrbits = new THREE.Group();
+threeBodyGroup.add(tbInnerOrbits);
+function makeTBOrbit(elements, scale, color, parent) {
+  const points = [];
+  for (let i=0;i<384;i++) {
+    const v=tbModel.orbit(elements, i/384*elements.period);
+    points.push(new THREE.Vector3(...v).multiplyScalar(scale));
+  }
+  const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({color,transparent:true,opacity:0.4}));
+  parent.add(line);return line;
+}
+const tbOrbitA=makeTBOrbit(tbModel.inner, -0.45*12/tbModel.inner.axis, 0xfff4e0, tbInnerOrbits);
+const tbOrbitB=makeTBOrbit(tbModel.inner, 0.55*12/tbModel.inner.axis, 0xffd090, tbInnerOrbits);
+const tbOrbitC=makeTBOrbit(tbModel.outer, 2/2.122*42/tbModel.outer.axis, 0xff6040, threeBodyGroup);
 let threeBodyOn = false;
 threeBodyGroup.visible = false;
-
-// 三体运动参数（简化版混沌三体：A和B互绕，C在混沌轨道上）
-let tbTime = 0;
-const TB_AB_PERIOD = 10;  // A-B互绕周期（秒）
-const TB_AB_R = 7;        // A-B轨道半径
-const TB_C_R0 = 22;       // C初始轨道半径
-
+let tbYears = 0;
+let tbOuterYears = 0;
+function placeThreeBody() {
+  const state=tbModel.state(tbYears,true,tbOuterYears);
+  [tbStarA,tbStarB,tbStarC].forEach((star,i)=>star.position.fromArray(state.positions[i]));
+  [tbGlowA,tbGlowB,tbGlowC].forEach((glow,i)=>glow.position.fromArray(state.positions[i]));
+  [tbLabelA,tbLabelB,tbLabelC].forEach((label,i)=>{
+    label.position.fromArray(state.positions[i]);label.position.y += [3.5,3,2.5][i];
+  });
+  tbInnerOrbits.position.fromArray(state.center);
+}
 function updateThreeBody(dt) {
   if (!threeBodyOn) return;
-  tbTime += dt;
-
-  // A和B互绕（椭圆轨道 + 摄动）
-  const abAngle = (tbTime / TB_AB_PERIOD) * Math.PI * 2;
-  const abEcc = 0.12; // 偏心率
-  const abR = TB_AB_R * (1 - abEcc * Math.cos(abAngle * 2)); // 轨径微变
-  const abJitter = Math.sin(tbTime * 0.7) * 0.3; // 混沌微扰
-  tbStarA.position.set(Math.cos(abAngle) * abR * 0.45 + abJitter, Math.sin(abAngle) * abR * 0.45, Math.sin(abAngle * 1.3) * 0.5);
-  tbStarB.position.set(-Math.cos(abAngle) * abR * 0.55 - abJitter, -Math.sin(abAngle) * abR * 0.55, -Math.sin(abAngle * 1.3) * 0.5);
-  tbGlowA.position.copy(tbStarA.position);
-  tbGlowB.position.copy(tbStarB.position);
-
-  // C（比邻星）混沌轨道：多个频率叠加模拟混沌
-  const w1 = 2 * Math.PI / 35;   // 主周期
-  const w2 = 2 * Math.PI / 17.3; // 次周期（无理数比→准周期→类混沌）
-  const w3 = 2 * Math.PI / 11.7; // 第三频率
-  const rC = TB_C_R0 * (1 + 0.2 * Math.sin(w1 * tbTime) + 0.12 * Math.cos(w2 * tbTime));
-  const aC = w1 * tbTime * 0.8 + 0.3 * Math.sin(w2 * tbTime) + 0.15 * Math.cos(w3 * tbTime);
-  const zC = TB_C_R0 * 0.25 * Math.sin(w3 * tbTime + 1.2);
-  tbStarC.position.set(Math.cos(aC) * rC, Math.sin(aC) * rC, zC);
-  tbGlowC.position.copy(tbStarC.position);
-
-  // 标签位置
-  tbLabelA.position.set(tbStarA.position.x, tbStarA.position.y + 3.5, 0);
-  tbLabelB.position.set(tbStarB.position.x, tbStarB.position.y + 3, 0);
-  tbLabelC.position.set(tbStarC.position.x, tbStarC.position.y + 2.5, 0);
-
-  // 轨迹（只记录比邻星）
-  const pos = tbTrailLine.geometry.attributes.position;
-  pos.setXYZ(tbTrailIdx, tbStarC.position.x, tbStarC.position.y, tbStarC.position.z);
-  pos.needsUpdate = true;
-  tbTrailIdx = (tbTrailIdx + 1) % 300;
+  if (!paused) { tbYears += dt*8; tbOuterYears += dt*tbModel.outer.period/45; }
+  placeThreeBody();
 }
+placeThreeBody();
 
 /* ============ 旅行者号探测器 ============ */
 const VGER1_DIST = 140;  // 旅行者1号当前视觉距离
@@ -1298,7 +1318,10 @@ const objs = [];
 for (const p of PLANETS) {
   const planetGroup = new THREE.Group(); worldGroup.add(planetGroup);
   const tiltGroup = new THREE.Group(); tiltGroup.rotation.x = THREE.MathUtils.degToRad(p.tilt); planetGroup.add(tiltGroup);
-  const sphere = new THREE.Mesh(new THREE.SphereGeometry(p.size, 48, 32), new THREE.MeshStandardMaterial({ map:textures[p.key], roughness:0.8, metalness:0, emissive:0x222222, emissiveIntensity:0.15 }));
+  // SphereGeometry's texture poles lie on Y. Bake them onto Z before applying
+  // axial tilt and spin so the texture, rotation axis and ring plane agree.
+  const geometry = new THREE.SphereGeometry(p.size, 48, 32).rotateX(Math.PI / 2);
+  const sphere = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map:textures[p.key], roughness:0.8, metalness:0, emissive:0x222222, emissiveIntensity:0.15 }));
   tiltGroup.add(sphere);
   sphereMap.set(sphere, p.key);
 
@@ -1310,7 +1333,7 @@ for (const p of PLANETS) {
     tiltGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map:textures.ring, side:THREE.DoubleSide, transparent:true, opacity:0.95, depthWrite:false })));
   }
   worldGroup.add(makeOrbitLine(p.orbit));
-  objs.push({ p, planetGroup, sphere });
+  objs.push({ p, planetGroup, tiltGroup, sphere });
 }
 
 /* 创建 HTML 标签（圆点 + 横线 + 文字） */
@@ -1325,23 +1348,27 @@ for (const o of objs) {
 
 /* 节气（HTML 标签，不随缩放变化） */
 const EARTH_ORBIT = PLANETS.find(p => p.key === 'earth').orbit;
-const CARDINALS = [{ name:'春分',deg:0 },{ name:'夏至',deg:90 },{ name:'秋分',deg:180 },{ name:'冬至',deg:270 }];
 const termLabelEls = [];
 const _projV = new THREE.Vector3();
-for (const c of CARDINALS) {
-  const a = THREE.MathUtils.degToRad(c.deg), r = EARTH_ORBIT + 2.5;
+const termLabelsLayer=document.createElement('div');termLabelsLayer.id='termLabelsLayer';document.body.appendChild(termLabelsLayer);
+for (const [index,name] of SOLAR_TERMS.entries()) {
+  const a = THREE.MathUtils.degToRad(index*15), r = EARTH_ORBIT + 6;
   const worldPos = new THREE.Vector3(Math.cos(a)*r, Math.sin(a)*r, 0);
-  const el = document.createElement('div'); el.className = 'plabel';
-  el.innerHTML = `<span class="name" style="color:#cfe3cc">${c.name}</span>`;
+  const el = document.createElement('div'); el.className = 'plabel term-label';el.dataset.term=String(index);
+  el.innerHTML = `<span class="name">${name}</span>`;
   el.style.display = termsOn ? '' : 'none';
-  labelsLayer.appendChild(el);
-  termLabelEls.push({ el, worldPos });
+  termLabelsLayer.appendChild(el);
+  termLabelEls.push({ el, worldPos, index });
 }
 const earthObj = objs.find(o => o.p.key === 'earth');
-const termLabelEl = document.createElement('div'); termLabelEl.className = 'plabel';
-termLabelEl.innerHTML = `<span class="name" style="color:#ffd98a">节气</span>`;
-termLabelEl.style.display = termsOn ? '' : 'none';
-labelsLayer.appendChild(termLabelEl);
+// Keep the Earth's axial tilt visible without reference-plane rings.
+const earthGuides = new THREE.Group();earthGuides.visible=false;
+if (earthObj) {
+  const axis=new THREE.Vector3(0,0,1);
+  const axisLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints([axis.clone().multiplyScalar(-3.4),axis.clone().multiplyScalar(3.4)]),new THREE.LineBasicMaterial({color:0xf4d794}));
+  earthGuides.add(axisLine);
+  earthObj.tiltGroup.add(earthGuides);
+}
 
 /* ============ 行星位置 ============ */
 let planetInertia = null; // { key, velocity, time }
@@ -1351,7 +1378,7 @@ function setPlanetPositions() {
   const earthWorldAngle = THREE.MathUtils.degToRad((-earthEcliptic + 360) % 360);
   if (earthObj) {
     earthObj.planetGroup.position.set(Math.cos(earthWorldAngle)*earthObj.p.orbit, -Math.sin(earthWorldAngle)*earthObj.p.orbit, 0);
-    earthObj.sphere.rotation.z = Math.PI * 2 * ((simElapsed / (earthObj.p.rotHours * 3600)) % 1);
+    earthObj.sphere.rotation.z = Math.PI * 2 * ((simElapsed / (Math.abs(earthObj.p.rotHours) * 3600)) % 1);
   }
   // 其他行星
   for (const o of objs) {
@@ -1359,7 +1386,8 @@ function setPlanetPositions() {
     const rev = simElapsed / (o.p.period * SEC_PER_DAY);
     const ang = MEAN_LON_RAD[o.p.key] + Math.PI * 2 * (rev - Math.floor(rev));
     o.planetGroup.position.set(Math.cos(ang)*o.p.orbit, Math.sin(ang)*o.p.orbit, 0);
-    o.sphere.rotation.z = Math.PI * 2 * ((simElapsed / (o.p.rotHours * 3600)) % 1);
+    // Tilts above 90 degrees already reverse the spin relative to the ecliptic.
+    o.sphere.rotation.z = Math.PI * 2 * ((simElapsed / (Math.abs(o.p.rotHours) * 3600)) % 1);
   }
 }
 
@@ -1372,6 +1400,23 @@ function updateAxes() {
   xLine.scale.x = reach; yLine.scale.y = reach;
   xLabel.position.set(labelR, 0, 0); yLabel.position.set(0, labelR, 0);
   zLabel.position.set(0, 0, 30);
+}
+
+// Keep equinoxes/solstices visible and highlight the current term at its fixed position.
+function updateTermLabels() {
+  const ti=currentTermIndex();
+  if(ti!==lastTermIndex) {
+    lastTermIndex=ti;
+    for(const t of termLabelEls)t.el.classList.toggle('active',t.index===ti);
+  }
+  for(const t of termLabelEls) {
+    if(!termsOn||(t.index!==ti&&t.index%6!==0)){t.el.style.display='none';continue;}
+    _projV.copy(t.worldPos);worldGroup.localToWorld(_projV);_projV.project(camera);
+    const x=(_projV.x*.5+.5)*innerWidth,y=(-_projV.y*.5+.5)*innerHeight;
+    t.el.style.left=x+'px';t.el.style.top=y+'px';
+    const onScreen=_projV.z>=-1&&_projV.z<=1&&x>=0&&x<=innerWidth&&y>=45&&y<=innerHeight-70;
+    t.el.style.display=onScreen?'':'none';
+  }
 }
 
 /* ============ 动画循环 ============ */
@@ -1398,6 +1443,7 @@ function animate() {
   }
 
   setPlanetPositions();
+  updateCourseCamera();
   updateAxes();
   updateThreeBody(dt);
   if (voyagerOn) updateVoyagers();
@@ -1415,30 +1461,8 @@ function animate() {
       if (sx < -50 || sx > innerWidth + 50 || sy < -50 || sy > innerHeight + 50) { el.style.display = 'none'; continue; }
       el.style.display = ''; el.style.left = sx + 'px'; el.style.top = sy + 'px';
     }
-    // 节气标签位置
-    for (const t of termLabelEls) {
-      _projV.copy(t.worldPos);
-      worldGroup.localToWorld(_projV);
-      _projV.project(camera);
-      if (_projV.z > 1) { t.el.style.display = 'none'; continue; }
-      const sx = (_projV.x * 0.5 + 0.5) * innerWidth;
-      const sy = (-_projV.y * 0.5 + 0.5) * innerHeight;
-      if (sx < -50 || sx > innerWidth + 50 || sy < -50 || sy > innerHeight + 50) { t.el.style.display = 'none'; continue; }
-      t.el.style.display = termsOn ? '' : 'none'; t.el.style.left = sx + 'px'; t.el.style.top = sy + 'px';
-    }
-    // 地球上的节气标签
-    if (earthObj) {
-      const ep = new THREE.Vector3(0, -(earthObj.p.size + 1.3), 0);
-      earthObj.planetGroup.localToWorld(ep);
-      ep.project(camera);
-      if (ep.z <= 1) {
-        const sx = (ep.x * 0.5 + 0.5) * innerWidth;
-        const sy = (-ep.y * 0.5 + 0.5) * innerHeight;
-        termLabelEl.style.display = termsOn ? '' : 'none';
-        termLabelEl.style.left = sx + 'px'; termLabelEl.style.top = sy + 'px';
-      } else { termLabelEl.style.display = 'none'; }
-    }
-    // 星座/星宿标签位置
+  }
+    // Sky labels are independent of the planet-label switch.
     for (const cl of constellationLabels) {
       _projV.copy(cl.pos);
       constellationGroup.localToWorld(_projV);
@@ -1451,10 +1475,7 @@ function animate() {
       cl.el.style.display = (isZodiac ? zodiacOn : xiusuOn) ? '' : 'none';
       cl.el.style.left = sx + 'px'; cl.el.style.top = sy + 'px';
     }
-  }
-
-  const ti = currentTermIndex();
-  if (ti !== lastTermIndex) { lastTermIndex = ti; termLabelEl.querySelector('.name').textContent = '节气·' + SOLAR_TERMS[ti]; }
+  updateTermLabels();
 
   // 旋转阻尼
   if (!canvasEl._rotating) { spinZVel *= Math.exp(-6*dt); spinXVel *= Math.exp(-6*dt); spinZ += spinZVel*dt; spinX += spinXVel*dt; }
@@ -1466,31 +1487,95 @@ function animate() {
 }
 // 初始化：所有图层默认隐藏（轨道/标签/坐标轴/节气/星座/星宿/三体星系/旅行者号）
 for (const key in layerConfig) layerConfig[key].set(false);
+setEarthAxis(earthAxisPreference===true);
 // 课程桥接位于模块内部，所有日期均传递同一个 UTC 时间戳。
 // Fit the teaching subject into the part of the scene not covered by narration.
 let courseFocus = null;
-function focusCourse(key) {
+let courseAxesStep = 0;
+let courseCameraMove = null;
+function updateCourseCamera() {
+  if (!courseCameraMove) return;
+  const t = Math.min(1, (performance.now() - courseCameraMove.start) / 950);
+  camera.position.lerpVectors(courseCameraMove.from, courseCameraMove.to, t*t*(3-2*t));
+  if (t === 1) courseCameraMove = null;
+}
+function focusCourse(key, immediate=false) {
   courseFocus = key;
-  spinX = spinZ = spinXVel = spinZVel = 0;
-  xGroup.rotation.x = 0; worldGroup.rotation.z = 0;
+  // Pull the selected body close; the four-season view keeps enough pitch to reveal axial tilt.
+  spinX = key==='earth'&&earthGuides.visible ? -1.2 : objs.some(body=>body.p.key===key) ? -1.1 : key==='planets'&&courseAxesStep>=3 ? -0.75 : 0;
+  spinZ = key==='planets'&&courseAxesStep>=3 ? -0.35 : 0;
+  spinXVel = spinZVel = 0;
+  xGroup.rotation.x = spinX; worldGroup.rotation.z = spinZ;
   updateVoyagers(); scene.updateMatrixWorld(true);
-  const box = new THREE.Box3(new THREE.Vector3(-90,-90,-10),new THREE.Vector3(90,90,10));
+  let box = new THREE.Box3(new THREE.Vector3(-90,-90,-10),new THREE.Vector3(90,90,10));
+  const body=objs.find(item=>item.p.key===key);
+  if(body) {
+    // Fit the original body size. Invisible axial guides must not enlarge the box.
+    const radius = body.p.key === 'saturn' ? body.p.size*2.5 : body.p.key === 'earth' && earthGuides.visible ? 3.4 : body.p.size;
+    box.setFromCenterAndSize(body.planetGroup.getWorldPosition(new THREE.Vector3()),new THREE.Vector3(2,2,2).multiplyScalar(radius*1.5));
+  }
   if (key === 'xiusu' || key === 'zodiac') box.setFromObject(key === 'xiusu' ? xiusuGroup : zodiacGroup);
-  if (key === 'threeBody') box.setFromCenterAndSize(threeBodyGroup.getWorldPosition(new THREE.Vector3()),new THREE.Vector3(70,70,70));
+  if (key === 'threeBody') box.setFromObject(threeBodyGroup).expandByScalar(4);
   if (key === 'voyager') { box.makeEmpty(); box.expandByPoint(new THREE.Vector3()); box.expandByObject(vger1.group); box.expandByObject(vger2.group); box.expandByScalar(12); }
+  if (key==='planets' && courseAxesStep >= 3) {
+    // 聚焦远处主题时也把太阳原点、三轴标签纳入画面。
+    box.union(new THREE.Box3(new THREE.Vector3(-90,-90,-12),new THREE.Vector3(90,90,32)).applyMatrix4(worldGroup.matrixWorld));
+  }
+  window.TimeviewCards.layout();
   const panel = document.querySelector('#tv-assist.on'), rect = panel?.getBoundingClientRect();
   let left=20, right=innerWidth-20, top=60, bottom=innerHeight-76;
-  if(rect) { if(innerWidth<=600) bottom=rect.top-12; else right=rect.left-20; }
+  if(rect) { if(innerWidth<=600) bottom=rect.top-12; else if(rect.left<innerWidth/2)left=rect.right+20;else right=rect.left-20; }
+  for (const card of document.querySelectorAll('#planetCard, #threeBodyCard, #tv-course-visual')) {
+    if (card.hidden || getComputedStyle(card).display === 'none') continue;
+    const cr = card.getBoundingClientRect();
+    if (innerWidth > 600 && cr.left > 240) right = Math.min(right, cr.left - 18);
+    else if (innerWidth <= 600) top = Math.max(top, cr.bottom + 12);
+  }
   const width=Math.max(80,right-left),height=Math.max(80,bottom-top);
   const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
   const tan=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
   const distance=Math.max(size.x/(2*tan*camera.aspect*width/innerWidth),size.y/(2*tan*height/innerHeight))*1.22+size.z/2;
-  camera.position.set(center.x-((left+right)/innerWidth-1)*distance*tan*camera.aspect,center.y-(1-(top+bottom)/innerHeight)*distance*tan,center.z+distance);
-  camera.lookAt(camera.position.x,camera.position.y,center.z);
+  const destination = new THREE.Vector3(center.x-((left+right)/innerWidth-1)*distance*tan*camera.aspect,center.y-(1-(top+bottom)/innerHeight)*distance*tan,center.z+distance);
+  if (immediate || matchMedia('(prefers-reduced-motion: reduce)').matches) { camera.position.copy(destination); courseCameraMove = null; }
+  else courseCameraMove = {from:camera.position.clone(), to:destination, start:performance.now()};
+  camera.lookAt(camera.position.x,camera.position.y,camera.position.z-1);
   camera.far=Math.max(3000,distance+size.z+1000); camera.updateProjectionMatrix();
 }
+function setCourseAxes(step, refocus = true) {
+  const changed = courseAxesStep !== step;
+  courseAxesStep = step;
+  layerConfig.orbits.set(true); layerConfig.axes.set(step > 0);
+  [xLine, xLabel].forEach(o => o.visible = step >= 1);
+  [yLine, yLabel].forEach(o => o.visible = step >= 2);
+  [zLine, zLabel].forEach(o => o.visible = step >= 3);
+  if (refocus || changed) focusCourse('planets');
+}
+function resetCourseBodies(){for(const body of objs)body.planetGroup.scale.setScalar(1);setEarthAxis(earthAxisPreference===true);}
+function showCourseSeason(term){
+  resetCourseBodies();cardEl.style.display='none';
+  const dates={spring:'2026-03-20',summer:'2026-06-21',autumn:'2026-09-23',winter:'2026-12-22',terms:'2026-03-20'};
+  const date=dates[term]||dates.spring;
+  simElapsed=(Date.parse(date+'T23:59:00+08:00')-EPOCH_MS)/1000;
+  layerConfig.orbits.set(true);layerConfig.terms.set(true);layerConfig.axes.set(false);
+  setEarthAxis(earthAxisPreference??true);
+  setPlanetPositions();focusCourse('earth');
+}
 window.addEventListener('resize',()=>{if(courseFocus)focusCourse(courseFocus);});
+function resetSolarView() {
+  window.dispatchEvent(new Event('timeview:manual-view'));
+  window.TimeviewCards.hide();window.TimeviewCourseVisuals?.hide();
+  courseCameraMove=null;_pinchDist=0;
+  planetDrag=null;planetInertia=null;canvasEl._rotating=false;
+  courseAxesStep=0;layerConfig.orbits.set(true);
+  focusCourse('planets',true);
+}
+document.getElementById('pReset').addEventListener('click',resetSolarView);
 window.TimeviewCourse = {
+  reset: () => {
+    window.TimeviewCards.hide(); resetCourseBodies(); planetInertia=null;
+    for (const key of ['zodiac','xiusu','threeBody','voyager','terms']) layerConfig[key].set(false);
+    setCourseAxes(0,false); layerConfig.labels.set(true);
+  },
   focus: focusCourse,
   time: () => EPOCH_MS + simElapsed * 1000,
   setTime: (ts) => {
@@ -1501,28 +1586,43 @@ window.TimeviewCourse = {
     updateDateText(); updateLunar();
   },
   now: () => document.getElementById('pNow').click(),
-  layer: (key, visible) => { if (layerConfig[key]) layerConfig[key].set(visible); if(visible && ['zodiac','xiusu','threeBody','voyager'].includes(key)){layerConfig.labels.set(true);focusCourse(key);} },
-  axes: (step) => {
-    focusCourse('planets');
-    layerConfig.orbits.set(true); layerConfig.axes.set(step > 0);
-    [xLine, xLabel].forEach(o => o.visible = step >= 1);
-    [yLine, yLabel].forEach(o => o.visible = step >= 2);
-    [zLine, zLabel].forEach(o => o.visible = step >= 3);
-    spinX = step >= 3 ? -0.75 : 0; spinXVel = 0; spinZVel = 0;
+  layer: (key, visible) => {
+    if (visible && ['zodiac','xiusu','threeBody','voyager'].includes(key)) {
+      window.TimeviewCards.hide(); resetCourseBodies();
+      for (const other of ['zodiac','xiusu','threeBody','voyager']) if(other!==key)layerConfig[other].set(false);
+      setCourseAxes(0,false);layerConfig.terms.set(false);
+    }
+    if (layerConfig[key]) layerConfig[key].set(visible);
+    if (visible && key === 'threeBody') window.TimeviewCards.show(document.getElementById('threeBodyCard'));
+    if(visible && ['zodiac','xiusu','threeBody','voyager'].includes(key)){layerConfig.labels.set(true);focusCourse(key);}
   },
+  axes: (step)=>{resetCourseBodies();setCourseAxes(step);},
+  season: showCourseSeason,
   planet: (key) => {
+    resetCourseBodies();
+    const body=objs.find(item=>item.p.key===key);
+    if(!body)return;
     layerConfig.orbits.set(true); layerConfig.labels.set(true);
-    layerConfig.axes.set(true);
-    [xLine,xLabel,yLine,yLabel].forEach(o=>o.visible=true);
-    [zLine,zLabel].forEach(o=>o.visible=false);
-    focusCourse('planets');
+    courseAxesStep=0;
     showCard(key, 20, 80, true);
+    setPlanetPositions();focusCourse(key);
+  },
+  report: () => {
+    resetCourseBodies();cardEl.style.display='none';courseAxesStep=0;
+    layerConfig.zodiac.set(false);layerConfig.xiusu.set(true);layerConfig.labels.set(true);layerConfig.orbits.set(true);
+    focusCourse('planets');
   }
 };
 animate();
 </script>
 
-<script>window.TIMEVIEW='solar';</script>
+<script>
+window.TIMEVIEW='solar';
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', {updateViaCache:'none'})
+    .then(registration=>registration.update()).catch(()=>{});
+}
+</script>
 <script>
 // “开场”是整场重启；不携带旧的日期、视角或课程进度。
 window.replayIntro = function () {
@@ -1531,12 +1631,16 @@ window.replayIntro = function () {
   try {
     sessionStorage.removeItem('introPlayed');
     sessionStorage.setItem('tv-clock-paused', '0');
-    sessionStorage.setItem('tv-natural-course-v1', JSON.stringify({cursor:0,muted:false,closed:true,resume:false}));
+    sessionStorage.setItem('tv-course-v2-'+(window.TimeviewActiveCourseId||'cosmos-basics'), JSON.stringify({cursor:0,muted:false,closed:true,resume:false}));
   } catch (_) {}
   const screensaver = document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1';
-  location.replace('app?restart=1' + (screensaver ? '&scrsv=1' : ''));
+  const params=new URLSearchParams(location.search),course=params.get('preview')==='1'?params.get('course'):null;
+  location.replace('app?restart=1' + (course?'&preview=1&course='+encodeURIComponent(course):'') + (screensaver ? '&scrsv=1' : ''));
 };
 </script>
+<script src="three-body-model.js"></script>
+<script src="card-layout.js"></script>
+<script src="course-visuals.js"></script>
 <script src="assistant.js"></script>
 </body>
 </html>

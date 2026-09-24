@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05080f">
 <title>时间景观</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:#05080f;font-family:-apple-system,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;color:#c8daf0;-webkit-font-smoothing:antialiased}
@@ -393,6 +392,8 @@ if ('serviceWorker' in navigator) {
   <div class="voy-labels" id="voyLabels"></div>
 </div>
 
+<!-- Three.js -->
+<script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
 
 <!-- 主应用 -->
 <script>
@@ -1194,6 +1195,7 @@ document.getElementById('voyExit').onclick = () => exitVoyage();
 // ========== 触摸交互 ==========
 let drag = null, pinch = null;
 function isUI(t) {
+  if (t?.closest?.('#tv-course-visual')) return true;
   return !!(t && t.closest && t.closest('button,a,input,select,textarea,[onclick],.topbar,.bottombar,.view-seg,#tv-fab,#tv-assist,#datePicker,#spdPopup,#skinPopup,#tzPopup,.fort-mask,.card-mask,.guide-card,.guide-overlay'));
 }
 function onTouchStart(e) {
@@ -1230,10 +1232,11 @@ function onTouchEnd(e) {
 
 // 鼠标事件适配器
 function mouseToTouch(e) { return { clientX: e.clientX, clientY: e.clientY }; }
-function onMouseDown(e) { onTouchStart({ touches: [mouseToTouch(e)] }); }
+function onMouseDown(e) { if (!isUI(e.target)) onTouchStart({ touches: [mouseToTouch(e)] }); }
 function onMouseMove(e) { if (drag) { onTouchMove({ touches: [mouseToTouch(e)] }); e.preventDefault(); } }
 function onMouseUp(e) { onTouchEnd({ touches: [] }); }
 function onWheel(e) {
+  if (isUI(e.target)) return;
   e.preventDefault();
   earthZoom = Math.max(0.5, Math.min(4, earthZoom * (e.deltaY > 0 ? 0.92 : 1.08)));
 }
@@ -1252,6 +1255,7 @@ document.getElementById('cardMask').onclick = (e) => { if (e.target === document
 // 月亮信息卡
 document.addEventListener('click', (e) => {
   if (state.view !== 'earth' || !window._moonXY) return;
+  if (isUI(e.target)) return;
   if (Math.hypot(e.clientX - window._moonXY.x, e.clientY - window._moonXY.y) > window._moonXY.r + 20) return;
   const d = dnum(dispT);
   const _cd = new Date(dispT + tz.min * 60000);
@@ -1267,7 +1271,7 @@ document.addEventListener('click', (e) => {
     '<div class="row"><span>黄经差</span><span class="val">' + ph.el.toFixed(1) + '°</span></div>' +
     '<div class="row"><span>周期天数</span><span class="val">' + (ph.age % SYN).toFixed(1) + '</span></div>' +
     '<div class="note">地球唯一的天然卫星，潮汐锁定，约 27.3 天绕地一周。</div>';
-  document.getElementById('cardMask').style.display = 'flex';
+  window.TimeviewCards.show(document.getElementById('cardMask'));
 });
 
 // ========== 命理/历法 ==========
@@ -1279,7 +1283,8 @@ function flushFort(force) {
   _fortFlushed = _fortBuf;
   document.getElementById('fortText').textContent = _fortBuf;
   document.getElementById('fortLoading').style.display = 'none';
-  document.getElementById('fortMask').style.display = 'flex';
+  const card = document.getElementById('fortMask');
+  if (card.style.display === 'none') window.TimeviewCards.show(card);
 }
 
 function startFortune() {
@@ -1490,16 +1495,51 @@ function resetScreensaverToNow() {
 }
 window.addEventListener('timeview:intro-finished', resetScreensaverToNow);
 if (!window.introActive) resetScreensaverToNow();
+let courseMoonMonthStart = null;
+function showCourseMoon(value) {
+  const dayMs = 86400000;
+  const lunarAt = ts => {
+    const local = new Date(ts + 480 * 60000);
+    return solarToLunar(local.getUTCFullYear(), local.getUTCMonth() + 1, local.getUTCDate());
+  };
+  if (courseMoonMonthStart === null) {
+    const local = new Date(state.t + 480 * 60000);
+    const noon = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 4);
+    const lunar = lunarAt(noon);
+    courseMoonMonthStart = noon - (lunar.day - 1) * dayMs;
+  }
+  const monthStart = courseMoonMonthStart;
+  const index = Math.max(0, Math.min(7, Math.trunc(Number(value) || 0)));
+  let offset = [1, 3, 8, 11, 15, 18, 23, 26][index] - 1;
+  if (value === 'cycle') {
+    // Replaying this cue stays on the next month's first day.
+    offset = lunarAt(monthStart + 29 * dayMs).day === 1 ? 29 : 30;
+  }
+  const ts = monthStart + offset * dayMs;
+  window.TimeviewCourse.setTime(ts);
+  courseMoonMonthStart = monthStart;
+  setView('earth'); inertia = 0; tlDrag = false;
+  curUnit = 'sec'; state.spd = SPD.sec;
+  document.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾';
+  document.querySelectorAll('.spd-opt').forEach(o => o.classList.toggle('on', o.dataset.u === 'sec'));
+  const lunar = lunarAt(ts), phase = moonPhase(dnum(ts), lunar.day);
+  return {date: new Date(ts + 480 * 60000).toISOString().slice(0, 10),
+    lunar: lunar.monthName + lunar.dayName, el: phase.el};
+}
 window.TimeviewCourse = {
+  reset: () => { setView('earth'); earthZoom=1; inertia=0; tlDrag=false; },
   time: () => state.t,
   setTime: (ts) => {
     if (!Number.isFinite(ts)) throw new Error('无效日期');
+    courseMoonMonthStart = null;
+    refreshZones(ts);
     tzIdx = 0; tz = TIMEZONES[0];
     document.getElementById('tzBtn').textContent = '🕓 ' + tz.label;
     state.t = ts; dispT = ts; anchorT = ts;
     document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
   },
-  now: () => document.getElementById('pNow').click()
+  moon: showCourseMoon,
+  now: () => { courseMoonMonthStart = null; document.getElementById('pNow').click(); }
 };
 </script>
 <script>
@@ -1510,12 +1550,15 @@ window.replayIntro = function () {
   try {
     sessionStorage.removeItem('introPlayed');
     sessionStorage.setItem('tv-clock-paused', '0');
-    sessionStorage.setItem('tv-natural-course-v1', JSON.stringify({cursor:0,muted:false,closed:true,resume:false}));
+    sessionStorage.setItem('tv-course-v2-'+(window.TimeviewActiveCourseId||'cosmos-basics'), JSON.stringify({cursor:0,muted:false,closed:true,resume:false}));
   } catch (_) {}
   const screensaver = document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1';
-  location.replace('app?restart=1' + (screensaver ? '&scrsv=1' : ''));
+  const params=new URLSearchParams(location.search),course=params.get('preview')==='1'?params.get('course'):null;
+  location.replace('app?restart=1' + (course?'&preview=1&course='+encodeURIComponent(course):'') + (screensaver ? '&scrsv=1' : ''));
 };
 </script>
+<script src="card-layout.js"></script>
+<script src="course-visuals.js"></script>
 <script src="assistant.js"></script>
 </body>
 </html>

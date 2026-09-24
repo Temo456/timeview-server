@@ -49,6 +49,7 @@ body{background:#050a18;color:#c8daf0;font-family:-apple-system,"PingFang SC","M
 </style>
 <style>
 .admin-tabs{display:flex;gap:10px;max-width:820px;margin:18px auto;padding:0 16px}.admin-tabs button[aria-selected=true]{border-color:#e0c489;color:#e0c489}.course-intro{color:#9eb6c5;font-size:13px;margin-bottom:14px}.course-toolbar{position:sticky;top:70px;background:#0b1829f5;z-index:15;border:1px solid #5fd6f02b;border-radius:10px;padding:12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}.course-toolbar input{background:#11233a;color:#eaf6ff;border:1px solid #5fd6f050;border-radius:7px;padding:8px;min-width:0;width:210px}.course-msg{width:100%;font-size:12px;color:#b8cbb9}.course-section{border:1px solid #5fd6f025;border-radius:12px;margin:12px 0;padding:12px 14px;background:#081424}.course-section summary{cursor:pointer;color:#e5ca8f;font-weight:700}.course-section .f{margin-top:14px}.course-line{padding:14px 0;border-top:1px solid #ffffff12}.course-line:first-child{border-top:0}.course-note{font-size:12px;color:#94afc3;margin:5px 0}.course-line textarea{min-height:95px}.course-line .role-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}.course-line select{width:auto}.course-title{margin-bottom:12px}.course-label{display:block;margin:7px 0 3px}#courseEditor [hidden]{display:none!important}@media(max-width:640px){.course-toolbar{top:110px}.course-toolbar input{width:100%}}
+.course-toolbar>label{font-size:12px;color:#c5d9e6;display:flex;align-items:center;gap:7px}.course-toolbar select,.course-line select,.course-section select{background:#11233a;color:#eaf6ff;border:1px solid #5fd6f050;border-radius:7px;padding:7px;color-scheme:dark}.course-ops,.line-ops{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.course-ops button,.line-ops button{font-size:11px}.course-line .scene-select{max-width:100%}.course-link{color:#e5ca8f;text-decoration:none;font-size:12px}
 </style>
 </head>
 <body>
@@ -61,8 +62,9 @@ body{background:#050a18;color:#c8daf0;font-family:-apple-system,"PingFang SC","M
 </div>
 <nav class="admin-tabs" aria-label="内容类型"><button id="courseTab" class="btn ghost" aria-selected="true">讲解内容</button><button id="qaTab" class="btn ghost" aria-selected="false">知识库问答</button></nav>
 <div class="wrap" id="courseEditor">
-  <p class="course-intro">按讲解顺序修改阿远、阿星的台词。保存后，前台下次打开或刷新时使用新内容；当前播放中的讲解不被打断。画面动作保持原有顺序。内容只讲科学事实，不加入玄学、性格判断或预测。</p>
-  <div class="course-toolbar"><button id="courseSave" class="btn" disabled>保存并发布</button><button id="courseReload" class="btn ghost">重新加载</button><div id="courseMessage" class="course-msg" role="status">正在加载讲解内容…</div></div>
+  <p class="course-intro">在这里编辑课程，并设置前台上哪堂课。前台刷新后展示已设置的课程，正在播放的讲解会继续完成。</p>
+  <p id="coursePublished" class="course-intro" role="status">正在读取前台课程…</p>
+  <div class="course-toolbar"><label>编辑课程 <select id="courseSelect" aria-label="编辑课程"></select></label><button id="courseNew" class="btn ghost">新建空白课程</button><button id="courseClone" class="btn ghost">复制当前课程</button><button id="courseSave" class="btn" disabled>保存课程</button><button id="coursePublish" class="btn" disabled>设为前台课程</button><button id="courseReload" class="btn ghost">重新加载</button><div id="courseMessage" class="course-msg" role="status">正在加载讲解内容…</div></div>
   <div id="courseFields"></div>
 </div>
 <div class="wrap" id="list"></div>
@@ -185,72 +187,6 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModa
 
 load();
 </script>
-<script>
-(function(){
-  let content=null, dirty=false, saving=false;
-  const $=id=>document.getElementById(id);
-  const message=text=>$('courseMessage').textContent=text;
-  function mode(course){$('courseEditor').hidden=!course;$('list').hidden=course;$('addQa').hidden=course;$('cnt').hidden=course;$('courseTab').setAttribute('aria-selected',course);$('qaTab').setAttribute('aria-selected',!course);}
-  $('courseTab').onclick=()=>mode(true);$('qaTab').onclick=()=>mode(false);mode(true);
-  function changed(){dirty=true;message('有未发布的修改');}
-  function field(parent,label,value,setter,kind='textarea'){
-    const wrap=document.createElement('div'),l=document.createElement('label'),el=document.createElement(['date','number'].includes(kind)?'input':kind);
-    l.className='course-label';l.textContent=label;
-    el.value=value;el.setAttribute('aria-label',label);if(kind==='date'){el.type='date';el.min='1900-01-01';el.max='2100-12-31';}else if(kind==='number'){el.type='number';el.min=1;el.max=600;el.step=1;}else el.maxLength=kind==='input'?40:1000;
-    el.oninput=()=>{setter(el.value);changed();};l.append(el);wrap.append(l);parent.append(wrap);return el;
-  }
-  function render(){
-    $('courseFields').replaceChildren();
-    content.settings={replySeconds:8,dateReplySeconds:60,editingSeconds:60,...content.settings};
-    const timing=document.createElement('details');timing.className='course-section';timing.open=true;
-    const heading=document.createElement('summary');heading.textContent='观众回复倒计时';timing.append(heading);
-    const timingBody=document.createElement('div');timingBody.className='f';timing.append(timingBody);
-    for(const [key,label] of [['replySeconds','普通提问等待（秒）'],['dateReplySeconds','选择日期等待（秒）'],['editingSeconds','开始输入后等待（秒）']])field(timingBody,label,content.settings[key],v=>content.settings[key]=Number(v),'number');
-    const hint=document.createElement('p');hint.className='course-note';hint.textContent='范围1–600秒。输入内容时重新计时；倒计时结束后继续讲解。发布后重新打开体验页面生效。';timingBody.append(hint);$('courseFields').append(timing);
-    content.chapters.forEach((ch,i)=>{
-      const details=document.createElement('details');details.className='course-section';details.open=i===0;
-      const summary=document.createElement('summary');summary.textContent=String(i+1).padStart(2,'0')+' · '+ch.title;details.append(summary);
-      const body=document.createElement('div');body.className='f';details.append(body);
-      field(body,'章节名称',ch.title,v=>{ch.title=v;summary.textContent=String(i+1).padStart(2,'0')+' · '+v;},'input');
-      content.lines.filter(l=>l.chapter===ch.id).forEach((line,index)=>{
-        const block=document.createElement('section');block.className='course-line';body.append(block);
-        const note=document.createElement('p');note.className='course-note';note.textContent='第 '+(index+1)+' 段 · '+({say:'讲解',ask:'提问与回应',date:'邀请输入日期',example:'生日示范'}[line.type]);block.append(note);
-        if(line.text){
-          const row=document.createElement('label');row.className='role-row';row.textContent='讲解角色 ';const select=document.createElement('select');select.setAttribute('aria-label','讲解角色');
-          [['ayuan','阿远 · 白桦'],['axing','阿星 · 冰糖']].forEach(([value,name])=>{const o=document.createElement('option');o.value=value;o.textContent=name;select.append(o);});select.value=line.role;select.onchange=()=>{line.role=select.value;changed();};row.append(select);block.append(row);
-          field(block,'台词（最多1000字）',line.text,v=>line.text=v);
-          if(line.text.includes('{{城市时间}}')){const n=document.createElement('p');n.className='course-note';n.textContent='{{城市时间}} 会自动替换为北京、伦敦、纽约的实际读数。';block.append(n);}
-        }
-        if(line.answer)field(block,'回答后的讲解（阿远）',line.answer,v=>line.answer=v);
-        if(line.fallback)field(block,'无人提供日期时的演示日期',line.fallback,v=>line.fallback=v,'date');
-      });
-      $('courseFields').append(details);
-    });
-    const extra=document.createElement('details');extra.className='course-section';const title=document.createElement('summary');title.textContent='互动与报告衔接语';extra.append(title);const b=document.createElement('div');b.className='f';extra.append(b);
-    const names={date:'复述日期（阿星）',dateObservation:'日期更新后的观察（阿远）',report:'报告讲解（阿远）',reportFailure:'报告失败时（阿远）',received:'收到回答时（阿远）',noAnswer:'没有回答时（阿远）'};
-    for(const name of Object.keys(names))field(b,names[name],content.templates[name],v=>content.templates[name]=v);
-    const tip=document.createElement('p');tip.className='course-note';tip.textContent='日期支持 {{来源}}、{{日期}}、{{时间说明}}；报告支持 {{月相}}、{{照亮比例}}。花括号中的内容由系统计算替换，不要填固定数值。';b.append(tip);$('courseFields').append(extra);
-  }
-  async function loadCourse(){
-    if(saving)return;
-    if(dirty&&!confirm('重新加载会放弃本页未发布的修改，是否继续？'))return;
-    $('courseSave').disabled=true;message('正在加载…');
-    try{const r=await fetch('api/course-script',{cache:'no-store'});if(!r.ok)throw Error('加载失败');const next=await r.json();content=next;dirty=false;render();$('courseSave').disabled=false;message('已加载版本 '+content.revision+(content.updatedAt?' · '+new Date(content.updatedAt).toLocaleString():' · 内置脚本'));}
-    catch(_){message('加载失败，请点击重新加载。');}
-  }
-  $('courseReload').onclick=loadCourse;
-  $('courseSave').onclick=async()=>{
-    if(!content||saving)return;
-    saving=true;$('courseSave').disabled=true;$('courseReload').disabled=true;message('正在保存…');
-    // 保存期间冻结输入，避免把提交后继续键入的内容误标为已发布。
-    $('courseFields').querySelectorAll('input,textarea,select').forEach(e=>e.disabled=true);
-    try{const r=await fetch('api/course-script',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(content),signal:AbortSignal.timeout(15000)});const j=await r.json();if(!r.ok)throw Error(j.error||'保存失败');content.revision=j.revision;content.updatedAt=j.updatedAt;dirty=false;message('已发布版本 '+j.revision+'，前台刷新后生效。');}
-    catch(e){message('未确认发布成功：'+e.message+'。当前修改已保留。');}
-    finally{saving=false;$('courseSave').disabled=false;$('courseReload').disabled=false;$('courseFields').querySelectorAll('input,textarea,select').forEach(e=>e.disabled=false);}
-  };
-  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-  loadCourse();
-})();
-</script>
+<script src="course-editor.js"></script>
 </body>
 </html>
