@@ -39,6 +39,22 @@
   let replySettings={replySeconds:8,dateReplySeconds:60,editingSeconds:60};
   const speechRates=[0.6,0.75,0.85,1,1.25,1.5], rateKey='tv-speech-rate';
   let speechRate=0.85, activeAudio=null;
+  // Keep one media element: mobile browsers grant playback permission per element.
+  const speechAudio=new Audio();
+  speechAudio.preload='auto';speechAudio.setAttribute('playsinline','');
+  let audioUnlocked=false;
+  function unlockSpeechAudio(){
+    if(muted||audioUnlocked||activeAudio||!navigator.userActivation?.isActive)return;
+    // Start a short silent WAV synchronously inside the user's click, before TTS fetches.
+    const wav=new ArrayBuffer(844),data=new DataView(wav);
+    const label=(at,text)=>Array.from(text).forEach((ch,i)=>data.setUint8(at+i,ch.charCodeAt(0)));
+    label(0,'RIFF');data.setUint32(4,836,true);label(8,'WAVE');label(12,'fmt ');
+    data.setUint32(16,16,true);data.setUint16(20,1,true);data.setUint16(22,1,true);
+    data.setUint32(24,8000,true);data.setUint32(28,16000,true);data.setUint16(32,2,true);data.setUint16(34,16,true);
+    label(36,'data');data.setUint32(40,800,true);
+    speechAudio.src='data:audio/wav;base64,'+btoa(String.fromCharCode(...new Uint8Array(wav)));
+    speechAudio.play().then(()=>{audioUnlocked=true;}).catch(()=>{});
+  }
   try{const stored=Number(localStorage.getItem(rateKey));if(speechRates.includes(stored))speechRate=stored;}catch(_){}
   let cursor = Number.isInteger(saved.cursor) ? saved.cursor : 0;
   let muted = !!saved.muted, running = false, generation = 0, cancel = null;
@@ -109,7 +125,7 @@
     }
     if (ch === 6) {
       const planets = [['mercury','水星','它最靠近太阳。'],['venus','金星','它有浓密的大气。'],['earth','地球','这是我们生活的星球。'],['mars','火星','它的表面呈现红色。'],['jupiter','木星','它是太阳系里最大的行星。'],['saturn','土星','它的环是很鲜明的特征。'],['uranus','天王星','它的自转轴倾斜得很明显。'],['neptune','海王星','它是八大行星中距离太阳最远的一颗。'],['pluto','冥王星','它属于矮行星。']];
-      planets.forEach(([id,name,fact],i)=>say(ch,i%2,'这一站是'+name+'。'+fact+'先看看它在画面里的位置，再读一读旁边的信息。',()=>scene().planet(id)));
+      planets.forEach(([id,name,fact],i)=>say(ch,i%2,name+'。'+fact,()=>scene().planet(id)));
     }
     if (ch === 7) {
       say(ch, 1, '先看星座图层。人们把天空分区，也用熟悉的图案帮助记忆。',()=>layer('zodiac',true));
@@ -168,6 +184,7 @@
   style.textContent += `#tv-assist .reading-chunk{color:#fff2cc;background:#b88a3645;border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone;box-shadow:0 0 0 2px #b88a3615}`;
   style.textContent += `#tv-assist .stage-nav{position:relative;padding:8px 18px 12px}#tvStageLabel{color:#b9c8ca;font-size:11px;letter-spacing:.3px}#tv-assist .cue-track{position:relative;display:flex;justify-content:space-between;margin-top:5px;height:28px;isolation:isolate}#tv-assist .cue-track:before{content:'';position:absolute;top:13px;left:12px;right:12px;height:1px;background:linear-gradient(to right,#d8bd84 var(--progress,0%),#49616b var(--progress,0%));z-index:-1}#tv-assist .cue-point{position:relative;width:24px;min-width:0;height:28px;padding:0;border-radius:5px;background:transparent;display:grid;place-items:center}#tv-assist .cue-point:before{content:'';width:5px;height:5px;border:1px solid #81959c;background:#112129;border-radius:50%}#tv-assist .cue-point.past:before{background:#b8a273;border-color:#b8a273}#tv-assist .cue-point[aria-current=step]:before{width:8px;height:8px;background:#efd19a;border-color:#efd19a;box-shadow:0 0 0 4px #d7bd8520}#tv-assist .cue-point:hover:before,#tv-assist .cue-point:focus-visible:before{background:#fff0c7;border-color:#fff0c7}#tv-assist .cue-tooltip{position:absolute;bottom:49px;left:12px;right:12px;padding:7px 10px;background:#20343e;color:#f7e2b7;border:1px solid #c9b48250;border-radius:7px;font-size:12px;box-shadow:0 6px 18px #0004;pointer-events:none;z-index:2}`;
   style.textContent += `#tv-assist select{font:inherit;color:#edf1ec;background:#172d37;border:1px solid #ffffff30;border-radius:7px;padding:5px;color-scheme:dark}#tv-assist .speech-rate{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:12px;color:#b9c8ca}#tvRate{padding:2px 6px!important}#tvReplyArea{margin-top:12px}#tv-assist .reply-choices{display:flex;flex-wrap:wrap;gap:6px}#tv-assist .reply-choice{padding:8px 10px;min-height:40px;text-align:left;white-space:normal;overflow-wrap:anywhere;border:1px solid #d6bd8650;background:#d6bd860c;color:#f0d8a5}#tv-assist .reply-choice:hover{background:#d6bd8625}#tv-assist .date-parts{display:flex;gap:5px;width:100%}#tv-assist .date-parts label{display:flex;align-items:center;gap:3px;min-width:0;flex:1;font-size:12px}#tv-assist .date-parts label:first-child{flex:1.35}#tv-assist .date-parts select{min-width:0;width:100%;min-height:40px}#tv-assist .skip-reply{font-size:12px;margin-top:4px}@media(max-width:600px){#tv-assist.replying{height:min(80vh,600px)}}`;
+  style.textContent += `#tv-assist .skip-paragraph{margin-left:auto;min-height:32px;padding:3px 8px;font-size:11px;color:#d6c08e;border:1px solid #d6c08e30}#tv-assist .skip-paragraph:disabled{cursor:default;color:#95aaaF}@media(max-width:600px){#tv-assist .skip-paragraph{min-height:40px}}`;
   document.head.append(style);
   const panel=document.createElement('aside');panel.id='tv-assist';panel.setAttribute('aria-label','阿远与阿星的讲解');
   panel.innerHTML=`<header><div class="top"><span class="kicker">时间景观 · AI 双人讲解</span><button id="tvClose" aria-label="收起并暂停讲解">×</button></div><h2 id="tvTitle">一起读懂眼前的宇宙</h2><span class="sub">阿远 · 白桦　 /　 阿星 · 冰糖</span></header><nav class="stage-nav" aria-label="课程环节"><label id="tvStageLabel" for="tvStage"></label><div id="tvCues" class="cue-track" role="group" aria-label="选择讲解环节"></div><div id="tvCueTip" class="cue-tooltip" role="tooltip" hidden></div><input id="tvStage" type="hidden" value="0"></nav><div class="body" id="tvBody"><div id="tvLog" role="log" aria-live="polite"></div><div id="tvReport" hidden></div><div id="tvReplyArea" role="group" aria-label="选择回复" hidden></div><div id="tvPrompt" hidden></div><div id="tvCountdown" hidden style="font-size:12px;color:#d6c08e;margin-top:6px;font-variant-numeric:tabular-nums"></div></div><footer><div class="controls"><span id="tvStatus" role="status">等你一起出发</span><div><button id="tvPlay">开始听</button><button id="tvMute" aria-label="切换声音">声音开</button></div></div><label class="speech-rate" for="tvRate">语速 <select id="tvRate" aria-label="讲解语速"></select></label></footer>`;
@@ -199,6 +216,7 @@
   });
   const audioCache=new Map(), audioRequests=new Set();
   const spokenThisStep=new Map();
+  let activeSpeech=null;
   function cancelAudioRequests(){for(const controller of audioRequests)controller.abort();audioRequests.clear();audioCache.clear();}
   // Each short utterance is both an audio segment and an exact highlight span.
   function speechChunks(text){
@@ -242,13 +260,22 @@
     let speech=spokenThisStep.get(identity);
     if(!speech){
       const paragraph=append(who,text),chunks=speechChunks(text);
-      speech={paragraph,chunks,marks:markSpeech(paragraph,chunks),next:0,complete:false};
+      const skip=document.createElement('button');skip.type='button';skip.className='skip-paragraph';skip.textContent='跳过本段';
+      speech={paragraph,chunks,marks:markSpeech(paragraph,chunks),next:0,complete:false,skip};
+      skip.onclick=()=>{
+        if(spokenThisStep.get(identity)!==speech||speech.complete)return;
+        speech.complete=true;speech.next=chunks.length;skip.disabled=true;skip.textContent='已跳过';
+        if(activeSpeech?.speech===speech){if(cancel)cancel();cancelAudioRequests();}
+      };
+      paragraph.parentElement.querySelector('.speaker').append(skip);
       spokenThisStep.set(identity,speech);
     }
     if(speech.complete)return;
     const {chunks,marks}=speech;
+    activeSpeech={speech,gen};
+    try{
     if(muted){status((who?'阿星':'阿远')+'正在讲');await delay(Math.max(3200,text.length*190)/speechRate,gen);if(valid(gen))speech.complete=true;return;}
-    for(let i=speech.next;i<chunks.length&&valid(gen);i++){
+    for(let i=speech.next;i<chunks.length&&valid(gen)&&!speech.complete;i++){
       status('正在准备'+(who?'阿星':'阿远')+'的语音…');
       // Request the current segment first, with at most one segment of lookahead.
       const pending=getAudio(chunks[i],who);
@@ -258,24 +285,37 @@
         let done=false;const end=value=>{if(done)return;done=true;if(cancel===abort)cancel=null;resolve(value);};
         const abort=()=>end(null);cancel=abort;pending.then(end);
       });
-      if(!valid(gen))return;
+      if(!valid(gen)||speech.complete)return;
       if(!b64){status('这一小段语音暂不可用，先一起读文字');marks[i].classList.add('reading-chunk');await delay(Math.max(3500,chunks[i].length*190)/speechRate,gen);marks[i].classList.remove('reading-chunk');if(valid(gen))speech.next=i+1;continue;}
       status((who?'阿星':'阿远')+'正在讲'+(chunks.length>1?' · '+(i+1)+'/'+chunks.length:''));
-      await new Promise(resolve=>{
-        let url,audio,timer,done=false;
+      const result=await new Promise(resolve=>{
+        let url,timer,done=false;const audio=speechAudio;
         const mark=marks[i];
-        const end=completed=>{if(done)return;done=true;clearTimeout(timer);mark.classList.remove('reading-chunk');if(completed)speech.next=i+1;if(audio)audio.pause();if(activeAudio===audio)activeAudio=null;if(url)URL.revokeObjectURL(url);if(cancel===stop)cancel=null;resolve();};
+        const end=completed=>{if(done)return;done=true;clearTimeout(timer);audio.onended=null;audio.onerror=null;mark.classList.remove('reading-chunk');if(completed===true)speech.next=i+1;audio.pause();if(activeAudio===audio)activeAudio=null;if(url)URL.revokeObjectURL(url);if(cancel===stop)cancel=null;resolve(completed);};
         const stop=()=>end(false);cancel=stop;
         try{
-          url=URL.createObjectURL(new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:'audio/mpeg'}));audio=new Audio(url);
+          url=URL.createObjectURL(new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:'audio/mpeg'}));audio.src=url;
           activeAudio=audio;audio.preservesPitch=true;audio.defaultPlaybackRate=speechRate;audio.playbackRate=speechRate;
-          timer=setTimeout(()=>{pause('声音播放中断，点继续重听这句话');},90000/Math.min(...speechRates));
-          audio.onended=()=>end(true);audio.onerror=()=>pause('声音播放中断，点继续重听这句话');
-          audio.play().then(()=>{if(done||!valid(gen))return;mark.classList.add('reading-chunk');followSpeech(mark);}).catch(()=>{if(valid(gen))pause('点一下继续听，即可开启声音');else end();});
-        }catch(_){pause('声音未能播放，点继续重试');}
+          timer=setTimeout(()=>end('unavailable'),90000/Math.min(...speechRates));
+          audio.onended=()=>end(true);audio.onerror=()=>end('unavailable');
+          audio.play().then(()=>{if(done||!valid(gen))return;audioUnlocked=true;mark.classList.add('reading-chunk');followSpeech(mark);}).catch(error=>{
+            if(done)return;
+            if(valid(gen)&&error.name==='NotAllowedError')pause('点一下继续听，即可开启声音');
+            else end('unavailable');
+          });
+        }catch(_){end('unavailable');}
       });
+      if(result==='unavailable'&&valid(gen)&&!speech.complete){
+        status('这一小段语音暂不可用，先一起读文字');marks[i].classList.add('reading-chunk');
+        await delay(Math.max(3500,chunks[i].length*190)/speechRate,gen);marks[i].classList.remove('reading-chunk');
+        if(valid(gen)&&!speech.complete)speech.next=i+1;
+      }
     }
     if(valid(gen)&&speech.next===chunks.length)speech.complete=true;
+    }finally{
+      if(activeSpeech?.speech===speech&&activeSpeech.gen===gen)activeSpeech=null;
+      if(speech.complete&&!speech.skip.disabled)speech.skip.hidden=true;
+    }
   }
   async function waitReply(step,gen){
     if(!valid(gen))return null;
@@ -349,6 +389,7 @@
   }
   async function run(){
     if(running)return;
+    unlockSpeechAudio();
     running=true;closed=false;welcomed=true;const gen=++generation;
     $('tvPlay').textContent='暂停';persist(true);
     try{
@@ -357,6 +398,8 @@
         if(target!==view){navigating=true;persist(true);location.href=(target==='earth'?'app':'solar-system.html')+'?t='+Math.round(scene().time())+courseQuery;return;}
         if(!window.TimeviewCourse){status('等画面准备好');await delay(500,gen);continue;}
         if(window.introActive||($('introOverlay')&&$('introOverlay').offsetHeight)) {status('先一起看开场');await delay(500,gen);continue;}
+        // Derive retained axes from the script, including direct chapter jumps and reloads.
+        scene().keepAxes?.(steps.slice(0,cursor+1).some(step=>/^axes:[23]$/.test(step.scene)));
         if(lastChapter!==s.ch){enterChapter(s);lastChapter=s.ch;$('tvTitle').textContent=chapters[s.ch][1].replace(' · 两道题','');updateStage(s.ch);}
         if(s.action)s.action();
         if(s.type==='say'){await speak(typeof s.text==='function'?s.text():s.text,s.who,gen);}
@@ -373,7 +416,7 @@
           await showDate(item,s.birthday,gen);
         }
         if(!valid(gen))return;
-        cursor++;spokenThisStep.clear();persist(true);await delay(1800,gen);
+        cursor++;spokenThisStep.clear();persist(true);await delay(500,gen);
       }
       if(valid(gen)) {running=false;status('今天先聊到这里');$('tvPlay').textContent='再听一遍';persist(false);}
     }catch(_){if(valid(gen))pause('这一段没准备好，点继续再试一次');}

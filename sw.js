@@ -1,6 +1,6 @@
 // 缓存键：与 server.js 的 VERSION 同步 bump，否则老用户会被 SW 缓存挡住看不到新页面
 const CACHE_PREFIX = "timeview:" + self.registration.scope + ":v";
-const C = CACHE_PREFIX + "4.0.4";
+const C = CACHE_PREFIX + "4.0.6";
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["./","app","manifest.json","icon-192.png","icon-512.png"]).catch(()=>{})));
   self.skipWaiting();

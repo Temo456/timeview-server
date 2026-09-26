@@ -135,8 +135,8 @@
 </style>
 </head>
 <body>
-<div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" src="textures/disney-up-to-timeview.mp4" autoplay muted playsinline style="width:100%;height:100%;object-fit:contain"></video><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
-<script>(function(){var ov=document.getElementById('introOverlay'),vid=document.getElementById('introVid'),skip=document.getElementById('introSkip');if(!ov||!vid)return;function hide(){ov.style.opacity='0';try{vid.pause()}catch(e){}setTimeout(function(){ov.style.display='none';ov.style.opacity='1'},800)}vid.addEventListener('ended',hide);if(skip)skip.addEventListener('click',hide);window.replayIntro=function(){ov.style.display='block';ov.style.opacity='1';vid.currentTime=0;vid.muted=false;var p=vid.play();if(p&&p.catch)p.catch(function(){vid.muted=true;vid.play().catch(hide)})};if(!sessionStorage.getItem('introPlayed')){sessionStorage.setItem('introPlayed','1');ov.style.display='block';vid.muted=true;var q=vid.play();if(q&&q.catch)q.catch(hide)}})();</script>
+<div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-v406.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
+<script src="intro.js"></script>
 <div id="scene"></div>
 
 <!-- 顶栏 -->
@@ -1491,7 +1491,7 @@ setEarthAxis(earthAxisPreference===true);
 // 课程桥接位于模块内部，所有日期均传递同一个 UTC 时间戳。
 // Fit the teaching subject into the part of the scene not covered by narration.
 let courseFocus = null;
-let courseAxesStep = 0;
+let courseAxesStep = 0, courseKeepXY = false;
 let courseCameraMove = null;
 function updateCourseCamera() {
   if (!courseCameraMove) return;
@@ -1542,13 +1542,13 @@ function focusCourse(key, immediate=false) {
   camera.far=Math.max(3000,distance+size.z+1000); camera.updateProjectionMatrix();
 }
 function setCourseAxes(step, refocus = true) {
-  const changed = courseAxesStep !== step;
+  if(courseKeepXY)step=Math.max(2,step);
   courseAxesStep = step;
   layerConfig.orbits.set(true); layerConfig.axes.set(step > 0);
   [xLine, xLabel].forEach(o => o.visible = step >= 1);
   [yLine, yLabel].forEach(o => o.visible = step >= 2);
   [zLine, zLabel].forEach(o => o.visible = step >= 3);
-  if (refocus || changed) focusCourse('planets');
+  if (refocus) focusCourse('planets');
 }
 function resetCourseBodies(){for(const body of objs)body.planetGroup.scale.setScalar(1);setEarthAxis(earthAxisPreference===true);}
 function showCourseSeason(term){
@@ -1556,7 +1556,7 @@ function showCourseSeason(term){
   const dates={spring:'2026-03-20',summer:'2026-06-21',autumn:'2026-09-23',winter:'2026-12-22',terms:'2026-03-20'};
   const date=dates[term]||dates.spring;
   simElapsed=(Date.parse(date+'T23:59:00+08:00')-EPOCH_MS)/1000;
-  layerConfig.orbits.set(true);layerConfig.terms.set(true);layerConfig.axes.set(false);
+  layerConfig.orbits.set(true);layerConfig.terms.set(true);setCourseAxes(0,false);
   setEarthAxis(earthAxisPreference??true);
   setPlanetPositions();focusCourse('earth');
 }
@@ -1566,11 +1566,15 @@ function resetSolarView() {
   window.TimeviewCards.hide();window.TimeviewCourseVisuals?.hide();
   courseCameraMove=null;_pinchDist=0;
   planetDrag=null;planetInertia=null;canvasEl._rotating=false;
-  courseAxesStep=0;layerConfig.orbits.set(true);
+  setCourseAxes(0,false);layerConfig.orbits.set(true);
   focusCourse('planets',true);
 }
 document.getElementById('pReset').addEventListener('click',resetSolarView);
 window.TimeviewCourse = {
+  keepAxes: (on) => {
+    if(courseKeepXY===on)return;
+    courseKeepXY=on;setCourseAxes(on?Math.max(2,courseAxesStep):0,false);
+  },
   reset: () => {
     window.TimeviewCards.hide(); resetCourseBodies(); planetInertia=null;
     for (const key of ['zodiac','xiusu','threeBody','voyager','terms']) layerConfig[key].set(false);
@@ -1603,12 +1607,12 @@ window.TimeviewCourse = {
     const body=objs.find(item=>item.p.key===key);
     if(!body)return;
     layerConfig.orbits.set(true); layerConfig.labels.set(true);
-    courseAxesStep=0;
+    setCourseAxes(0,false);
     showCard(key, 20, 80, true);
     setPlanetPositions();focusCourse(key);
   },
   report: () => {
-    resetCourseBodies();cardEl.style.display='none';courseAxesStep=0;
+    resetCourseBodies();cardEl.style.display='none';setCourseAxes(0,false);
     layerConfig.zodiac.set(false);layerConfig.xiusu.set(true);layerConfig.labels.set(true);layerConfig.orbits.set(true);
     focusCourse('planets');
   }

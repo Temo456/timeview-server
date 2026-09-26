@@ -6,6 +6,7 @@ COPY textures/ textures/
 COPY course-store.js course-default.json ./
 COPY three-body-model.js ./
 COPY favicon.svg favicon.ico ./
+COPY intro.js ./
 COPY sounds/ sounds/
 ENV PORT=3000 DATA_DIR=/data
 EXPOSE 3000

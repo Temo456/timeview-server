@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "4.0.4";
+const VERSION = "4.0.6";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -612,6 +612,12 @@ const server = http.createServer(async (req, res) => {
     fs.stat(fp, (err, st) => {
       if (err) return sendHtml(res, LANDING);
       const type = MIME[ext] || "application/octet-stream";
+      if(/^intro-v\d+\.mp4$/.test(path.basename(fp))){
+        res.setHeader('Cache-Control','public, max-age=31536000, immutable');
+        // Browsers need a strong validator to cache and combine partial responses.
+        res.setHeader('ETag','"'+st.size.toString(16)+'-'+Math.trunc(st.mtimeMs).toString(16)+'"');
+        res.setHeader('Last-Modified',st.mtime.toUTCString());
+      }
       const range = req.headers.range;
       if (range) {
         const m = /bytes=(\d*)-(\d*)/.exec(range);
