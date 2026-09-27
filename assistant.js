@@ -59,7 +59,13 @@
   let cursor = Number.isInteger(saved.cursor) ? saved.cursor : 0;
   let muted = !!saved.muted, running = false, generation = 0, cancel = null;
   let closed = saved.resume !== true || saved.closed === true, navigating = false, welcomed = false, lastChapter = -1, resumeAfterIntro = false;
-  let currentDate = null, report = null;
+  let currentDate = null, dateCursor = -1, report = null;
+  let dateScene = null;
+  function finishDateScene(){
+    if(!currentDate&&!dateScene)return;
+    scene().now();window.TimeviewCourseVisuals?.hide();
+    currentDate=null;dateCursor=-1;dateScene=null;
+  }
   const steps = [];
   function say(ch, who, text, action) { steps.push({ch, who, text, action, type:'say'}); }
   function ask(ch, text, answer, choices) { steps.push({ch, who:1, text, answer, choices, type:'ask'}); }
@@ -86,16 +92,18 @@
   }
   function applyScene(cue) {
     if(!cue)return;
-    if(cue==='now'){window.TimeviewCourseVisuals?.hide();scene().now();return;}
+    if(cue==='now'){currentDate=null;dateCursor=-1;dateScene=null;window.TimeviewCourseVisuals?.hide();scene().now();return;}
     const [kind,value]=cue.split(':');
+    if(dateScene&&dateScene!==kind)finishDateScene();
     if(kind==='moon'){
+      dateScene=kind;
       const example=scene().moon?.(value);
       window.TimeviewCourseVisuals?.moon(value,example);
       return;
     }
     window.TimeviewCourseVisuals?.hide();
     if(kind==='axes'){scene().axes(Number(value));return;}
-    if(kind==='season'){window.TimeviewCourseVisuals?.season(value);scene().season?.(value);return;}
+    if(kind==='season'){dateScene=kind;window.TimeviewCourseVisuals?.season(value);scene().season?.(value);return;}
     if(kind==='planet'){scene().planet(value);return;}
     if(kind==='layer'){layer(value,true);return;}
     if(kind==='report'){scene().report?.();return;}
@@ -367,7 +375,7 @@
     return {date,time,ts,defaultTime:!m[4]};
   }
   async function showDate(item,birthday,gen){
-    currentDate=item;report=null;$('tvReport').hidden=true;
+    currentDate=item;dateCursor=cursor;report=null;$('tvReport').hidden=true;
     scene().setTime(item.ts);
     if(view==='solar'){cleanSolar();layer('orbits',true);layer('labels',true);}
     await speak(fillTemplate(scriptTemplates.date,{'来源':item.example?'我们用一个演示日期，':'你选择的是','日期':item.date,'时间说明':item.defaultTime?'以北京时间中午十二点作演示。':'采用北京时间'+item.time+'。'}),1,gen);
@@ -395,6 +403,7 @@
     try{
       while(valid(gen)&&cursor<steps.length){
         const s=steps[cursor], target=chapters[s.ch][2];
+        if(lastChapter!==-1&&lastChapter!==s.ch)finishDateScene();
         if(target!==view){navigating=true;persist(true);location.href=(target==='earth'?'app':'solar-system.html')+'?t='+Math.round(scene().time())+courseQuery;return;}
         if(!window.TimeviewCourse){status('等画面准备好');await delay(500,gen);continue;}
         if(window.introActive||($('introOverlay')&&$('introOverlay').offsetHeight)) {status('先一起看开场');await delay(500,gen);continue;}
@@ -408,17 +417,21 @@
           if(reply)append(2,reply);
           await speak((reply?scriptTemplates.received:scriptTemplates.noAnswer)+s.answer,0,gen);
         }else if(s.type==='date'||s.type==='example'){
-          let reply=null;
-          if(s.type==='date'){await speak(s.text,s.who,gen);reply=await waitReply(s,gen);}
-          if(!valid(gen))return;
-          if(reply)append(2,reply);
-          const item={...parseDate(reply||s.fallback),example:!reply};
+          let item=currentDate&&dateCursor===cursor?currentDate:null;
+          if(!item){
+            let reply=null;
+            if(s.type==='date'){await speak(s.text,s.who,gen);reply=await waitReply(s,gen);}
+            if(!valid(gen))return;
+            if(reply)append(2,reply);
+            item={...parseDate(reply||s.fallback),example:!reply};
+          }
           await showDate(item,s.birthday,gen);
+          if(valid(gen))finishDateScene();
         }
         if(!valid(gen))return;
         cursor++;spokenThisStep.clear();persist(true);await delay(500,gen);
       }
-      if(valid(gen)) {running=false;status('今天先聊到这里');$('tvPlay').textContent='再听一遍';persist(false);}
+      if(valid(gen)) {finishDateScene();running=false;status('今天先聊到这里');$('tvPlay').textContent='再听一遍';persist(false);}
     }catch(_){if(valid(gen))pause('这一段没准备好，点继续再试一次');}
   }
   function open(start=true){closed=false;panel.classList.add('on');fab.classList.add('hide');persist(start);if(start)run();}
@@ -433,7 +446,7 @@
   });
   updateStage(steps[cursor].ch);
   $('tvStage').oninput=()=>{$('tvStageLabel').textContent=(+$('tvStage').value+1)+' / '+chapters.length+' · '+chapters[+$('tvStage').value][1];};
-  $('tvStage').onchange=()=>{pause();resumeAfterIntro=false;const ch=+$('tvStage').value;cursor=steps.findIndex(s=>s.ch===ch);spokenThisStep.clear();lastChapter=-1;report=null;$('tvReport').hidden=true;$('tvLog').replaceChildren();window.TimeviewCourseVisuals?.hide();updateStage(ch);persist(true);run();};
+  $('tvStage').onchange=()=>{pause();finishDateScene();resumeAfterIntro=false;const ch=+$('tvStage').value;cursor=steps.findIndex(s=>s.ch===ch);spokenThisStep.clear();lastChapter=-1;report=null;$('tvReport').hidden=true;$('tvLog').replaceChildren();window.TimeviewCourseVisuals?.hide();updateStage(ch);persist(true);run();};
   fab.onclick=()=>open();
   $('tvClose').onclick=()=>{closed=true;resumeAfterIntro=false;pause();panel.classList.remove('on');fab.classList.remove('hide');persist(false);fab.focus();};
   $('tvPlay').onclick=()=>{resumeAfterIntro=false;if(running)pause();else{if(cursor>=steps.length){cursor=0;spokenThisStep.clear();if(view==='solar'&&chapters[0][2]==='earth'){navigating=true;persist(true);location.href='app?t='+Math.round(scene().time())+courseQuery;return;}}run();}};

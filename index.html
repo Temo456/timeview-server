@@ -233,6 +233,8 @@ if ('serviceWorker' in navigator) {
       <div class="dp-nav" onclick="dpNav(1)">›</div>
     </div>
     <div id="dpGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center"></div>
+    <div class="dp-legend"><span class="term">● 节气</span><span class="festival">● 节日</span><span>按北京时间日期</span></div>
+    <div id="dpEvents" aria-live="polite"></div>
     <div style="display:flex;gap:6px;margin-top:12px;align-items:center;justify-content:center">
       <span style="font-size:12px;color:#5a7a94">时间</span>
       <input type="time" id="dpTime" value="12:00" step="1" style="font-size:13px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:8px;padding:5px 8px;background:rgba(10,24,42,.6);width:90px">
@@ -247,9 +249,10 @@ if ('serviceWorker' in navigator) {
     </div>
     <div id="lunarInfo" style="font-size:12px;color:#9fc6dd;text-align:center;min-height:40px"></div>
   </div>
-  <div style="display:flex;border-top:1px solid rgba(95,214,240,.15)">
-    <div id="dpCancel" class="dp-btn" style="color:#6a8ea8">取消</div>
-    <div id="dpToday" class="dp-btn" style="color:#5fd6f0;border-radius:0 0 16px 16px">今天</div>
+  <div class="dp-actions">
+    <button type="button" id="dpCancel" class="dp-btn" style="color:#9cb3c4">取消</button>
+    <button type="button" id="dpToday" class="dp-btn" style="color:#5fd6f0">今天</button>
+    <button type="button" id="dpConfirm" class="dp-btn">确认</button>
   </div>
 </div>
 
@@ -315,6 +318,9 @@ if ('serviceWorker' in navigator) {
 <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
 
 <!-- 主应用 -->
+<script src="lunar.js"></script>
+<script src="calendar-terms.js"></script>
+<script src="calendar-events.js"></script>
 <script>
 // ========== 平台层（浏览器适配） ==========
 const PLT = {
@@ -762,7 +768,7 @@ function updateHUD(d, date) {
 
 // ========== 时间控制 ==========
 document.getElementById('pPlay').onclick = () => { state.playing = !state.playing; try { sessionStorage.setItem('tv-clock-paused', state.playing ? '0' : '1'); } catch (_) {} document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶'; };
-document.getElementById('pNow').onclick = () => { state.t = Date.now(); dispT = state.t; anchorT = state.t; curUnit = 'sec'; state.spd = SPD.sec; document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶'; };
+document.getElementById('pNow').onclick = () => { state.t = Date.now(); dispT = state.t; anchorT = state.t; curUnit = 'sec'; state.spd = SPD.sec; state.playing=true;try{sessionStorage.setItem('tv-clock-paused','0');}catch(_){} document.getElementById('pPlay').textContent = '❚❚'; };
 document.getElementById('pPrev').onclick = () => { state.t -= 30 * 86400e3; };
 document.getElementById('pNext').onclick = () => { state.t += 30 * 86400e3; };
 document.getElementById('pSlow').onclick = () => { const u = ['sec','hour','day','month','year']; const i = u.indexOf(curUnit); if (i > 0) { curUnit = u[i - 1]; state.spd = SPD[curUnit]; document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶'; } };
@@ -855,17 +861,26 @@ document.addEventListener('click', (e) => {
 // 日期点击 → 打开跳转面板
 // ===== 日期选择器 =====
 var dpYear = today.getFullYear(), dpMonth = today.getMonth(), dpSelected = today.getDate();
+const syncLunarPicker=TimeviewCalendar.lunarPicker(()=>({y:dpYear,m:dpMonth+1,d:dpSelected}),(y,m,d)=>{dpYear=y;dpMonth=m-1;dpSelected=d;renderCalendar()});
+function setPickerDraft(ts){
+  const d=new Date(ts+zoneOffset(tz,ts)*60000);
+  dpYear=d.getUTCFullYear();dpMonth=d.getUTCMonth();dpSelected=d.getUTCDate();
+  document.getElementById('dpTime').value=[d.getUTCHours(),d.getUTCMinutes(),d.getUTCSeconds()].map(p2).join(':');
+  renderCalendar();syncLunarPicker();
+}
 
 function switchCalTab(tab) {
   document.getElementById('tabSolar').className = 'dp-tab' + (tab === 'solar' ? ' active' : '');
   document.getElementById('tabLunar').className = 'dp-tab' + (tab === 'lunar' ? ' active' : '');
   document.getElementById('solarPanel').style.display = tab === 'solar' ? '' : 'none';
   document.getElementById('lunarPanel').style.display = tab === 'lunar' ? '' : 'none';
+  if(tab==='lunar')syncLunarPicker();
 }
 
 function dpNav(dir) { dpMonth += dir; if (dpMonth < 0) { dpMonth = 11; dpYear--; } if (dpMonth > 11) { dpMonth = 0; dpYear++; } renderCalendar(); }
 
 function renderCalendar() {
+  dpSelected=Math.min(Math.max(1,dpSelected),new Date(dpYear,dpMonth+1,0).getDate());
   document.getElementById('dpTitle').textContent = (dpMonth + 1) + '月';
   var ySel = document.getElementById('dpYear');
   if (ySel) {
@@ -888,19 +903,18 @@ function renderCalendar() {
     el.textContent = daysInPrev - firstDay + 1 + i; grid.appendChild(el);
   }
   for (var d = 1; d <= daysInMonth; d++) {
-    var el = document.createElement('div'); el.className = 'dp-cell';
-    if (d === dpSelected && dpMonth === now.getMonth() && dpYear === now.getFullYear()) el.classList.add('today');
+    var el = document.createElement('button'); el.type='button';el.className = 'dp-cell';
+    if (d === now.getDate() && dpMonth === now.getMonth() && dpYear === now.getFullYear()) el.classList.add('today');
     if (d === dpSelected) el.classList.add('selected');
-    var lunar = solarToLunar(dpYear, dpMonth + 1, d);
-    var lunarLabel = lunar ? lunar.dayName : '';
-    el.innerHTML = '<div style="font-size:14px;color:#bfe4f5">'+d+'</div><div class="dp-lunar">'+lunarLabel+'</div>';
-    el.onclick = (function(dd) { return function() { dpSelected = dd; renderCalendar(); jumpToDate(); }; })(d);
+    TimeviewCalendar.decorateCell(el,dpYear,dpMonth+1,d);
+    el.onclick = (function(dd) { return function(event) { event.stopPropagation();dpSelected = dd; renderCalendar(); }; })(d);
     grid.appendChild(el);
   }
   var remaining = 42 - firstDay - daysInMonth;
   for (var i = 1; i <= remaining; i++) {
     var el = document.createElement('div'); el.className = 'dp-cell other'; el.textContent = i; grid.appendChild(el);
   }
+  TimeviewCalendar.selection(dpYear,dpMonth+1,dpSelected);
   // Update lunar info
   var lunar = solarToLunar(dpYear, dpMonth + 1, dpSelected);
   var _st = solarTerm(dnum(Date.UTC(dpYear, dpMonth, dpSelected) + 12*3600000));
@@ -915,27 +929,30 @@ function renderCalendar() {
 document.getElementById('dateText').onclick = function() {
   var picker = document.getElementById('datePicker');
   if (picker.style.display === 'none') {
-    renderCalendar(); picker.style.display = 'block';
+    setPickerDraft(state.t);picker.style.display = 'block';
   } else { picker.style.display = 'none'; }
 };
 document.getElementById('dpCancel').onclick = function() { document.getElementById('datePicker').style.display = 'none'; };
 document.getElementById('dpToday').onclick = function() {
-  var now = new Date(); dpYear = now.getFullYear(); dpMonth = now.getMonth(); dpSelected = now.getDate(); renderCalendar(); jumpToDate();
+  setPickerDraft(Date.now());
 };
-// 自动跳转到选中的日期
+// Only confirmation applies the draft; closing discards it on the next open.
 function jumpToDate() {
   var ts = document.getElementById('dpTime').value || '12:00';
   var hm = ts.split(':');
-  var local = Date.UTC(dpYear, dpMonth, dpSelected, +hm[0]||0, +hm[1]||0);
+  var civil=new Date(0);civil.setUTCFullYear(dpYear,dpMonth,dpSelected);civil.setUTCHours(+hm[0]||0,+hm[1]||0,+hm[2]||0,0);var local=civil.getTime();
   var target=local-tz.min*60000;
   for(var i=0;i<3;i++) target=local-zoneOffset(tz,target)*60000;
   state.t=target; refreshZones(target);
+  inertia=0;tlDrag=false;
   dispT = state.t; anchorT = state.t;
   document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
 }
-// 时间变化也自动跳转
-document.getElementById('dpTime').onchange = function() { jumpToDate(); };
-document.addEventListener('click', function(e) {
+document.getElementById('dpConfirm').onclick=function(){
+  const input=document.getElementById('dpTime');input.required=true;if(!input.reportValidity())return;
+  window.dispatchEvent(new Event('timeview:manual-view'));jumpToDate();document.getElementById('datePicker').style.display='none';
+};
+document.addEventListener('pointerdown', function(e) {
   if (!e.target.closest('#datePicker') && !e.target.closest('#dateText')) {
     document.getElementById('datePicker').style.display = 'none';
   }
@@ -974,22 +991,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// 农历选择器初始化
-function initLunarPicker() {
-  var ySel = document.getElementById('lunarYear'), mSel = document.getElementById('lunarMonth'), dSel = document.getElementById('lunarDay'), hSel = document.getElementById('lunarHour');
-  if (!ySel) return;
-  ySel.innerHTML = '';
-  for (var y = 1900; y <= 2100; y++) { var o = document.createElement('option'); o.value = y - 1900; o.textContent = y + '年'; ySel.appendChild(o); }
-  var now = new Date(); ySel.value = now.getFullYear() - 1900;
-  hSel.innerHTML = '';
-  var hours = ['子时 (23-1)','丑时 (1-3)','寅时 (3-5)','卯时 (5-7)','辰时 (7-9)','巳时 (9-11)','午时 (11-13)','未时 (13-15)','申时 (15-17)','酉时 (17-19)','戌时 (19-21)','亥时 (21-23)'];
-  hours.forEach(function(h, i) { var o = document.createElement('option'); o.value = i; o.textContent = h; hSel.appendChild(o); });
-  function rebuildMonths() { var y = 1900 + parseInt(ySel.value); var ms = lunarMonths(y); mSel.innerHTML = ''; ms.forEach(function(mo, i) { var o = document.createElement('option'); o.value = i; o.textContent = mo.label; mSel.appendChild(o); }); rebuildDays(); }
-  function rebuildDays() { var y = 1900 + parseInt(ySel.value); var ms = lunarMonths(y); var mo = ms[parseInt(mSel.value)] || ms[0]; var days = lunarMonthDays(y, mo.m) + (mo.isLeap ? lunarLeapDays(y) : 0); dSel.innerHTML = ''; for (var d = 1; d <= days; d++) { var o = document.createElement('option'); o.value = d; o.textContent = d + '日'; dSel.appendChild(o); } }
-  ySel.onchange = rebuildMonths; mSel.onchange = rebuildDays;
-  rebuildMonths();
-}
-initLunarPicker();
+// Lunar controls use the shared draft picker above.
 
 // 时间轴
 function setView(v) {

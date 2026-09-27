@@ -7,6 +7,8 @@ COPY course-store.js course-default.json ./
 COPY three-body-model.js ./
 COPY favicon.svg favicon.ico ./
 COPY intro.js ./
+COPY solar-gestures.js ./
+COPY calendar-events.js calendar-terms.js ./
 COPY sounds/ sounds/
 ENV PORT=3000 DATA_DIR=/data
 EXPOSE 3000

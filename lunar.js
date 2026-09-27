@@ -1,3 +1,4 @@
+(function () {
 // 农历（阴历）转换 1900-2100。数据表 lunarInfo 为通用公开数据。
 // 仅用于可视化展示，范围外日期返回空串。
 const lunarInfo = [
@@ -108,3 +109,4 @@ const TimeviewLunar = { solarToLunar, lunarToSolar, lunarMonths, fmtLunar, ganzh
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TimeviewLunar;
 else globalThis.TimeviewLunar = TimeviewLunar;
+})();
