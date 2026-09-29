@@ -4,9 +4,11 @@ WORKDIR /app
 COPY server.js astro.js lunar.js knowledge.json index.html solar-system.html assistant.js card-layout.js course-visuals.js course-editor.js landing.html release.html wallpaper.html admin.html manifest.json sw.js timeview-wallpaper.apk ./
 COPY textures/ textures/
 COPY course-store.js course-default.json ./
+COPY course-audio.js course-speech.js course-audio-client.js ./
+COPY vendor/ vendor/
 COPY three-body-model.js ./
 COPY favicon.svg favicon.ico ./
-COPY intro.js ./
+COPY intro.js preload.js intro.css ./
 COPY solar-gestures.js ./
 COPY calendar-events.js calendar-terms.js ./
 COPY sounds/ sounds/

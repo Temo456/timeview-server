@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "4.0.11";
+const VERSION = "4.1.0";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -84,7 +84,19 @@ let KB = [];
 try { KB = JSON.parse(fs.readFileSync(path.join(ROOT, "knowledge.json"), "utf-8")); } catch (e) {}
 function saveKB() { try { fs.writeFileSync(path.join(ROOT, "knowledge.json"), JSON.stringify(KB, null, 2)); } catch (e) {} }
 const DATA_DIR = process.env.DATA_DIR || ROOT;
-const courseStore = require('./course-store')(DATA_DIR);
+let courseAudio;
+const courseStore = require('./course-store')(DATA_DIR,course=>{if(courseAudio)courseAudio.ensure(course);});
+async function synthesizeCourseSpeech({text,voice}){
+  if(!TTS_API_KEY)throw Error('TTS service is not configured');
+  const body=JSON.stringify({model:TTS_MODEL,messages:[{role:'assistant',content:text}],audio:{format:'mp3',voice:voice==='female'?TTS_VOICE_FEMALE:TTS_VOICE_MALE}});
+  const response=await postJSON(TTS_BASE_URL+'/chat/completions',{'Authorization':'Bearer '+TTS_API_KEY},body,PROXY);
+  if(response.error)throw Error(response.error.message||'TTS error');
+  const data=response.choices?.[0]?.message?.audio?.data;
+  if(!data)throw Error('Missing TTS audio');
+  return Buffer.from(data,'base64');
+}
+courseAudio=require('./course-audio')({dataDir:DATA_DIR,profile:[TTS_BASE_URL,TTS_MODEL,TTS_VOICE_MALE,TTS_VOICE_FEMALE],synthesize:synthesizeCourseSpeech,current:id=>courseStore.get(id)});
+if(TTS_API_KEY)courseAudio.ensure(courseStore.get());
 const ARCH = path.join(DATA_DIR, "archives.json");
 function loadArch() { try { return JSON.parse(fs.readFileSync(ARCH, "utf-8")); } catch (e) { return []; } }
 function saveArch(a) { try { fs.writeFileSync(ARCH, JSON.stringify(a)); } catch (e) {} }
@@ -142,31 +154,33 @@ function dechunkBuf(b){ const parts=[]; let i=0; while(i<b.length){ const j=b.in
 // 纯内置模块的 HTTPS POST，支持 HTTP CONNECT 代理（解决 fetch 不认代理 + 国内访问）
 function postJSON(urlStr, headers, bodyStr, proxy){
   return new Promise((resolve,reject)=>{
-    let done=false; const fail=e=>{ if(!done){done=true;reject(e);} };
+    let done=false;const sockets=[];let timer;
+    const fail=e=>{if(!done){done=true;clearTimeout(timer);sockets.forEach(s=>s.destroy());reject(e);}};
     const u=new URL(urlStr); const host=u.hostname, port=parseInt(u.port||"443",10), pth=u.pathname+(u.search||"");
     const h=Object.assign({}, headers, {"Host":u.host,"Content-Type":"application/json","Content-Length":Buffer.byteLength(bodyStr),"Connection":"close"});
     let head="POST "+pth+" HTTP/1.1\r\n"; for(const k in h) head+=k+": "+h[k]+"\r\n"; head+="\r\n";
     const onTls=(sock)=>{
+      sockets.push(sock);sock.setTimeout(60000,()=>fail(new Error('response timeout')));
       sock.write(head); sock.write(bodyStr);
       const chunks=[]; sock.on("data",d=>chunks.push(d));
       sock.on("end",()=>{ try{
         const buf=Buffer.concat(chunks); const sep=buf.indexOf("\r\n\r\n");
         const hd=buf.slice(0,sep).toString("latin1"); let body=buf.slice(sep+4);
         if(/transfer-encoding:\s*chunked/i.test(hd)) body=dechunkBuf(body);
-        done=true; resolve(JSON.parse(body.toString("utf-8")));
+        const parsed=JSON.parse(body.toString("utf-8"));done=true;clearTimeout(timer);resolve(parsed);
       }catch(e){ fail(new Error("bad response: "+e.message)); } });
       sock.on("error",fail);
     };
-    const timer=setTimeout(()=>fail(new Error("timeout")),60000);
-    const clear=()=>clearTimeout(timer);
+    timer=setTimeout(()=>fail(new Error("timeout")),60000);
     if(proxy){
       const pu=new URL(proxy.indexOf("://")<0?("http://"+proxy):proxy);
       const sk=net.connect(parseInt(pu.port||"80",10), pu.hostname, ()=>{ sk.write("CONNECT "+host+":"+port+" HTTP/1.1\r\nHost: "+host+":"+port+"\r\n\r\n"); });
+      sockets.push(sk);
       let est=false, pb="";
-      sk.on("data",d=>{ if(est)return; pb+=d.toString("latin1"); if(pb.indexOf("\r\n\r\n")>=0){ clear(); if(/^HTTP\/1\.[01] 200/.test(pb)){ est=true; const ts=tls.connect({socket:sk,servername:host},()=>onTls(ts)); ts.on("error",fail);} else { fail(new Error("proxy CONNECT failed: "+pb.split("\r\n")[0])); sk.destroy(); } } });
+      sk.on("data",d=>{ if(est)return; pb+=d.toString("latin1"); if(pb.indexOf("\r\n\r\n")>=0){ if(/^HTTP\/1\.[01] 200/.test(pb)){ est=true; const ts=tls.connect({socket:sk,servername:host},()=>onTls(ts)); sockets.push(ts);ts.on("error",fail);} else { fail(new Error("proxy CONNECT failed: "+pb.split("\r\n")[0])); sk.destroy(); } } });
       sk.on("error",fail);
     } else {
-      const ts=tls.connect({host,port,servername:host},()=>{ clear(); onTls(ts); }); ts.on("error",fail);
+      const ts=tls.connect({host,port,servername:host},()=>onTls(ts));sockets.push(ts);ts.on("error",fail);
     }
   });
 }
@@ -248,6 +262,16 @@ const server = http.createServer(async (req, res) => {
   if (p === "/api/course-script") return courseStore.handle(req, res, sendJson, readBody);
   if (p === "/api/courses") return courseStore.catalog(req, res, sendJson, readBody);
   if (p === "/api/course-publishing") return courseStore.publish(req, res, sendJson, readBody);
+  if((p==='/api/course-playback'||p==='/api/course-audio-status')&&req.method==='GET'){
+    const id=u.searchParams.get('course'),course=id?courseStore.get(id):courseStore.get();
+    res.setHeader('Cache-Control','no-store');
+    if(!course)return sendJson(res,{error:'课程不存在'},404);
+    if(p==='/api/course-audio-status')return sendJson(res,courseAudio.status(course));
+    const result=courseAudio.playback(course,u.searchParams.get('preview')==='1');
+    return result.ready?sendJson(res,{...result.bundle,preparing:result.status.state!=='ready'?result.status:null}):sendJson(res,result.status,result.status.state==='failed'?503:202);
+  }
+  const clip=/^\/api\/course-audio\/clips\/([a-f0-9]{64})\.mp3$/.exec(p);
+  if(clip&&(req.method==='GET'||req.method==='HEAD'))return courseAudio.serveClip(req,res,clip[1]);
 
   // 课程报告只返回经过白名单筛选的计算结果；不调用大模型或命理解读。
   if (p === "/api/course-report" && req.method === "POST") {
@@ -593,7 +617,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // HTML 路由（用内存缓存，已注入 <base>）
-  if (p === "/" ) return sendHtml(res, LANDING);
+  if (p === "/" ) return sendHtml(res, APP);
   if (p === "/app" || p === "/app/") return sendHtml(res, APP);
   if (p === "/release" || p === "/release/") return sendHtml(res, RELEASE);
   if (p === "/wallpaper" || p === "/wallpaper/") return sendHtml(res, WALLPAPER);

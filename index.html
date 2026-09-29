@@ -142,9 +142,10 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
 /* 金色丝线皮肤：界面文字压成白色（画布里的表盘已直接改色，这里只处理 HTML 界面元素） */
 body.golden-skin > *:not(#cv):not(#gl){filter:grayscale(1) contrast(1.5)}
 </style>
+<link rel="stylesheet" href="intro.css?v=4.1.0">
 </head>
 <body>
-<div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-v406.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
+<div id="introOverlay" data-view="earth" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-beijing-v421.mp4" data-mobile-src="textures/intro-beijing-v421-mobile.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
 <script>
 // Check for SW updates even when the app is opened directly.
 if ('serviceWorker' in navigator) {
@@ -152,7 +153,10 @@ if ('serviceWorker' in navigator) {
     .then(function (registration) { return registration.update(); }).catch(function () {});
 }
 </script>
-<script src="intro.js"></script>
+<script src="course-speech.js?v=4.1.0"></script>
+<script src="course-audio-client.js?v=4.1.0"></script>
+<script src="preload.js?v=4.1.0"></script>
+<script src="intro.js?v=4.1.0"></script>
 <script>if(/[?&]scrsv=1/.test(location.search))document.body.classList.add('scrsv');</script>
 
 <!-- 2D 画布（地球表盘） -->
@@ -314,9 +318,6 @@ if ('serviceWorker' in navigator) {
   <div class="voy-labels" id="voyLabels"></div>
 </div>
 
-<!-- Three.js -->
-<script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
-
 <!-- 主应用 -->
 <script src="lunar.js"></script>
 <script src="calendar-terms.js"></script>
@@ -435,7 +436,7 @@ let tzIdx = 0, tz = TIMEZONES[0];
 
 // ========== 图片加载（浏览器自动缓存，无需 Cache API）==========
 function loadImage(img, url) {
-  img.src = url;
+  return window.TimeviewPreload.image(img,url,url.endsWith('.webp')?url.replace('.webp','.png'):null);
 }
 
 // Simplified Chang'e-1 icon and orbit, animated for teaching rather than telemetry.
@@ -500,7 +501,7 @@ function frame(now) {
     if (state.playing) state.t += state.spd * dt;
     if (inertia) { state.t += inertia * dt; inertia *= Math.exp(-1.4 * dt); if (Math.abs(inertia) < 1000) inertia = 0; }
   }
-  if (window.introActive) return;
+  if (window.introActive && !window.introTransitioning) return;
   if (state.playing) changEPhase = (changEPhase + dt * Math.PI * 2 / 10) % (Math.PI * 2);
   dispT += (state.t - dispT) * (1 - Math.exp(-8 * dt));
   refreshZones(dispT); document.getElementById('tzBtn').textContent='🕓 '+tz.label;
@@ -539,7 +540,7 @@ const earthImgCache = {}; // key: 'skin_hemi' → Image
 function earthCacheKey(skin, hemi) { return skin + '_' + (hemi > 0 ? 'n' : 's'); }
 function getEarthTexName(skin, hemi) {
   const pole = hemi > 0 ? 'earth-north-pole' : 'earth-south-pole';
-  return skin === 'satellite' ? pole + '.png' : pole + '-' + skin + '.png';
+  return skin === 'satellite' ? pole + '.webp' : pole + '-' + skin + '.png';
 }
 function getEarthImg() {
   const key = earthCacheKey(curSkin, state.hemi);
@@ -551,13 +552,14 @@ function isEarthReady() {
 }
 function loadEarthPole() {
   const key = earthCacheKey(curSkin, state.hemi);
-  if (earthImgCache[key] && earthImgCache[key].complete && earthImgCache[key].naturalWidth > 0) return;
+  if (earthImgCache[key]) return earthImgCache[key]._ready;
   const img = new Image();
   earthImgCache[key] = img;
   img.onload = () => updateEarthLoading();
-  img.onerror = () => updateEarthLoading();
-  img.src = TEXBASE + getEarthTexName(curSkin, state.hemi);
+  img._ready = loadImage(img, TEXBASE + getEarthTexName(curSkin, state.hemi));
+  img._ready.catch(() => {delete earthImgCache[key];updateEarthLoading();});
   updateEarthLoading();
+  return img._ready;
 }
 loadEarthPole();
 
@@ -600,13 +602,26 @@ function drawMoonLit(mx, my, r, illum, rot) {
   ctx.restore();
 }
 
+let introMapReleased=null;
+try{
+  const arrival=Number(sessionStorage.getItem('tv-intro-arrival'));
+  sessionStorage.removeItem('tv-intro-arrival');
+  if(arrival&&Date.now()-arrival<30000)introMapReleased=performance.now();
+}catch(_){}
 function drawEarth(d, date) {
   const scrsv = document.body.classList.contains('scrsv');
   const cx = scrsv ? W * 0.68 : W / 2, cy = H * EARTH_CFG.centerY, R = Math.min(W, H) * EARTH_CFG.earthScale * earthZoom;
   const G = curSkin === 'golden';  // 金色丝线皮肤：文字白、线条金黄、背景黑
   const utcDate = new Date(dispT);  // 不加时区偏移，纯 UTC
   const utch = utcDate.getUTCHours() + utcDate.getUTCMinutes() / 60;
-  const merid = (90 - utch * 15) * RAD;
+  const actualMerid = (90 - utch * 15) * RAD;
+  let merid=actualMerid;
+  if(window.introArrivalLock){introMapReleased=performance.now();merid=Math.PI;}
+  else if(introMapReleased!==null){
+    const p=Math.min(1,(performance.now()-introMapReleased)/1800),ease=p*p*(3-2*p);
+    merid=Math.PI+Math.atan2(Math.sin(actualMerid-Math.PI),Math.cos(actualMerid-Math.PI))*ease;
+    if(p===1)introMapReleased=null;
+  }
   const _ld = new Date(dispT + tz.min * 60000);
   const _ln = solarToLunar(_ld.getUTCFullYear(), _ld.getUTCMonth()+1, _ld.getUTCDate());
   const ph = moonPhase(d, _ln ? _ln.day : null);
@@ -996,6 +1011,7 @@ document.addEventListener('click', function(e) {
 // 时间轴
 function setView(v) {
   if (v === 'voyage') { enterVoyage(); return; }
+  ++voyageRequest;
   if (state.view === 'voyage') exitVoyage();
   state.view = v;
   document.getElementById('gl').classList.toggle('show', v === 'voyage');
@@ -1022,16 +1038,40 @@ let voyage = null, _voyState = 'orbit', _destDist = 0, _distLy = 0, _speedC = 0,
 let _destIdx = 3, _warpIdx = 0;
 const WLV = [2.635e-5, 1e-4, 5e-4, 0.002, 0.01, 0.05, 0.2, 0.5, 1, 2, 3, 5, 10, 30, 100, 300, 1000, 10000, 100000, 1000000];
 
-function enterVoyage() {
+let voyageLibrary = null, voyageRequest = 0;
+function loadVoyageLibrary() {
+  if (window.THREE) return Promise.resolve();
+  if (!voyageLibrary) voyageLibrary = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js';
+    script.onload = () => window.THREE ? resolve() : reject(new Error('Three.js unavailable'));
+    script.onerror = () => { script.remove(); reject(new Error('Three.js download failed')); };
+    document.head.append(script);
+  }).catch(error => { voyageLibrary = null; throw error; });
+  return voyageLibrary;
+}
+async function enterVoyage() {
+  const request = ++voyageRequest;
+  // The Earth view and its opening use no WebGL library. Download it only
+  // when entering this view, leaving startup bandwidth for the movie.
+  try {
+    await loadVoyageLibrary();
+    if (request !== voyageRequest) return;
+    ensureRenderer();
+    if (!voyage) initVoyageScene();
+  } catch (error) {
+    console.warn('Voyage unavailable:', error);
+    if (request === voyageRequest) alert('星空旅行加载失败，请检查网络后重试。');
+    return;
+  }
   state.view = 'voyage';
-  ensureRenderer();
   document.getElementById('gl').classList.add('show');
   document.getElementById('cv').style.display = 'none';
   document.getElementById('voyHud').style.display = '';
-  if (!voyage) initVoyageScene();
   setupVoyRoute();
 }
 function exitVoyage() {
+  ++voyageRequest;
   document.getElementById('voyHud').style.display = 'none';
   document.getElementById('gl').classList.remove('show');
   document.getElementById('cv').style.display = '';
@@ -1464,22 +1504,18 @@ window.TimeviewCourse = {
   moon: showCourseMoon,
   now: () => { courseMoonMonthStart = null; document.getElementById('pNow').click(); }
 };
-</script>
-<script>
-// “开场”是整场重启；不携带旧的日期、视角或课程进度。
-window.replayIntro = function () {
-  window.courseRestarting = true;
-  window.dispatchEvent(new Event('timeview:course-restart'));
-  try {
-    sessionStorage.removeItem('introPlayed');
-    sessionStorage.setItem('tv-clock-paused', '0');
-    sessionStorage.setItem('tv-course-v2-'+(window.TimeviewActiveCourseId||'cosmos-basics'), JSON.stringify({cursor:0,muted:false,closed:true,resume:false}));
-  } catch (_) {}
-  const screensaver = document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1';
-  const params=new URLSearchParams(location.search),course=params.get('preview')==='1'?params.get('course'):null;
-  location.replace('app?restart=1' + (course?'&preview=1&course='+encodeURIComponent(course):'') + (screensaver ? '&scrsv=1' : ''));
+window.prepareEarthScene = async function () {
+  await Promise.all([loadEarthPole(),loadImage(moonImg,TEXBASE+'moon.jpg'),loadImage(changEIcon,'textures/change-orbiter.svg?v=3.57')]);
+  moonReady=true;
+  const day=dnum(dispT),date=new Date(dispT+tz.min*60000);
+  refreshZones(dispT);drawEarth(day,date);updateHUD(day,date);
+  document.getElementById('einfo').style.display='';
+  // Let the browser commit the decoded Earth canvas behind the loading screen.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  window.earthSceneReady=true;
 };
 </script>
+
 <script src="card-layout.js"></script>
 <script src="course-visuals.js"></script>
 <script src="assistant.js"></script>

@@ -2,7 +2,7 @@
   "name": "时间景观",
   "short_name": "时间景观",
   "description": "天文时空可视化平台 · 一个时间轴，驱动太阳系的全部光阴",
-  "start_url": "app",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

@@ -59,11 +59,11 @@
       <line x1="15" y1="57" x2="104" y2="57" stroke="#7297a450"/><line x1="56" y1="98" x2="56" y2="18" stroke="#7297a450"/>
       <text x="107" y="60" fill="#a4bec5" font-size="9">X</text><text x="60" y="23" fill="#a4bec5" font-size="9">Y</text>
       <circle cx="56" cy="57" r="31" fill="none" stroke="#7297a4"/>${ticks}<circle cx="56" cy="57" r="6" fill="#dcab55"/>
-      <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="#57a9d3"/><line data-axis="top" x1="${ex.toFixed(1)}" y1="${(ey-10).toFixed(1)}" x2="${ex.toFixed(1)}" y2="${(ey+10).toFixed(1)}" stroke="#e4d8a0" stroke-width="2"/>
+      <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="#57a9d3"/><line data-axis="top" x1="${ex.toFixed(1)}" y1="${(ey-10).toFixed(1)}" x2="${ex.toFixed(1)}" y2="${(ey+10).toFixed(1)}" stroke="#e9a6ff" stroke-width="3"/>
       <text x="146" y="12" fill="#c6d5d8" font-size="10">侧视 · YZ平面</text>
       <line x1="146" y1="62" x2="238" y2="62" stroke="#7297a4"/><line x1="188" y1="100" x2="188" y2="23" stroke="#a4bec5" stroke-dasharray="3 3"/>
       <text x="177" y="24" fill="#a4bec5" font-size="9">Z</text><text x="228" y="76" fill="#a4bec5" font-size="9">−Y</text>
-      <circle cx="188" cy="62" r="16" fill="#57a9d3"/><line x1="175.3" y1="91.4" x2="200.7" y2="32.6" stroke="#e4d8a0" stroke-width="2"/><text x="204" y="33" fill="#e4d8a0" font-size="9">北</text>
+      <circle cx="188" cy="62" r="16" fill="#57a9d3"/><line x1="175.3" y1="91.4" x2="200.7" y2="32.6" stroke="#e9a6ff" stroke-width="3"/><text x="204" y="33" fill="#e9a6ff" font-size="9">北</text>
       <text x="0" y="116" fill="#b5c9cc" font-size="10">每格15°太阳视黄经</text><text x="141" y="116" fill="#b5c9cc" font-size="10">地轴偏离Z轴23.4°</text>
     </svg><div class="cv-term"><span>春分 · 夏至</span><span>秋分 · 冬至</span></div>`;
     note.textContent='地轴在空间中保持同向。俯视时，二至沿Y轴，二分与轨道相切；倾角从垂直轨道的Z轴量起。';

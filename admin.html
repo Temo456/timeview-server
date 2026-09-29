@@ -62,8 +62,9 @@ body{background:#050a18;color:#c8daf0;font-family:-apple-system,"PingFang SC","M
 </div>
 <nav class="admin-tabs" aria-label="内容类型"><button id="courseTab" class="btn ghost" aria-selected="true">讲解内容</button><button id="qaTab" class="btn ghost" aria-selected="false">知识库问答</button></nav>
 <div class="wrap" id="courseEditor">
-  <p class="course-intro">在这里编辑课程，并设置前台上哪堂课。前台刷新后展示已设置的课程，正在播放的讲解会继续完成。</p>
+  <p class="course-intro">在这里编辑课程，并设置前台上哪堂课。保存后自动生成朗读音频，全部就绪后前台刷新生效，正在播放的讲解会继续完成。</p>
   <p id="coursePublished" class="course-intro" role="status">正在读取前台课程…</p>
+  <p id="courseAudioStatus" class="course-intro" role="status">正在读取音频状态…</p>
   <div class="course-toolbar"><label>编辑课程 <select id="courseSelect" aria-label="编辑课程"></select></label><button id="courseNew" class="btn ghost">新建空白课程</button><button id="courseClone" class="btn ghost">复制当前课程</button><button id="courseSave" class="btn" disabled>保存课程</button><button id="coursePublish" class="btn" disabled>设为前台课程</button><button id="courseReload" class="btn ghost">重新加载</button><div id="courseMessage" class="course-msg" role="status">正在加载讲解内容…</div></div>
   <div id="courseFields"></div>
 </div>

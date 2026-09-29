@@ -1,5 +1,5 @@
 /* 时间景观 · 双角色课程。自然连续讲解，观众通过选项参与。 */
-(async function () {
+window.TimeviewAssistantReady = (async function () {
   'use strict';
   // 屏保只展示实时表盘，不运行隐藏的课程或自动切换日期。
   if (document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1') return;
@@ -7,14 +7,9 @@
   const previewMode = new URLSearchParams(location.search).get('preview') === '1';
   const requestedCourse = previewMode ? new URLSearchParams(location.search).get('course') : null;
   let courseId = requestedCourse && /^[-a-z0-9]{2,48}$/.test(requestedCourse) ? requestedCourse : 'cosmos-basics';
-  let loadedScript = null;
-  try {
-    const response = await fetch('api/course-script'+(previewMode?'?course='+encodeURIComponent(courseId):''),{cache:'no-store',signal:AbortSignal.timeout(5000)});
-    if(response.ok){
-      const script=await response.json();
-      if(script.schemaVersion===2&&script.chapters?.length&&script.lines?.length){loadedScript=script;courseId=script.courseId;}
-    }
-  } catch (_) {}
+  const {script:loadedScript}=await window.TimeviewAudio.lesson();
+  courseId=loadedScript.courseId;
+  const speechPlans=new Map();
   window.TimeviewActiveCourseId=courseId;
   const courseQuery=previewMode?'&preview=1&course='+encodeURIComponent(courseId):'';
   const roles = [{name:'阿远',voice:'male',tag:'白桦 · 原理讲解'},{name:'阿星',voice:'female',tag:'冰糖 · 观察引导'}];
@@ -35,7 +30,7 @@
   const key = 'tv-course-v2-'+courseId;
   let saved = {};
   try { saved = JSON.parse(sessionStorage.getItem(key) || '{}'); } catch (_) {}
-  if(new URLSearchParams(location.search).get('restart')==='1')saved={cursor:0,muted:false,closed:true,resume:false};
+  if(window.TimeviewEntryFresh||new URLSearchParams(location.search).get('restart')==='1')saved={cursor:0,muted:false,closed:true,resume:false};
   let replySettings={replySeconds:8,dateReplySeconds:60,editingSeconds:60};
   const speechRates=[0.6,0.75,0.85,1,1.25,1.5], rateKey='tv-speech-rate';
   let speechRate=0.85, activeAudio=null;
@@ -158,7 +153,10 @@
   let scriptTemplates = {"date": "{{来源}}{{日期}}，{{时间说明}}底部时间和画面已经一起更新了。", "dateObservation": "同一时刻，各地用不同的当地时间表达。请再看一眼北京、伦敦与纽约，日期有没有变化？", "report": "这一天，模型计算的月相是{{月相}}，照亮比例约百分之{{照亮比例}}。报告已经放在对话下面，你可以慢慢看，也可以留下这份记录。", "reportFailure": "这次报告没有准备好，我们先观察画面，不猜测具体结果。", "received": "收到你的想法，我们一起看看。", "noAnswer": "没关系，我们一起看。"};
 
   function fillTemplate(text, values) {
-    return text.replace(/\{\{([^{}]+)\}\}/g, (_,name) => String(values[name] ?? ''));
+    const plan=window.TimeviewSpeech.plan(text,values),rendered=plan.map(segment=>segment.text).join('');
+    speechPlans.set(rendered,plan);
+    if(speechPlans.size>24)speechPlans.delete(speechPlans.keys().next().value);
+    return rendered;
   }
   // 每次打开页面获取已发布版本；当前页使用同一份快照，讲解中不替换台词。
   try {
@@ -214,6 +212,9 @@
     $('tvReplyArea').hidden=true;$('tvPrompt').hidden=true;$('tvPlay').textContent='继续听';
     status(message);persist(false);
   }
+  let resumeAfterChoice=false;
+  window.addEventListener('timeview:intro-choice-opened',()=>{resumeAfterChoice=running;if(running)pause('已暂停，选择开场城市');});
+  window.addEventListener('timeview:intro-choice-closed',event=>{const resume=resumeAfterChoice;resumeAfterChoice=false;if(resume&&!event.detail.restarting&&!window.courseRestarting)run();});
   function delay(ms,gen){return new Promise(resolve=>{
     if(!valid(gen))return resolve();
     let done=false;const end=()=>{if(done)return;done=true;clearTimeout(timer);if(cancel===end)cancel=null;resolve();};
@@ -222,34 +223,15 @@
   window.addEventListener('timeview:manual-view',()=>{
     if(running)pause('已暂停讲解，可自由观察；继续听会回到课程画面');
   });
-  const audioCache=new Map(), audioRequests=new Set();
+  const audioCache=new Map();
   const spokenThisStep=new Map();
   let activeSpeech=null;
-  function cancelAudioRequests(){for(const controller of audioRequests)controller.abort();audioRequests.clear();audioCache.clear();}
+  function cancelAudioRequests(){audioCache.clear();}
   // Each short utterance is both an audio segment and an exact highlight span.
-  function speechChunks(text){
-    const chars=Array.from(text),chunks=[];
-    while(chars.length){
-      let end=Math.min(80,chars.length);
-      const sample=chars.slice(0,end).join('');
-      const sentence=sample.match(/[。！？!?；;\n][”’」』]?/u);
-      if(sentence)end=Array.from(sample.slice(0,sentence.index+sentence[0].length)).length;
-      else if(end<chars.length){const stops=[...sample.matchAll(/[，,：:]/gu)];const stop=stops.filter(m=>m.index>=20).pop();if(stop)end=Array.from(sample.slice(0,stop.index+1)).length;}
-      chunks.push(chars.splice(0,end).join(''));
-    }
-    return chunks;
-  }
-  function getAudio(text,who){
-    const k=who+':'+text;
+  function getAudio(parts,who){
+    const k=who+':'+JSON.stringify(parts);
     if(!audioCache.has(k)){
-      const controller=new AbortController();audioRequests.add(controller);
-      const timer=setTimeout(()=>controller.abort(),25000);
-      // TTS-only homophone cue: 星宿 is xīng xiù (宿, fourth tone).
-      const spokenText=text.replaceAll('星宿','星秀');
-      const p=fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:spokenText,voice:roles[who].voice}),signal:controller.signal})
-        .then(r=>{if(!r.ok)throw Error();return r.json();}).then(j=>{if(!j.audio)throw Error();return j.audio;})
-        .catch(()=>{if(audioCache.get(k)===p)audioCache.delete(k);return null;})
-        .finally(()=>{clearTimeout(timer);audioRequests.delete(controller);});
+      const p=window.TimeviewAudio.audio(parts,roles[who].voice).catch(()=>{if(audioCache.get(k)===p)audioCache.delete(k);return null;});
       audioCache.set(k,p);if(audioCache.size>4)audioCache.delete(audioCache.keys().next().value);
     }
     return audioCache.get(k);
@@ -267,9 +249,9 @@
     const identity=who+'|'+text;
     let speech=spokenThisStep.get(identity);
     if(!speech){
-      const paragraph=append(who,text),chunks=speechChunks(text);
+      const paragraph=append(who,text),plan=speechPlans.get(text)||window.TimeviewSpeech.plan(text),chunks=plan.map(segment=>segment.text);
       const skip=document.createElement('button');skip.type='button';skip.className='skip-paragraph';skip.textContent='跳过本段';
-      speech={paragraph,chunks,marks:markSpeech(paragraph,chunks),next:0,complete:false,skip};
+      speech={paragraph,chunks,plan,marks:markSpeech(paragraph,chunks),next:0,complete:false,skip};
       skip.onclick=()=>{
         if(spokenThisStep.get(identity)!==speech||speech.complete)return;
         speech.complete=true;speech.next=chunks.length;skip.disabled=true;skip.textContent='已跳过';
@@ -285,16 +267,15 @@
     if(muted){status((who?'阿星':'阿远')+'正在讲');await delay(Math.max(3200,text.length*190)/speechRate,gen);if(valid(gen))speech.complete=true;return;}
     for(let i=speech.next;i<chunks.length&&valid(gen)&&!speech.complete;i++){
       status('正在准备'+(who?'阿星':'阿远')+'的语音…');
-      // Request the current segment first, with at most one segment of lookahead.
-      const pending=getAudio(chunks[i],who);
-      if(i+1<chunks.length)getAudio(chunks[i+1],who);
-      else {const next=steps[cursor+1];if(next&&next.type==='say'&&typeof next.text==='string')getAudio(speechChunks(next.text)[0],next.who);}
-      const b64=await new Promise(resolve=>{
+      // All bytes are local; prepare at most one following segment for playback.
+      const pending=getAudio(speech.plan[i].parts,who);
+      if(i+1<chunks.length)getAudio(speech.plan[i+1].parts,who);
+      const blob=await new Promise(resolve=>{
         let done=false;const end=value=>{if(done)return;done=true;if(cancel===abort)cancel=null;resolve(value);};
         const abort=()=>end(null);cancel=abort;pending.then(end);
       });
       if(!valid(gen)||speech.complete)return;
-      if(!b64){status('这一小段语音暂不可用，先一起读文字');marks[i].classList.add('reading-chunk');await delay(Math.max(3500,chunks[i].length*190)/speechRate,gen);marks[i].classList.remove('reading-chunk');if(valid(gen))speech.next=i+1;continue;}
+      if(!blob){status('这一小段语音暂不可用，先一起读文字');marks[i].classList.add('reading-chunk');await delay(Math.max(3500,chunks[i].length*190)/speechRate,gen);marks[i].classList.remove('reading-chunk');if(valid(gen))speech.next=i+1;continue;}
       status((who?'阿星':'阿远')+'正在讲'+(chunks.length>1?' · '+(i+1)+'/'+chunks.length:''));
       const result=await new Promise(resolve=>{
         let url,timer,done=false;const audio=speechAudio;
@@ -302,7 +283,7 @@
         const end=completed=>{if(done)return;done=true;clearTimeout(timer);audio.onended=null;audio.onerror=null;mark.classList.remove('reading-chunk');if(completed===true)speech.next=i+1;audio.pause();if(activeAudio===audio)activeAudio=null;if(url)URL.revokeObjectURL(url);if(cancel===stop)cancel=null;resolve(completed);};
         const stop=()=>end(false);cancel=stop;
         try{
-          url=URL.createObjectURL(new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:'audio/mpeg'}));audio.src=url;
+          url=URL.createObjectURL(blob);audio.src=url;
           activeAudio=audio;audio.preservesPitch=true;audio.defaultPlaybackRate=speechRate;audio.playbackRate=speechRate;
           timer=setTimeout(()=>end('unavailable'),90000/Math.min(...speechRates));
           audio.onended=()=>end(true);audio.onerror=()=>end('unavailable');

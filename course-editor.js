@@ -5,6 +5,17 @@
   const message=value=>$('courseMessage').textContent=value;
   let content=null,courseId=new URLSearchParams(location.search).get('course')||'',dirty=false,saving=false;
   let activeCourseId='cosmos-basics',publishingRevision=0;
+  let audioTimer,audioRequest=0;
+  async function refreshAudioStatus(){
+    clearTimeout(audioTimer);const request=++audioRequest,id=courseId;
+    try{
+      const response=await fetch('api/course-audio-status?course='+encodeURIComponent(id),{cache:'no-store',signal:AbortSignal.timeout(10000)});
+      if(!response.ok)throw Error();const data=await response.json();
+      if(request!==audioRequest||id!==courseId)return;
+      $('courseAudioStatus').textContent=data.state==='ready'?'整课音频已就绪 · 修订版 '+data.revision:data.state==='failed'?'音频生成失败，重新保存课程可重试。已就绪的前台版本会继续提供。':'音频正在生成 '+data.done+' / '+data.total+'，完成后前台刷新即可使用新版本。';
+      if(data.state==='queued'||data.state==='generating')audioTimer=setTimeout(refreshAudioStatus,3500);
+    }catch(error){if(request===audioRequest)$('courseAudioStatus').textContent='暂时无法获取音频进度，请稍后重新加载。';}
+  }
   const scenes=[
     ['','不切换画面'],['now','回到今天'],
     ...[0,1,2,3].map(n=>['axes:'+n,'坐标轴 '+(n===0?'轨道':n===1?'X':n===2?'XY':'XYZ')]),
@@ -133,6 +144,7 @@
       content=await response.json();courseId=id;dirty=false;render();$('courseSelect').value=id;
       $('courseSave').disabled=false;$('coursePublish').disabled=false;message('已加载 '+content.name+' · 修订版 '+content.revision);
       history.replaceState(null,'','admin.html?course='+encodeURIComponent(id));
+      refreshAudioStatus();
     }catch(error){message('加载失败：'+error.message);$('courseSelect').value=courseId;}
   }
   $('courseSelect').onchange=event=>loadCourse(event.target.value);
@@ -158,7 +170,7 @@
       const response=await fetch('api/course-script?course='+encodeURIComponent(courseId),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(content),signal:AbortSignal.timeout(15000)});
       const result=await response.json();if(!response.ok)throw Error(result.error||'保存失败');
       content.revision=result.revision;content.updatedAt=result.updatedAt;dirty=false;
-      await loadCatalog();message('已保存修订版 '+result.revision+(courseId===activeCourseId?'，前台刷新后生效。':'。点击“设为前台课程”后，前台将展示这门课。'));
+      await loadCatalog();message('已保存修订版 '+result.revision+(courseId===activeCourseId?'，音频生成完成后前台刷新生效。':'。音频自动生成，点击“设为前台课程”可发布这门课。'));refreshAudioStatus();
       return true;
     }catch(error){message('未确认保存成功：'+error.message+'。当前修改已保留。');return false;}
     finally{saving=false;['courseSave','coursePublish','courseReload','courseSelect','courseNew','courseClone'].forEach(id=>$(id).disabled=false);$('courseFields').querySelectorAll('input,textarea,select,button').forEach(el=>el.disabled=false);}
@@ -172,10 +184,11 @@
     try{
       const response=await fetch('api/course-publishing',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({activeCourseId:courseId,revision:publishingRevision}),signal:AbortSignal.timeout(15000)});
       const result=await response.json();if(!response.ok)throw Error(result.error||'设置失败');
-      await loadCatalog();message('已将“'+content.name+'”设为前台课程，前台刷新后生效。');
+      await loadCatalog();message('已将“'+content.name+'”设为前台课程，音频就绪后前台刷新生效。');refreshAudioStatus();
     }catch(error){message('前台课程未更新：'+error.message);}
     finally{saving=false;['coursePublish','courseSave','courseReload','courseSelect','courseNew','courseClone'].forEach(id=>$(id).disabled=false);}
   };
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
+  window.addEventListener('pagehide',()=>{clearTimeout(audioTimer);audioRequest++;});
   loadCatalog().then(()=>loadCourse()).catch(error=>message(error.message));
 })();

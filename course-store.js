@@ -83,7 +83,7 @@ function migrateLegacy(saved) {
   return next;
 }
 
-module.exports=function createCourseStore(dataDir){
+module.exports=function createCourseStore(dataDir,onChange=()=>{}){
   const primaryFile=path.join(dataDir,'course-content.json');
   const extraDir=path.join(dataDir,'courses');
   const courses=new Map();let loadError=false;
@@ -133,6 +133,7 @@ module.exports=function createCourseStore(dataDir){
         const next={activeCourseId:body.activeCourseId,revision:publishing.revision+1,updatedAt:new Date().toISOString()};
         try{saveFile(publishingFile,next);}catch(error){console.error(error);return sendJson(res,{error:'前台课程设置保存失败，请重试'},500);}
         publishing=next;
+        onChange(courses.get(next.activeCourseId));
         return sendJson(res,{ok:true,...publishing,name:courses.get(publishing.activeCourseId).name});
       }catch(error){return sendJson(res,{error:error.message},400);}
     },
@@ -148,7 +149,7 @@ module.exports=function createCourseStore(dataDir){
         if(body.revision!==current.revision)return sendJson(res,{error:'课程已在其他窗口更新，请重新加载后合并'},409);
         const next={...validate(body,id),revision:current.revision+1,updatedAt:new Date().toISOString()};
         try{saveFile(pathFor(id),next);}catch(error){console.error(error);return sendJson(res,{error:'服务器保存失败，原内容未替换，请重试'},500);}
-        courses.set(id,next);return sendJson(res,{ok:true,revision:next.revision,updatedAt:next.updatedAt});
+        courses.set(id,next);onChange(next);return sendJson(res,{ok:true,revision:next.revision,updatedAt:next.updatedAt});
       }catch(error){return sendJson(res,{error:error.message},400);}
     },
     async catalog(req,res,sendJson,readBody){
@@ -169,7 +170,7 @@ module.exports=function createCourseStore(dataDir){
         };
         const next={...validate({...initial,name},id),revision:0,updatedAt:new Date().toISOString()};
         try{saveFile(pathFor(id),next);}catch(error){console.error(error);return sendJson(res,{error:'新课程保存失败'},500);}
-        courses.set(id,next);return sendJson(res,{ok:true,course:summary(next)},201);
+        courses.set(id,next);onChange(next);return sendJson(res,{ok:true,course:summary(next)},201);
       }catch(error){return sendJson(res,{error:error.message},400);}
     }
   };

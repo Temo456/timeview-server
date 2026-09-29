@@ -1,0 +1,41 @@
+#introOverlay{background:#050a18!important;color:#eeeade}
+#introOverlay[data-phase="loading"] #introSkip,#introOverlay[data-phase="error"] #introSkip{display:none}
+#introOverlay[data-phase="loading"] #introCredits,#introOverlay[data-phase="error"] #introCredits{opacity:0}
+.intro-loading{position:absolute;inset:0;display:grid;place-items:center;padding:32px 26px;box-sizing:border-box;background:radial-gradient(ellipse at 50% 29%,#12293970,transparent 54%),#050a18;overflow:auto;font:14px/1.6 "Microsoft YaHei","PingFang SC",sans-serif}
+.intro-loading::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.45;background-image:radial-gradient(1px 1px at 13% 19%,#b8d5df 80%,transparent),radial-gradient(1px 1px at 78% 24%,#b8d5df 80%,transparent),radial-gradient(1px 1px at 22% 77%,#b8d5df 80%,transparent),radial-gradient(1px 1px at 86% 73%,#b8d5df 80%,transparent),radial-gradient(1px 1px at 69% 49%,#b8d5df 80%,transparent)}
+.intro-prep{width:min(100%,430px);position:relative;text-align:center}
+.intro-kicker{font-size:10px;letter-spacing:.28em;color:#8eaaa9;margin:0 0 10px}
+.intro-title{font:44px/1.4 "STKaiti","KaiTi","Songti SC",serif;letter-spacing:.18em;margin:10px 0 14px;padding-left:.18em;font-weight:400;color:#f4efdf}
+.intro-subtitle{font-size:12px;letter-spacing:.07em;color:#8da2af;margin:0 0 32px}
+.intro-progress-heading{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;color:#b4c9cb;text-align:left;font-size:12px}
+.intro-percent{font:30px/1 "Consolas","Menlo",monospace;letter-spacing:-.05em;color:#ede8d8;font-variant-numeric:tabular-nums}
+.intro-percent small{font-size:12px;color:#8faeb4;margin-left:4px}
+.intro-progress{height:3px;background:#29414c80;overflow:hidden;border-radius:2px}
+.intro-progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#76b8af,#e2d5a6);transition:width .2s linear}
+.intro-note{color:#6c8796;font-size:11px;margin:24px 0 0;line-height:1.8}
+.intro-retry{margin:20px auto 0;color:#eae4cf;background:#132b36;border:1px solid #739d9e;padding:10px 30px;border-radius:22px;font:13px "Microsoft YaHei",sans-serif;cursor:pointer}
+.intro-retry:focus-visible{outline:2px solid #e2d5a6;outline-offset:4px}
+#introOverlay[data-phase="error"] .intro-progress>i{background:#d7ae80}
+#introOverlay[data-phase="error"] .intro-note{color:#d7bfab}
+#introCredits{position:absolute;left:16px;bottom:10px;max-width:calc(100% - 32px);white-space:pre-line;color:#e5ebeeaa;font:9px/1.5 sans-serif;pointer-events:none;text-shadow:0 1px 4px #000}
+#introSound{position:absolute;bottom:max(72px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:12px 24px;border:1px solid #ffffff99;border-radius:24px;color:#fff;background:#10283bea;font:16px/1.4 sans-serif;cursor:pointer;box-shadow:0 4px 24px #0008;z-index:2}
+#introSound.intro-start-button{bottom:50%;transform:translate(-50%,50%);white-space:nowrap;padding:16px 28px}
+#introChooser{box-sizing:border-box;width:min(680px,calc(100vw - 32px));max-width:none;max-height:90dvh;margin:auto;padding:26px;border:1px solid #8da9b449;border-radius:20px;background:linear-gradient(145deg,#142932,#09131e);color:#eee9dc;box-shadow:0 24px 100px #0009;font:14px/1.6 'Microsoft YaHei','PingFang SC',sans-serif;overscroll-behavior:contain}
+#introChooser::backdrop{background:#020712cc;backdrop-filter:blur(9px)}
+.intro-choice-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}
+.intro-choice-heading p{margin:0;color:#9ebabb;font-size:10px;letter-spacing:.18em}
+.intro-choice-heading h2{margin:6px 0 0;font:28px/1.5 'STSong','SimSun',serif;font-weight:400;letter-spacing:.05em}
+.intro-choice-close{width:40px;height:40px;flex-shrink:0;border:1px solid #b7c9ce33;border-radius:50%;background:transparent;color:#b7c9ce;font:24px/1 sans-serif;cursor:pointer}
+.intro-city-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.intro-city{padding:0;overflow:hidden;border:1px solid #a9bfc433;border-radius:12px;background:#071421;text-align:left;color:inherit;cursor:pointer;font:inherit;transition:border-color .15s,transform .15s}
+.intro-city:hover{border-color:#e2ca92;transform:translateY(-2px)}
+.intro-city:focus-visible,.intro-choice-close:focus-visible{outline:2px solid #e2ca92;outline-offset:4px}
+.intro-city img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#122c3a}
+.intro-city-caption{display:grid;padding:14px 16px;gap:3px}
+.intro-city-caption strong{font:25px/1.3 'STSong','SimSun',serif;font-weight:400;letter-spacing:.12em;color:#f1e6c9}
+.intro-city-caption>span{font-size:12px;color:#a9c1c7;margin-top:3px}
+.intro-city-caption small{font-size:10px;color:#7796a3}
+.intro-choice-note{margin:18px 0 0;font-size:11px;color:#8099a5;text-align:center}
+@media(max-width:520px){#introChooser{padding:20px}.intro-city-grid{grid-template-columns:1fr;gap:12px}.intro-city{display:grid;grid-template-columns:42% 1fr;align-items:center}.intro-city img{height:100%;min-height:120px;aspect-ratio:auto}.intro-city-caption{padding:14px}.intro-choice-heading h2{font-size:25px}}
+@media(max-height:600px){.intro-subtitle{margin-bottom:20px}.intro-title{font-size:34px}.intro-note{margin-top:16px}}
+@media(prefers-reduced-motion:reduce){.intro-progress>i,.intro-city{transition:none}}
