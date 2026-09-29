@@ -4,12 +4,13 @@
   const Speech=window.TimeviewSpeech,scope=new URL('./',document.baseURI).href;
   const cacheName='timeview-course-audio:'+scope+':v1';
   const store=('caches' in window?caches.open(cacheName):Promise.resolve(null)).catch(()=>null);
-  const blobs=new Map(),decoded=new Map();
+  const blobs=new Map(),decoded=new Map(),dateRequests=new Map();
   let lessonPromise,preparePromise,bundle,index,context;
   const absolute=url=>new URL(url,document.baseURI).href;
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   function notify(status){window.dispatchEvent(new CustomEvent('timeview:audio-status',{detail:status}));}
-  function validBundle(value){return value?.script?.schemaVersion===2&&value.script.chapters?.length&&value.script.lines?.length&&value.manifest?.entries?.length&&value.script.courseId===value.manifest.courseId&&value.script.revision===value.manifest.revision&&value.manifest.entries.every(e=>/^[a-f0-9]{64}$/.test(e.hash)&&e.bytes>0&&e.url==='api/course-audio/clips/'+e.hash+'.mp3');}
+  function validEntry(e){return e&&/^[a-f0-9]{64}$/.test(e.hash)&&e.bytes>0&&e.url==='api/course-audio/clips/'+e.hash+'.mp3';}
+  function validBundle(value){return value?.script?.schemaVersion===2&&value.script.chapters?.length&&value.script.lines?.length&&value.manifest?.speechVersion===Speech.VERSION&&value.manifest?.entries?.length&&value.script.courseId===value.manifest.courseId&&value.script.revision===value.manifest.revision&&value.manifest.entries.every(validEntry);}
   function lesson(){
     if(lessonPromise)return lessonPromise;
     lessonPromise=(async()=>{
@@ -100,7 +101,45 @@
     if(decoded.size>96)decoded.delete(decoded.keys().next().value);
     try{return await promise;}catch(error){decoded.delete(entry.hash);throw error;}
   }
-  async function audio(parts,voice){
+  async function cachedUtterance(text,voice,route,payload,cacheRoute){
+    const key=Speech.lookup(text,voice);
+    const savedEntry=index.get(key);
+    if(savedEntry&&blobs.has(savedEntry.hash))return blobs.get(savedEntry.hash);
+    const url=absolute(cacheRoute+'/'+bundle.manifest.profile+'/'+Speech.VERSION+'?voice='+voice+'&text='+encodeURIComponent(text));
+    if(dateRequests.has(url))return dateRequests.get(url);
+    const promise=(async()=>{
+      const cache=await store,cached=cache&&await cache.match(url).catch(()=>null);
+      let entry=cached&&await cached.json().catch(()=>null);
+      const matches=e=>validEntry(e)&&e.voice===voice&&e.text===text;
+      if(!matches(entry)){
+        const response=await fetch(absolute(route),{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({manifestId:bundle.manifest.id,...payload}),signal:AbortSignal.timeout(210000)});
+        if(!response.ok)throw Error('讲解语音暂未准备好');
+        entry=(await response.json()).entry;
+        if(!matches(entry))throw Error('讲解语音与台词不一致');
+      }
+      if(!blobs.has(entry.hash))await load(entry,()=>{});
+      if(cache)await cache.put(url,new Response(JSON.stringify(entry),{headers:{'Content-Type':'application/json'}})).catch(()=>{});
+      index.set(key,entry);return blobs.get(entry.hash);
+    })();
+    dateRequests.set(url,promise);
+    try{return await promise;}finally{dateRequests.delete(url);}
+  }
+  async function dateAudio(input){
+    await prepare();const plan=Speech.datePlan(bundle.script.templates?.date,input);
+    return cachedUtterance(plan.parts[0],'female','api/course-date-audio',{date:plan.request},'api/course-date-cache');
+  }
+  async function dynamicAudio(request){
+    await prepare();const {template,voice}=Speech.dynamicSource(bundle.script,request),plan=Speech.dynamicPlan(template,request.values,request);
+    if(!Number.isInteger(request.segment)||!plan[request.segment])throw Error('语音段落编号无效');
+    return cachedUtterance(plan[request.segment].parts[0],voice,'api/course-dynamic-audio',{request:plan[request.segment].request},'api/course-dynamic-cache');
+  }
+  async function prepareDynamic(source,values){
+    await prepare();const {template}=Speech.dynamicSource(bundle.script,source);
+    return Promise.all(Speech.dynamicPlan(template,values,source).map(segment=>dynamicAudio(segment.request)));
+  }
+  async function audio(parts,voice,request){
+    if(request)return request.kind?dynamicAudio(request):dateAudio(request);
     await prepare();
     const entries=parts.map(text=>{const entry=index.get(Speech.lookup(text,voice));if(!entry)throw Error('课程语音与台词不一致');return entry;});
     if(entries.length===1)return blobs.get(entries[0].hash);
@@ -113,5 +152,5 @@
     let at=44;for(const piece of pieces)for(const sample of piece.samples){view.setInt16(at,Math.round(Math.max(-1,Math.min(1,sample))*32767),true);at+=2;}
     return new Blob([bytes],{type:'audio/wav'});
   }
-  window.TimeviewAudio={lesson,prepare,audio};
+  window.TimeviewAudio={lesson,prepare,audio,dateAudio,prepareDynamic};
 })();

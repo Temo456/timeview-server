@@ -26,7 +26,7 @@ const BIND = clean(process.env.BIND) || "0.0.0.0";
 // 解读模式开关：almanac=天文历法科普（默认，合规）；fortune=命理推演（仅在非微信渠道/过审后开启）
 const FORTUNE_MODE = (clean(process.env.FORTUNE_MODE) || "almanac").toLowerCase() === "fortune" ? "fortune" : "almanac";
 // 版本号：每次更新递增小版本（3.1 → 3.2 → …）。顶部右上角徽标据此显示，sw.js 缓存键同步 bump。
-const VERSION = "4.1.0";
+const VERSION = "4.1.3";
 // 语音合成（小米 MiMo TTS v2.5，OpenAI chat/completions 兼容，返回 base64 音频）
 const TTS_API_KEY = clean(process.env.TTS_API_KEY) || LLM_API_KEY;
 const TTS_BASE_URL = (clean(process.env.TTS_BASE_URL) || "https://api.xiaomimimo.com/v1").replace(/\/+$/, "");
@@ -95,7 +95,9 @@ async function synthesizeCourseSpeech({text,voice}){
   if(!data)throw Error('Missing TTS audio');
   return Buffer.from(data,'base64');
 }
-courseAudio=require('./course-audio')({dataDir:DATA_DIR,profile:[TTS_BASE_URL,TTS_MODEL,TTS_VOICE_MALE,TTS_VOICE_FEMALE],synthesize:synthesizeCourseSpeech,current:id=>courseStore.get(id)});
+courseAudio=require('./course-audio')({dataDir:DATA_DIR,profile:[TTS_BASE_URL,TTS_MODEL,TTS_VOICE_MALE,TTS_VOICE_FEMALE],synthesize:synthesizeCourseSpeech,current:id=>courseStore.get(id),reportForDate:date=>{
+  const data=computeAstro(Date.parse(date+'T12:00:00+08:00'),480);return {'月相':data.moonPhase,'照亮比例':data.moonIllum};
+}});
 if(TTS_API_KEY)courseAudio.ensure(courseStore.get());
 const ARCH = path.join(DATA_DIR, "archives.json");
 function loadArch() { try { return JSON.parse(fs.readFileSync(ARCH, "utf-8")); } catch (e) { return []; } }
@@ -272,6 +274,20 @@ const server = http.createServer(async (req, res) => {
   }
   const clip=/^\/api\/course-audio\/clips\/([a-f0-9]{64})\.mp3$/.exec(p);
   if(clip&&(req.method==='GET'||req.method==='HEAD'))return courseAudio.serveClip(req,res,clip[1]);
+  if(p==='/api/course-date-audio'&&req.method==='POST'){
+    res.setHeader('Cache-Control','no-store');
+    try{
+      const body=await readBody(req);
+      return sendJson(res,await courseAudio.dateAudio(body.manifestId,body.date));
+    }catch(error){return sendJson(res,{error:error.status?error.message:'日期语音暂未准备好，请重试。'},error.status||503);}
+  }
+  if(p==='/api/course-dynamic-audio'&&req.method==='POST'){
+    res.setHeader('Cache-Control','no-store');
+    try{
+      const body=await readBody(req);
+      return sendJson(res,await courseAudio.dynamicAudio(body.manifestId,body.request));
+    }catch(error){return sendJson(res,{error:error.status?error.message:'讲解语音暂未准备好，请重试。'},error.status||503);}
+  }
 
   // 课程报告只返回经过白名单筛选的计算结果；不调用大模型或命理解读。
   if (p === "/api/course-report" && req.method === "POST") {

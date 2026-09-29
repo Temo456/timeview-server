@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05080f">
@@ -142,7 +142,8 @@ body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,bo
 /* 金色丝线皮肤：界面文字压成白色（画布里的表盘已直接改色，这里只处理 HTML 界面元素） */
 body.golden-skin > *:not(#cv):not(#gl){filter:grayscale(1) contrast(1.5)}
 </style>
-<link rel="stylesheet" href="intro.css?v=4.1.0">
+<link rel="stylesheet" href="intro.css?v=4.1.3">
+<link rel="stylesheet" href="mobile.css?v=4.1.3">
 </head>
 <body>
 <div id="introOverlay" data-view="earth" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-beijing-v421.mp4" data-mobile-src="textures/intro-beijing-v421-mobile.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
@@ -153,10 +154,10 @@ if ('serviceWorker' in navigator) {
     .then(function (registration) { return registration.update(); }).catch(function () {});
 }
 </script>
-<script src="course-speech.js?v=4.1.0"></script>
-<script src="course-audio-client.js?v=4.1.0"></script>
-<script src="preload.js?v=4.1.0"></script>
-<script src="intro.js?v=4.1.0"></script>
+<script src="course-speech.js?v=4.1.3"></script>
+<script src="course-audio-client.js?v=4.1.3"></script>
+<script src="preload.js?v=4.1.3"></script>
+<script src="intro.js?v=4.1.3"></script>
 <script>if(/[?&]scrsv=1/.test(location.search))document.body.classList.add('scrsv');</script>
 
 <!-- 2D 画布（地球表盘） -->
@@ -427,6 +428,8 @@ const TIMEZONES = [['北京','Asia/Shanghai'],['伦敦','Europe/London'],['东�
 function cityClock(cn,zone,star=false){return {cn,zone,star,min:0,formatter:new Intl.DateTimeFormat('en-GB',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'})};}
 const NORTH_CITIES=[cityClock('北京','Asia/Shanghai',true),cityClock('东京','Asia/Tokyo'),cityClock('纽约','America/New_York'),cityClock('莫斯科','Europe/Moscow'),cityClock('柏林','Europe/Berlin'),cityClock('巴黎','Europe/Paris'),cityClock('伦敦','Europe/London'),cityClock('旧金山','America/Los_Angeles'),cityClock('渥太华','America/Toronto'),cityClock('多伦多','America/Toronto'),cityClock('温哥华','America/Vancouver')];
 const SOUTH_CITIES=[cityClock('悉尼','Australia/Sydney'),cityClock('堪培拉','Australia/Sydney'),cityClock('开普敦','Africa/Johannesburg'),cityClock('布宜诺斯艾利斯','America/Argentina/Buenos_Aires'),cityClock('圣保罗','America/Sao_Paulo'),cityClock('惠灵顿','Pacific/Auckland'),cityClock('乌斯怀亚','America/Argentina/Ushuaia')];
+const mobileCityOrder=list=>list.slice().sort((a,b)=>Number(['北京','伦敦','纽约'].includes(b.cn))-Number(['北京','伦敦','纽约'].includes(a.cn)));
+const MOBILE_CITIES={north:mobileCityOrder(NORTH_CITIES),south:mobileCityOrder(SOUTH_CITIES)};
 function clockAngle(hour){return -((hour-12)/24)*2*Math.PI;}
 function zoneOffset(zone,ts){const parts=Object.fromEntries(zone.formatter.formatToParts(new Date(ts)).map(p=>[p.type,p.value]));return Math.round((Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute,+parts.second)-Math.floor(ts/1000)*1000)/60000);}
 let zoneMinute = null;
@@ -610,7 +613,10 @@ try{
 }catch(_){}
 function drawEarth(d, date) {
   const scrsv = document.body.classList.contains('scrsv');
-  const cx = scrsv ? W * 0.68 : W / 2, cy = H * EARTH_CFG.centerY, R = Math.min(W, H) * EARTH_CFG.earthScale * earthZoom;
+  const mobile=!scrsv&&window.TimeviewMobile?.sceneRect();
+  const cx = scrsv ? W * 0.68 : mobile?(mobile.left+mobile.right)/2:W / 2;
+  const cy = mobile?(mobile.top+mobile.bottom)/2:H * EARTH_CFG.centerY;
+  const R = (mobile?Math.min(mobile.right-mobile.left,mobile.bottom-mobile.top):Math.min(W,H))*EARTH_CFG.earthScale*earthZoom;
   const G = curSkin === 'golden';  // 金色丝线皮肤：文字白、线条金黄、背景黑
   const utcDate = new Date(dispT);  // 不加时区偏移，纯 UTC
   const utch = utcDate.getUTCHours() + utcDate.getUTCMinutes() / 60;
@@ -673,7 +679,7 @@ function drawEarth(d, date) {
     // 小圆点
     ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * R * hDot, ny * R * hDot, 1.4, 0, 7); ctx.fill();
     // 双数=数字（不旋转，水平），单数=竖线（旋转朝向圆心）
-    if (h % 2 === 0) {
+    if (h % (mobile&&R<70?4:2) === 0) {
       ctx.fillStyle = G ? '#fff' : 'rgba(165,212,238,.92)'; ctx.font = EARTH_CFG.hourNumSize + 'px sans-serif';
       ctx.fillText(String(h).padStart(2, '0'), nx * R * hRing, ny * R * hRing);
     } else {
@@ -689,7 +695,8 @@ function drawEarth(d, date) {
 
   // 城市标注
   if (showCities) {
-  const list = state.hemi < 0 ? SOUTH_CITIES : NORTH_CITIES;
+  const list = mobile?MOBILE_CITIES[state.hemi<0?'south':'north']:state.hemi < 0 ? SOUTH_CITIES : NORTH_CITIES;
+  const occupied=mobile?[{left:cx-R*.25,right:cx+R*.25,top:cy-R*.25,bottom:cy+R*.25}]:[];
   const sameZoneCount = new Map();
   for (const c of list) {
     const rank = sameZoneCount.get(c.min) || 0;
@@ -722,6 +729,11 @@ function drawEarth(d, date) {
     if (labelR > maxR) labelR = maxR;
     if (labelR < R * 0.26) labelR = R * 0.26;
     const lx = cx + sinA * labelR, ly = cy - cosA * labelR;
+    if(mobile){
+      const box={left:lx-tw/2-4,right:lx+tw/2+4,top:ly-9,bottom:ly+9};
+      if(occupied.some(b=>box.left<b.right&&box.right>b.left&&box.top<b.bottom&&box.bottom>b.top))continue;
+      occupied.push(box);
+    }
     // 引线
     if (Math.hypot(lx - px, ly - py) > 6) {
       ctx.strokeStyle = 'rgba(255,210,74,.45)'; ctx.lineWidth = 0.7;
@@ -1516,6 +1528,7 @@ window.prepareEarthScene = async function () {
 };
 </script>
 
+<script src="mobile.js"></script>
 <script src="card-layout.js"></script>
 <script src="course-visuals.js"></script>
 <script src="assistant.js"></script>

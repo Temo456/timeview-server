@@ -152,8 +152,8 @@ window.TimeviewAssistantReady = (async function () {
   }
   let scriptTemplates = {"date": "{{来源}}{{日期}}，{{时间说明}}底部时间和画面已经一起更新了。", "dateObservation": "同一时刻，各地用不同的当地时间表达。请再看一眼北京、伦敦与纽约，日期有没有变化？", "report": "这一天，模型计算的月相是{{月相}}，照亮比例约百分之{{照亮比例}}。报告已经放在对话下面，你可以慢慢看，也可以留下这份记录。", "reportFailure": "这次报告没有准备好，我们先观察画面，不猜测具体结果。", "received": "收到你的想法，我们一起看看。", "noAnswer": "没关系，我们一起看。"};
 
-  function fillTemplate(text, values) {
-    const plan=window.TimeviewSpeech.plan(text,values),rendered=plan.map(segment=>segment.text).join('');
+  function fillTemplate(text, values, source) {
+    const plan=source?window.TimeviewSpeech.dynamicPlan(text,values,source):window.TimeviewSpeech.plan(text,values),rendered=plan.map(segment=>segment.text).join('');
     speechPlans.set(rendered,plan);
     if(speechPlans.size>24)speechPlans.delete(speechPlans.keys().next().value);
     return rendered;
@@ -172,7 +172,7 @@ window.TimeviewAssistantReady = (async function () {
     const chapterIndex=new Map(script.chapters.map((ch,i)=>[ch.id,i]));
     steps.splice(0,steps.length,...script.lines.map(line=>({
       id:line.id,ch:chapterIndex.get(line.chapter),type:line.type,who:line.role==='axing'?1:0,
-      text:line.text?.includes('{{城市时间}}')?()=>fillTemplate(line.text,{'城市时间':[['北京','Asia/Shanghai'],['伦敦','Europe/London'],['纽约','America/New_York']].map(([n,z])=>n+'是'+new Intl.DateTimeFormat('zh-CN',{timeZone:z,month:'long',day:'numeric',hour:'numeric',minute:'numeric',hour12:false}).format(new Date(scene().time()))).join('，')}):line.text,
+      text:line.text?.includes('{{城市时间}}')?()=>fillTemplate(line.text,{'城市时间':[['北京','Asia/Shanghai'],['伦敦','Europe/London'],['纽约','America/New_York']].map(([n,z])=>n+'是'+new Intl.DateTimeFormat('zh-CN',{timeZone:z,month:'long',day:'numeric',hour:'numeric',minute:'numeric',hour12:false}).format(new Date(scene().time()))).join('，')},{kind:'line',lineId:line.id}):line.text,
       answer:line.answer,choices:line.choices,fallback:line.fallback,birthday:line.birthday,
       scene:line.scene||'',action:line.scene?()=>applyScene(line.scene):null
     })));
@@ -228,10 +228,10 @@ window.TimeviewAssistantReady = (async function () {
   let activeSpeech=null;
   function cancelAudioRequests(){audioCache.clear();}
   // Each short utterance is both an audio segment and an exact highlight span.
-  function getAudio(parts,who){
+  function getAudio(parts,who,request){
     const k=who+':'+JSON.stringify(parts);
     if(!audioCache.has(k)){
-      const p=window.TimeviewAudio.audio(parts,roles[who].voice).catch(()=>{if(audioCache.get(k)===p)audioCache.delete(k);return null;});
+      const p=window.TimeviewAudio.audio(parts,roles[who].voice,request).catch(()=>{if(audioCache.get(k)===p)audioCache.delete(k);return null;});
       audioCache.set(k,p);if(audioCache.size>4)audioCache.delete(audioCache.keys().next().value);
     }
     return audioCache.get(k);
@@ -267,9 +267,9 @@ window.TimeviewAssistantReady = (async function () {
     if(muted){status((who?'阿星':'阿远')+'正在讲');await delay(Math.max(3200,text.length*190)/speechRate,gen);if(valid(gen))speech.complete=true;return;}
     for(let i=speech.next;i<chunks.length&&valid(gen)&&!speech.complete;i++){
       status('正在准备'+(who?'阿星':'阿远')+'的语音…');
-      // All bytes are local; prepare at most one following segment for playback.
-      const pending=getAudio(speech.plan[i].parts,who);
-      if(i+1<chunks.length)getAudio(speech.plan[i+1].parts,who);
+      // Selected dates use one complete utterance; static course clips are preloaded.
+      const pending=getAudio(speech.plan[i].parts,who,speech.plan[i].request);
+      if(i+1<chunks.length)getAudio(speech.plan[i+1].parts,who,speech.plan[i+1].request);
       const blob=await new Promise(resolve=>{
         let done=false;const end=value=>{if(done)return;done=true;if(cancel===abort)cancel=null;resolve(value);};
         const abort=()=>end(null);cancel=abort;pending.then(end);
@@ -313,8 +313,8 @@ window.TimeviewAssistantReady = (async function () {
     prompt.textContent=isDate?'选择公历日期；默认北京时间 12:00，仅作演示':'点选一个答案，也可以跳过继续听';
     status(isDate?'等你选择日期':'等你选择答案');
     return new Promise(resolve=>{
-      let timer,tick,deadline,done=false;
-      const end=value=>{if(done)return;done=true;clearTimeout(timer);clearInterval(tick);$('tvCountdown').hidden=true;area.replaceChildren();area.hidden=true;prompt.hidden=true;panel.classList.remove('replying');if(cancel===abort)cancel=null;resolve(value);};
+      let timer,tick,deadline,dateWarmup,done=false;
+      const end=value=>{if(done)return;done=true;clearTimeout(timer);clearTimeout(dateWarmup);clearInterval(tick);$('tvCountdown').hidden=true;area.replaceChildren();area.hidden=true;prompt.hidden=true;panel.classList.remove('replying');if(cancel===abort)cancel=null;resolve(value);};
       const abort=()=>end(null);cancel=abort;
       const draw=()=>{$('tvCountdown').textContent='剩余 '+Math.max(0,Math.ceil((deadline-Date.now())/1000))+' 秒，随后'+(isDate?'使用演示日期':'继续讲解');};
       const arm=seconds=>{clearTimeout(timer);deadline=Date.now()+seconds*1000;$('tvCountdown').hidden=false;draw();timer=setTimeout(()=>end(null),seconds*1000);};
@@ -331,11 +331,12 @@ window.TimeviewAssistantReady = (async function () {
         const select=(name,min,max)=>{const label=document.createElement('label'),el=document.createElement('select');el.setAttribute('aria-label',name);for(let n=min;n<=max;n++)el.add(new Option(String(n),String(n)));label.append(el,name);row.append(label);return el;};
         const year=select('年',1900,2100),month=select('月',1,12),day=select('日',1,31);
         const initial=step.fallback.split('-').map(Number);year.value=initial[0];month.value=initial[1];day.value=initial[2];
+        const selectedDate=()=>year.value+'-'+month.value.padStart(2,'0')+'-'+day.value.padStart(2,'0');
         const updateDays=()=>{const selected=Number(day.value),days=new Date(Date.UTC(Number(year.value),Number(month.value),0)).getUTCDate();day.replaceChildren();for(let n=1;n<=days;n++)day.add(new Option(String(n),String(n)));day.value=Math.min(selected,days);};
         updateDays();
-        for(const el of [year,month,day]){el.onfocus=()=>arm(replySettings.editingSeconds);el.onchange=()=>{updateDays();arm(replySettings.editingSeconds);};}
+        for(const el of [year,month,day]){el.onfocus=()=>arm(replySettings.editingSeconds);el.onchange=()=>{updateDays();arm(replySettings.editingSeconds);clearTimeout(dateWarmup);dateWarmup=setTimeout(()=>{const item=parseDate(selectedDate());if(item){window.TimeviewAudio.dateAudio(item).catch(()=>{});if(step.birthday)prepareReport(item);}},700);};}
         const submit=document.createElement('button');submit.type='submit';submit.className='reply-choice';submit.textContent='确认所选日期';form.append(submit);area.append(form);
-        form.onsubmit=e=>{e.preventDefault();const value=year.value+'-'+month.value.padStart(2,'0')+'-'+day.value.padStart(2,'0');if(parseDate(value))end(value);};
+        form.onsubmit=e=>{e.preventDefault();const value=selectedDate();if(parseDate(value))end(value);};
       }else{
         for(const label of step.choices)button(label,()=>end(label));
       }
@@ -355,25 +356,41 @@ window.TimeviewAssistantReady = (async function () {
     if(date<'1900-01-01'||date>'2100-12-31'||!Number.isFinite(ts)||new Date(ts+480*60000).toISOString().slice(0,10)!==date)return null;
     return {date,time,ts,defaultTime:!m[4]};
   }
+  const reportRequests=new Map();
+  function prepareReport(item){
+    if(reportRequests.has(item.ts))return reportRequests.get(item.ts);
+    const promise=(async()=>{
+      const response=await fetch('api/course-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts:item.ts}),signal:AbortSignal.timeout(15000)});
+      if(!response.ok)throw Error('报告暂不可用');
+      const data=await response.json();
+      window.TimeviewAudio.prepareDynamic({kind:'report'},{'月相':data.moonPhase,'照亮比例':data.moonIllum}).catch(()=>{});
+      return data;
+    })().catch(()=>{reportRequests.delete(item.ts);return null;});
+    reportRequests.set(item.ts,promise);if(reportRequests.size>8)reportRequests.delete(reportRequests.keys().next().value);
+    return promise;
+  }
   async function showDate(item,birthday,gen){
     currentDate=item;dateCursor=cursor;report=null;$('tvReport').hidden=true;
+    const preparedReport=birthday?prepareReport(item):null;
     scene().setTime(item.ts);
     if(view==='solar'){cleanSolar();layer('orbits',true);layer('labels',true);}
-    await speak(fillTemplate(scriptTemplates.date,{'来源':item.example?'我们用一个演示日期，':'你选择的是','日期':item.date,'时间说明':item.defaultTime?'以北京时间中午十二点作演示。':'采用北京时间'+item.time+'。'}),1,gen);
+    const dateSpeech=window.TimeviewSpeech.datePlan(scriptTemplates.date,item);
+    speechPlans.set(dateSpeech.text,[dateSpeech]);
+    if(speechPlans.size>24)speechPlans.delete(speechPlans.keys().next().value);
+    await speak(dateSpeech.text,1,gen);
     if(!valid(gen))return;
     if(!birthday){await speak(scriptTemplates.dateObservation,0,gen);return;}
     status('正在准备这一天的天象记录');
-    const response=await fetch('api/course-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts:item.ts}),signal:AbortSignal.timeout(15000)}).catch(()=>null);
+    const data=await preparedReport;
     if(!valid(gen))return;
-    if(!response||!response.ok){await speak(scriptTemplates.reportFailure,0,gen);return;}
-    const data=await response.json();if(!valid(gen))return;
+    if(!data){await speak(scriptTemplates.reportFailure,0,gen);return;}
     report={...item,data};
     if(view==='solar'){window.TimeviewCourseVisuals?.report({...data,date:item.date});scene().report?.();}
     const text=['生日当天的天文快照',item.date+' '+item.time+' 北京时间','月相：'+data.moonPhase+'　照亮约 '+data.moonIllum+'%','月龄约 '+data.moonAge+' 天',data.lunar,'节气：'+data.solarTerm,'星宿：'+(data.moonMansion||'二十八星宿')].join('\n');
     $('tvReport').textContent=text+'\n这份报告记录选定时刻的快照；画面时间继续运行。';$('tvReport').hidden=false;
     const download=document.createElement('a');download.href='#';download.textContent='留存这份天象记录 ↓';
     download.onclick=e=>{e.preventDefault();const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='天文快照-'+item.date+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};$('tvReport').append(download);
-    await speak(fillTemplate(scriptTemplates.report,{'月相':data.moonPhase,'照亮比例':data.moonIllum}),0,gen);
+    await speak(fillTemplate(scriptTemplates.report,{'月相':data.moonPhase,'照亮比例':data.moonIllum},{kind:'report'}),0,gen);
     await delay(6000,gen);
   }
   async function run(){

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>太阳系 · 九大行星</title>
 <style>
   :root { color-scheme: dark; }
@@ -134,20 +134,21 @@
     .bar-sep{display:none}
   }
 </style>
-<link rel="stylesheet" href="intro.css?v=4.1.0">
+<link rel="stylesheet" href="intro.css?v=4.1.3">
+<link rel="stylesheet" href="mobile.css?v=4.1.3">
 </head>
 <body>
 <div id="introOverlay" data-view="solar" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-beijing-v421.mp4" data-mobile-src="textures/intro-beijing-v421-mobile.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
-<script src="course-speech.js?v=4.1.0"></script>
-<script src="course-audio-client.js?v=4.1.0"></script>
-<script src="preload.js?v=4.1.0"></script>
-<script src="intro.js?v=4.1.0"></script>
+<script src="course-speech.js?v=4.1.3"></script>
+<script src="course-audio-client.js?v=4.1.3"></script>
+<script src="preload.js?v=4.1.3"></script>
+<script src="intro.js?v=4.1.3"></script>
 <div id="scene"></div>
 <div id="sceneLoading" role="status" style="position:fixed;inset:0;display:none;place-items:center;color:#b3cddd;font:14px sans-serif;pointer-events:none">正在准备太阳系…</div>
 
 <!-- 顶栏 -->
-<div style="position:fixed;top:0;left:0;right:0;z-index:20;padding:env(safe-area-inset-top) 12px 0;display:flex;align-items:center;height:44px;background:linear-gradient(180deg,rgba(5,8,15,.92),transparent);pointer-events:none">
-  <span style="font-size:16px;font-weight:800;color:#eaf6ff;text-shadow:0 0 12px rgba(95,214,240,.5)">时间景观 · 太阳系</span>
+<div class="topbar" style="position:fixed;top:0;left:0;right:0;z-index:20;padding:env(safe-area-inset-top) 12px 0;display:flex;align-items:center;height:44px;background:linear-gradient(180deg,rgba(5,8,15,.92),transparent);pointer-events:none">
+  <span class="brand" style="font-size:16px;font-weight:800;color:#eaf6ff;text-shadow:0 0 12px rgba(95,214,240,.5)">时间景观 · 太阳系</span>
   <div style="margin-left:auto;display:flex;gap:6px;align-items:center;pointer-events:auto">
     <button onclick="replayIntro()" style="font-size:11px;color:#5fd6f0;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px;background:transparent;cursor:pointer">🎬 开场</button>
     <a href="index.html?from=solar" style="font-size:11px;color:#5fd6f0;text-decoration:none;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px">🌍 地球</a>
@@ -1548,6 +1549,8 @@ function focusCourse(key, immediate=false) {
     if (innerWidth > 600 && cr.left > 240) right = Math.min(right, cr.left - 18);
     else if (innerWidth <= 600) top = Math.max(top, cr.bottom + 12);
   }
+  const mobile=window.TimeviewMobile?.sceneRect();
+  if(mobile)({left,right,top,bottom}=mobile);
   const width=Math.max(80,right-left),height=Math.max(80,bottom-top);
   const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
   const tan=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
@@ -1596,6 +1599,7 @@ function showCourseSeason(term){
   setPlanetPositions();focusCourse('earth');
 }
 window.addEventListener('resize',()=>{if(courseFocus&&!godMode)focusCourse(courseFocus);});
+window.addEventListener('timeview:mobile-layout',()=>{if(window.TimeviewMobile?.active()&&courseFocus&&!godMode)focusCourse(courseFocus);});
 function resetSolarView() {
   window.dispatchEvent(new Event('timeview:manual-view'));
   window.TimeviewCards.hide();window.TimeviewCourseVisuals?.hide();
@@ -1686,6 +1690,7 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <script src="three-body-model.js"></script>
+<script src="mobile.js"></script>
 <script src="card-layout.js"></script>
 <script src="course-visuals.js"></script>
 <script src="assistant.js"></script>

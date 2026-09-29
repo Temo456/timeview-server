@@ -14,6 +14,7 @@
   }
   function layout() {
     frame = 0;
+    if(window.TimeviewMobile?.layoutCards(selector)){window.TimeviewMobile.refresh();return;}
     const panel = document.querySelector('#tv-assist'); watch(panel);
     const toolbar=document.querySelector('.bottombar');watch(toolbar);
     if(panel&&toolbar) {
@@ -45,7 +46,7 @@
       for (const [key, value] of Object.entries(values)) if (card.style[key] !== value) card.style[key] = value;
       if (card.matches('#cardMask, #fortMask')) {
         if (card.style.background !== 'none') card.style.background = 'none';
-        const content = card.firstElementChild;
+        const content = card.querySelector('.card,.fort-card');
         content.style.width = '100%'; content.style.maxWidth = 'none'; content.style.maxHeight = 'none';
       }
     }

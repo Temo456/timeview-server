@@ -9,6 +9,7 @@ COPY vendor/ vendor/
 COPY three-body-model.js ./
 COPY favicon.svg favicon.ico ./
 COPY intro.js preload.js intro.css ./
+COPY mobile.js mobile.css ./
 COPY solar-gestures.js ./
 COPY calendar-events.js calendar-terms.js ./
 COPY sounds/ sounds/
