@@ -1,0 +1,128 @@
+:root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0a1225; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #scene { position: fixed; inset: 0; }
+  #scene canvas { touch-action: none; display: block; }
+
+  /* 底部工具条 */
+  .bottombar{position:fixed;left:8px;right:8px;bottom:8px;z-index:20;display:flex;align-items:center;gap:4px;padding:6px 10px;background:rgba(8,20,36,.88);border:1px solid rgba(95,214,240,.28);border-radius:24px;backdrop-filter:blur(10px);overflow-x:auto}
+  .bar-btn{font-size:12px;color:#7fa8c4;cursor:pointer;padding:5px 10px;border-radius:14px;white-space:nowrap;border:1px solid transparent;flex-shrink:0;background:none}
+  .bar-btn:active{background:rgba(95,214,240,.15)}
+  .bar-btn.on{color:#5fd6f0;border-color:rgba(95,214,240,.4)}
+  .bar-play{width:36px;height:36px;border-radius:50%;border:none;background:linear-gradient(135deg,#2aa9c8,#1c7fa0);color:#fff;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .bar-play:active{transform:scale(.92)}
+  .bar-date{flex:1;font-size:12px;font-weight:700;color:#eaf6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:60px;cursor:pointer;border-radius:12px;padding:4px 8px;background:rgba(95,214,240,.06)}
+  .bar-sep{width:1px;height:18px;background:rgba(95,214,240,.15);flex-shrink:0}
+  .bar-spd{font-size:11px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:14px;padding:5px 10px;background:rgba(10,24,42,.5);cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .spd-popup{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px}
+  .spd-popup .row{display:flex;gap:6px}
+  .spd-opt{padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;border:1px solid rgba(95,214,240,.3);background:rgba(10,24,42,.55);color:#dff0fb;cursor:pointer}
+  .spd-opt.on{background:linear-gradient(90deg,#5fd6f0,#2aa9c8);color:#04121c;border-color:transparent}
+
+  /* 图层选项 */
+  .layer-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:#7fa8c4;cursor:pointer;border-radius:8px;transition:background .15s}
+  .layer-opt:hover{background:rgba(95,214,240,.1)}
+  .layer-opt.on{color:#5fd6f0}
+  .layer-opt::before{content:'';display:inline-block;width:14px;height:14px;border-radius:3px;border:1.5px solid rgba(95,214,240,.4);flex-shrink:0}
+  .layer-opt.on::before{background:#5fd6f0;border-color:#5fd6f0}
+
+  /* 日期选择器 */
+  .dp-tab{flex:1;text-align:center;padding:10px;font-size:13px;font-weight:600;color:#6a8ea8;cursor:pointer;border-bottom:2px solid transparent}
+  .dp-tab.active{color:#5fd6f0;border-bottom-color:#5fd6f0}
+  .dp-nav{width:32px;height:32px;border-radius:50%;border:1px solid rgba(95,214,240,.3);color:#5fd6f0;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(10,24,42,.5)}
+  .dp-cell{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#bfe4f5;cursor:pointer}
+  .dp-cell:hover{background:rgba(95,214,240,.12)}
+  .dp-cell.today{border:1px solid #5fd6f0;color:#5fd6f0}
+  .dp-cell.selected{background:linear-gradient(135deg,#5fd6f0,#2aa9c8);color:#04121c;font-weight:700}
+  .dp-cell.other{color:#3a5a70}
+  .dp-cell.head{color:#5a7a94;font-size:11px;font-weight:600;cursor:default}
+  .dp-select{flex:1;font-size:12px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:5px;background:rgba(10,24,42,.6)}
+  .dp-btn{flex:1;text-align:center;padding:12px;font-size:13px;font-weight:600;cursor:pointer}
+
+  /* 行星标签（HTML overlay：星球头顶文字） */
+  #labelsLayer, #skyLabelsLayer, #termLabelsLayer { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  .plabel {
+    position: absolute; left:0; top:0; text-align: center;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    transform: translate(-50%, -100%);
+    white-space: nowrap; transition: opacity .2s;
+  }
+  .plabel .name {
+    font-size: 11px; color: rgba(220,235,255,0.9); letter-spacing: .3px;
+    text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.7);
+  }
+
+  /* 行星信息卡片 */
+  .term-label .name { color: #aabfc4; }
+  .term-label.active .name { color: #ffdb85; font-weight: 700; text-shadow: 0 0 8px #b87e30; }
+  #planetCard {
+    position: fixed; z-index: 20; display: none;
+    background: rgba(16, 28, 50, 0.88);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(140, 180, 240, 0.3);
+    border-radius: 16px; padding: 18px 20px;
+    width: 320px; color: #e0ecff;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    pointer-events: auto;
+  }
+  #planetCard .card-close {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none; color: #7fa8cc;
+    font-size: 18px; cursor: pointer; line-height: 1;
+  }
+  #planetCard .card-close:hover { color: #fff; }
+  #planetCard .card-name { font-size: 20px; font-weight: 700; color: #f0f6ff; margin-bottom: 2px; }
+  #planetCard .card-en { font-size: 12px; color: #7fa8cc; margin-bottom: 10px; }
+  #planetCard .card-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+    margin-bottom: 10px;
+  }
+  #planetCard .card-grid dt { font-size: 11px; color: #7fa8cc; }
+  #planetCard .card-grid dd { font-size: 13px; color: #e0ecff; margin: 0; }
+  #planetCard .card-desc { font-size: 12.5px; color: #b8d0e8; line-height: 1.6; }
+  #planetCard.course-card {
+    left: 18px; right: auto; top: 68px; bottom: auto;
+    width: var(--course-card-width, 320px);
+    max-height: var(--course-card-height, calc(100vh - 144px));
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  @media(max-width:600px) { #planetCard.course-card { left: 10px; top: 58px; } }
+
+  /* 三体信息卡 */
+  #threeBodyCard {
+    position: fixed; z-index: 20; display: none;
+    background: rgba(16, 28, 50, 0.92);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 100, 80, 0.5);
+    border-radius: 16px; padding: 18px 20px;
+    width: 340px; max-height: 70vh; overflow-y: auto;
+    color: #e0ecff;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    pointer-events: auto;
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+  }
+  #threeBodyCard .tb-title { font-size: 20px; font-weight: 700; color: #ffb088; margin-bottom: 6px; }
+  #threeBodyCard .tb-sub { font-size: 12px; color: #cc8866; margin-bottom: 12px; }
+  #threeBodyCard .tb-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+    margin-bottom: 12px;
+  }
+  #threeBodyCard .tb-grid dt { font-size: 11px; color: #cc8866; }
+  #threeBodyCard .tb-grid dd { font-size: 13px; color: #e0ecff; margin: 0; }
+  #threeBodyCard .tb-desc { font-size: 12.5px; color: #d4b8a8; line-height: 1.8; }
+  #threeBodyCard .tb-close {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none; color: #cc8866;
+    font-size: 20px; cursor: pointer; line-height: 1;
+  }
+  #threeBodyCard .tb-close:hover { color: #fff; }
+  /* 手机竖屏：底部工具条换行显示，日期占首行，其余按钮自动换行，避免横向滚动 */
+  @media(max-width:640px){
+    .bottombar{flex-wrap:wrap;overflow-x:hidden;gap:5px}
+    .bar-date{order:-1;flex-basis:100%;min-width:0}
+    .bar-sep{display:none}
+  }

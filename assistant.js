@@ -3,7 +3,9 @@ window.TimeviewAssistantReady = (async function () {
   'use strict';
   // 屏保只展示实时表盘，不运行隐藏的课程或自动切换日期。
   if (document.body.classList.contains('scrsv') || new URLSearchParams(location.search).get('scrsv') === '1') return;
-  const view = window.TIMEVIEW === 'solar' ? 'solar' : 'earth', $ = id => document.getElementById(id);
+  let view = window.TIMEVIEW === 'solar' ? 'solar' : 'earth';
+  const $ = id => document.getElementById(id);
+  window.addEventListener('timeview:view-changed',event=>{view=event.detail.view;});
   const previewMode = new URLSearchParams(location.search).get('preview') === '1';
   const requestedCourse = previewMode ? new URLSearchParams(location.search).get('course') : null;
   let courseId = requestedCourse && /^[-a-z0-9]{2,48}$/.test(requestedCourse) ? requestedCourse : 'cosmos-basics';
@@ -221,6 +223,7 @@ window.TimeviewAssistantReady = (async function () {
     const timer=setTimeout(end,ms);cancel=end;
   });}
   window.addEventListener('timeview:manual-view',()=>{
+    lastChapter=-1;
     if(running)pause('已暂停讲解，可自由观察；继续听会回到课程画面');
   });
   const audioCache=new Map();
@@ -402,7 +405,7 @@ window.TimeviewAssistantReady = (async function () {
       while(valid(gen)&&cursor<steps.length){
         const s=steps[cursor], target=chapters[s.ch][2];
         if(lastChapter!==-1&&lastChapter!==s.ch)finishDateScene();
-        if(target!==view){navigating=true;persist(true);location.href=(target==='earth'?'app':'solar-system.html')+'?t='+Math.round(scene().time())+courseQuery;return;}
+        if(target!==view){status('切换观察视角');await window.TimeviewViews.switchTo(target,{source:'course',isCurrent:()=>valid(gen)});if(!valid(gen))return;}
         if(!window.TimeviewCourse){status('等画面准备好');await delay(500,gen);continue;}
         if(window.introActive||($('introOverlay')&&$('introOverlay').offsetHeight)) {status('先一起看开场');await delay(500,gen);continue;}
         // Derive retained axes from the script, including direct chapter jumps and reloads.
@@ -447,7 +450,7 @@ window.TimeviewAssistantReady = (async function () {
   $('tvStage').onchange=()=>{pause();finishDateScene();resumeAfterIntro=false;const ch=+$('tvStage').value;cursor=steps.findIndex(s=>s.ch===ch);spokenThisStep.clear();lastChapter=-1;report=null;$('tvReport').hidden=true;$('tvLog').replaceChildren();window.TimeviewCourseVisuals?.hide();updateStage(ch);persist(true);run();};
   fab.onclick=()=>open();
   $('tvClose').onclick=()=>{closed=true;resumeAfterIntro=false;pause();panel.classList.remove('on');fab.classList.remove('hide');persist(false);fab.focus();};
-  $('tvPlay').onclick=()=>{resumeAfterIntro=false;if(running)pause();else{if(cursor>=steps.length){cursor=0;spokenThisStep.clear();if(view==='solar'&&chapters[0][2]==='earth'){navigating=true;persist(true);location.href='app?t='+Math.round(scene().time())+courseQuery;return;}}run();}};
+  $('tvPlay').onclick=()=>{resumeAfterIntro=false;if(running)pause();else{if(cursor>=steps.length){cursor=0;spokenThisStep.clear();lastChapter=-1;}run();}};
   $('tvMute').onclick=()=>{muted=!muted;$('tvMute').textContent=muted?'声音关':'声音开';const resume=running;pause();if(resume)run();else persist(false);};
   for(const rate of speechRates)$('tvRate').add(new Option(rate.toFixed(2).replace(/0$/, '')+' 倍'+(rate===0.85?'（推荐）':''),String(rate)));
   $('tvRate').value=String(speechRate);

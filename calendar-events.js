@@ -32,11 +32,11 @@
     for(const event of info.events){const label=document.createElement('span');label.className='dp-annotation '+event.kind;label.textContent=event.name;el.append(label);}
     if(!info.events.length){const label=document.createElement('span');label.className='dp-annotation lunar';label.textContent=info.dayLabel;el.append(label);}
   }
-  function selection(y,m,d){document.getElementById('dpEvents').textContent=dayInfo(y,m,d).label;}
+  function selection(y,m,d,scope=document){scope.getElementById('dpEvents').textContent=dayInfo(y,m,d).label;}
   // Both views edit the same civil-date draft; changing lunar fields never applies it.
-  function lunarPicker(getDate,setDate){
+  function lunarPicker(getDate,setDate,scope=document){
     const L=lunar||root.TimeviewLunar;
-    const year=document.getElementById('lunarYear'),month=document.getElementById('lunarMonth'),day=document.getElementById('lunarDay'),hour=document.getElementById('lunarHour'),info=document.getElementById('lunarInfo');
+    const year=scope.getElementById('lunarYear'),month=scope.getElementById('lunarMonth'),day=scope.getElementById('lunarDay'),hour=scope.getElementById('lunarHour'),info=scope.getElementById('lunarInfo');
     for(let y=1900;y<=2100;y++)year.add(new Option(y+'年',y));
     '子 丑 寅 卯 辰 巳 午 未 申 酉 戌 亥'.split(' ').forEach((name,i)=>hour.add(new Option(name+'时（'+((i*2+23)%24)+'–'+(i*2+1)+'点）',i)));
     const selectedMonth=()=>L.lunarMonths(Number(year.value)).find(m=>m.m===Math.abs(Number(month.value))&&m.isLeap===(Number(month.value)<0));
@@ -53,13 +53,13 @@
       if(!date)return;setDate(date.y,date.m,date.d);info.textContent='对应公历：'+dayInfo(date.y,date.m,date.d).label;
     }
     year.onchange=()=>{monthsForYear();update()};month.onchange=()=>{days();update()};day.onchange=update;
-    hour.onchange=()=>{document.getElementById('dpTime').value=String(Number(hour.value)*2).padStart(2,'0')+':00:00'};
+    hour.onchange=()=>{scope.getElementById('dpTime').value=String(Number(hour.value)*2).padStart(2,'0')+':00:00'};
     return ()=>{
       const date=getDate(),r=L.solarToLunar(date.y,date.m,date.d);
       for(const el of [year,month,day,hour])el.disabled=!r;
       if(!r){info.textContent='该日期超出农历选择范围，请使用公历。';return;}
       year.value=r.year;monthsForYear(r.isLeap?-r.month:r.month);days(r.day);
-      const h=Number(document.getElementById('dpTime').value.split(':')[0]);hour.value=Math.floor((h+1)%24/2);
+      const h=Number(scope.getElementById('dpTime').value.split(':')[0]);hour.value=Math.floor((h+1)%24/2);
       info.textContent='对应公历：'+dayInfo(date.y,date.m,date.d).label;
     };
   }

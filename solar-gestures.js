@@ -2,7 +2,8 @@
 (function (root) {
   'use strict';
   root.createSolarGestures=function(canvas,actions,overlays=[]){
-    const points=new Map();
+    const points=new Map(),listeners=new AbortController();
+    const listen=(target,type,handler,options)=>target.addEventListener(type,handler,{...(typeof options==='boolean'?{capture:options}:options),signal:listeners.signal});
     let previous=[],mode='rotate',moved=false,multi=false,announced=false;
     let origin=null,lastAt=0,lastMove=0,blockClickUntil=0,wheel=null;
     const snapshot=()=>Array.from(points.values(),p=>({...p}));
@@ -41,8 +42,8 @@
       actions.topology(points.size);rebase();
       try{canvas.setPointerCapture(p.id);}catch(_){}
     }
-    for(const surface of [canvas,...overlays])surface.addEventListener('pointerdown',start);
-    document.addEventListener('pointermove',e=>{
+    for(const surface of [canvas,...overlays])listen(surface,'pointerdown',start);
+    listen(document,'pointermove',e=>{
       const p=points.get(e.pointerId);if(!p)return;
       p.x=e.clientX;p.y=e.clientY;
     },true);
@@ -67,18 +68,18 @@
       blockClickUntil=performance.now()+400;actions.end(false,mode);
       for(const id of ids)try{if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);}catch(_){}
     }
-    document.addEventListener('pointerup',e=>finish(e,false),true);
-    document.addEventListener('pointercancel',e=>finish(e,true),true);
-    canvas.addEventListener('lostpointercapture',e=>{if(points.has(e.pointerId))cancel();});
-    for(const surface of [canvas,...overlays])surface.addEventListener('click',e=>{if(e.isTrusted&&performance.now()<blockClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
-    canvas.addEventListener('contextmenu',e=>e.preventDefault());
-    canvas.addEventListener('wheel',e=>{
+    listen(document,'pointerup',e=>finish(e,false),true);
+    listen(document,'pointercancel',e=>finish(e,true),true);
+    listen(canvas,'lostpointercapture',e=>{if(points.has(e.pointerId))cancel();});
+    for(const surface of [canvas,...overlays])listen(surface,'click',e=>{if(e.isTrusted&&performance.now()<blockClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+    listen(canvas,'contextmenu',e=>e.preventDefault());
+    listen(canvas,'wheel',e=>{
       e.preventDefault();if(points.size)return;
       if(!wheel){actions.begin({x:e.clientX,y:e.clientY,type:'wheel'});actions.interact();wheel={x:e.clientX,y:e.clientY,delta:0};}
       wheel.delta+=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1)*.0015;
     },{passive:false});
-    window.addEventListener('blur',cancel);
-    document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel();});
-    return {update,cancel,get active(){return points.size>0;}};
+    listen(window,'blur',cancel);
+    listen(document,'visibilitychange',()=>{if(document.hidden)cancel();});
+    return {update,cancel,dispose(){cancel();listeners.abort();},get active(){return points.size>0;}};
   };
 })(globalThis);

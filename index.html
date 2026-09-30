@@ -7,145 +7,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05080f">
 <title>时间景观</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{width:100%;height:100%;overflow:hidden;background:#05080f;font-family:-apple-system,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;color:#c8daf0;-webkit-font-smoothing:antialiased}
+<link id="earthViewStyle" rel="stylesheet" href="earth-view.css?v=4.2.6">
+<link id="solarViewStyle" rel="stylesheet" href="solar-view.css?v=4.2.6" media="not all">
+<link rel="stylesheet" href="intro.css?v=4.2.6">
+<link rel="stylesheet" href="mobile.css?v=4.2.6">
+<link rel="stylesheet" href="views.css?v=4.2.6">
+</head><body>
 
-/* ===== 底图 ===== */
-#cv{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
-#gl{position:fixed;inset:0;width:100%;height:100%;z-index:0;opacity:0;pointer-events:none;transition:opacity .4s}
-#gl.show{opacity:1;pointer-events:none}
-
-/* ===== 顶部栏 ===== */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:20;padding:env(safe-area-inset-top) 12px 0;display:flex;align-items:center;height:44px;background:linear-gradient(180deg,rgba(5,8,15,.92),transparent);pointer-events:none}
-.topbar>*{pointer-events:auto}
-.brand{font-size:16px;font-weight:800;color:#eaf6ff;text-shadow:0 0 12px rgba(95,214,240,.5)}
-.brand sub{font-size:9px;color:#5fd6f0;margin-left:4px;letter-spacing:1px;vertical-align:baseline}
-.view-seg{display:flex;margin-left:auto;gap:2px}
-.view-seg button{background:rgba(95,214,240,.08);border:1px solid rgba(95,214,240,.25);color:#6a8ea8;font-size:11px;padding:3px 10px;border-radius:12px;cursor:pointer;font-weight:600}
-.view-seg button.on{background:linear-gradient(135deg,#5fd6f0,#2aa9c8);color:#04121c;border-color:transparent}
-.menu-btn{width:32px;height:32px;border:1px solid rgba(95,214,240,.3);border-radius:4px;background:rgba(8,20,36,.7);color:#5fd6f0;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:8px}
-
-/* ===== 地球信息条 ===== */
-.einfo{position:fixed;top:44px;left:12px;z-index:15;pointer-events:none;display:flex;flex-direction:column;gap:2px}
-.einfo .ei2{font-size:11px;color:#ffd24a;text-shadow:0 0 6px rgba(0,0,0,.8)}
-
-/* ===== 底部浮动操作栏 ===== */
-.bottombar{position:fixed;left:8px;right:8px;bottom:8px;z-index:20;display:flex;align-items:center;gap:4px;padding:6px 10px;background:rgba(8,20,36,.88);border:1px solid rgba(95,214,240,.28);border-radius:24px;backdrop-filter:blur(10px);overflow-x:auto}
-.bar-btn{font-size:12px;color:#7fa8c4;cursor:pointer;padding:5px 10px;border-radius:14px;white-space:nowrap;border:1px solid transparent;flex-shrink:0}
-.bar-btn:active{background:rgba(95,214,240,.15)}
-.bar-play{width:36px;height:36px;border-radius:50%;border:none;background:linear-gradient(135deg,#2aa9c8,#1c7fa0);color:#fff;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.bar-play:active{transform:scale(.92)}
-.bar-earth{color:#5fd6f0;font-weight:600;text-decoration:none;border:1px solid rgba(95,214,240,.4);border-radius:14px}
-.bar-sep{width:1px;height:18px;background:rgba(95,214,240,.15);flex-shrink:0}
-.bar-date{flex:1;font-size:12px;font-weight:700;color:#eaf6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:60px;cursor:pointer;border-radius:12px;padding:4px 8px;background:rgba(95,214,240,.06)}
-.bar-spd{font-size:11px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:14px;padding:5px 10px;background:rgba(10,24,42,.5);cursor:pointer;white-space:nowrap;flex-shrink:0}
-.bar-feat{height:28px;border-radius:14px;border:1px solid rgba(95,214,240,.25);background:rgba(10,24,42,.45);color:#7fa8c4;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0 8px;white-space:nowrap;gap:2px}
-.bar-feat:active{background:rgba(95,214,240,.18);color:#5fd6f0}
-.spd-popup{display:none;position:fixed;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px;max-width:90vw}
-.spd-popup .row{display:flex;gap:6px}
-.spd-opt{padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;border:1px solid rgba(95,214,240,.3);background:rgba(10,24,42,.55);color:#dff0fb;cursor:pointer}
-.spd-opt.on{background:linear-gradient(90deg,#5fd6f0,#2aa9c8);color:#04121c;border-color:transparent}
-.tz-opt{padding:8px 14px;border-radius:8px;font-size:12px;color:#bfe4f5;cursor:pointer;border:1px solid transparent}
-.tz-opt:hover,.tz-opt.on{background:rgba(95,214,240,.12);border-color:rgba(95,214,240,.3);color:#5fd6f0}
-.dp-lunar{font-size:9px;color:rgba(255,210,74,.7);margin-top:1px}
-/* 日期选择器 */
-.dp-tab{flex:1;text-align:center;padding:10px;font-size:13px;font-weight:600;color:#6a8ea8;cursor:pointer;border-bottom:2px solid transparent}
-.dp-tab.active{color:#5fd6f0;border-bottom-color:#5fd6f0}
-.dp-nav{width:32px;height:32px;border-radius:50%;border:1px solid rgba(95,214,240,.3);color:#5fd6f0;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(10,24,42,.5)}
-.dp-cell{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#bfe4f5;cursor:pointer}
-.dp-cell:hover{background:rgba(95,214,240,.12)}
-.dp-cell.today{border:1px solid #5fd6f0;color:#5fd6f0}
-.dp-cell.selected{background:linear-gradient(135deg,#5fd6f0,#2aa9c8);color:#04121c;font-weight:700}
-.dp-cell.other{color:#3a5a70}
-.dp-cell.head{color:#5a7a94;font-size:11px;font-weight:600;cursor:default}
-.dp-select{flex:1;font-size:12px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:5px;background:rgba(10,24,42,.6)}
-.dp-btn{flex:1;text-align:center;padding:12px;font-size:13px;font-weight:600;cursor:pointer}
-.spds{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
-
-
-/* ===== 信息卡弹窗 ===== */
-.card-mask{position:fixed;inset:0;z-index:50;background:rgba(2,5,12,.5);display:flex;align-items:center;justify-content:center}
-.card{width:78vw;max-width:320px;border-radius:8px;padding:14px 16px;background:rgba(8,20,36,.95);border:1px solid rgba(95,214,240,.7);box-shadow:0 12px 40px rgba(0,0,0,.6)}
-.card .hdr{display:flex;align-items:center;margin-bottom:8px}
-.card .hdr .bar{width:3px;height:16px;background:#5fd6f0;box-shadow:0 0 8px #5fd6f0;border-radius:2px;margin-right:8px}
-.card .hdr .bar.gold{background:#f5c451;box-shadow:0 0 8px #f5c451}
-.card .hdr .title{font-size:17px;font-weight:800;color:#fff;flex:1}
-.card .hdr .close{color:#7fa8c4;font-size:20px;cursor:pointer;padding:0 4px}
-.card .row{display:flex;justify-content:space-between;font-size:12.5px;color:#7fa8c4;padding:4px 0;border-bottom:1px solid rgba(95,214,240,.08)}
-.card .row .val{color:#dff0fb}
-.card .note{margin-top:8px;font-size:12px;color:#cfe4f2;line-height:1.6;background:rgba(95,214,240,.06);border:1px solid rgba(95,214,240,.18);border-radius:4px;padding:8px}
-
-/* ===== 操作引导 ===== */
-.guide-overlay{position:fixed;inset:0;z-index:60;background:rgba(2,6,16,.72)}
-.guide-hl{position:fixed;z-index:61;border:2px solid rgba(95,214,240,.85);border-radius:12px;box-shadow:0 0 24px rgba(95,214,240,.45);pointer-events:none;animation:gpulse 2s ease-in-out infinite}
-@keyframes gpulse{0%,100%{box-shadow:0 0 24px rgba(95,214,240,.45)}50%{box-shadow:0 0 32px rgba(95,214,240,.65)}}
-.guide-hl-dial{left:50%;top:36%;width:56vw;height:56vw;max-width:280px;max-height:280px;transform:translate(-50%,-50%);border-radius:50%}
-.guide-card{position:fixed;left:50%;transform:translateX(-50%);z-index:62;width:280px;background:rgba(8,20,36,.96);border:1px solid rgba(95,214,240,.65);border-radius:10px;padding:16px 18px 12px}
-.guide-card .title{font-size:17px;font-weight:800;color:#eaf6ff;margin-bottom:8px}
-.guide-card .desc{font-size:13px;line-height:1.75;color:#bfe4f5;white-space:pre-line}
-.guide-card .row{display:flex;align-items:center;margin-top:14px}
-.guide-card .skip{font-size:12px;color:#6a8ea8;cursor:pointer}
-.guide-card .dots{flex:1;display:flex;justify-content:center;gap:6px}
-.guide-card .dot{width:6px;height:6px;border-radius:50%;background:rgba(95,214,240,.25)}
-.guide-card .dot.on{background:#5fd6f0;box-shadow:0 0 6px rgba(95,214,240,.7)}
-.guide-card .nav{display:flex;align-items:center;gap:8px}
-.guide-card .prev{font-size:12px;color:#7fa8c4;cursor:pointer}
-.guide-card .next{font-size:13px;font-weight:700;color:#04121c;background:linear-gradient(90deg,#5fd6f0,#2aa9c8);padding:6px 14px;border-radius:14px;cursor:pointer}
-
-/* ===== 命理/历法报告 ===== */
-.fort-mask{position:fixed;inset:0;z-index:50;background:rgba(2,5,12,.5);display:flex;align-items:center;justify-content:center}
-.fort-card{width:85vw;max-width:400px;max-height:78vh;border-radius:10px;padding:14px 16px;background:rgba(8,20,36,.95);border:1px solid rgba(180,140,230,.6);display:flex;flex-direction:column}
-.fort-card .hdr{display:flex;align-items:center;margin-bottom:8px}
-.fort-card .hdr .bar{width:3px;height:16px;background:#f5c451;border-radius:2px;margin-right:8px}
-.fort-card .hdr .title{font-size:17px;font-weight:800;color:#fff;flex:1}
-.fort-card .hdr .close{color:#7fa8c4;font-size:20px;cursor:pointer}
-.fort-body{flex:1;overflow-y:auto;margin-top:6px}
-.fort-text{font-size:13px;line-height:1.85;color:#d8e8f6;white-space:pre-wrap;word-break:break-word}
-.fort-loading{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:55;display:flex;flex-direction:column;align-items:center;gap:14px}
-.fort-spin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(180,140,230,.2);border-top-color:#b48ce6;animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.fort-ltxt{font-size:14px;color:#d4a0ff;letter-spacing:3px}
-
-/* ===== 星空旅行 HUD ===== */
-.voy-hud{position:fixed;inset:0;z-index:10;pointer-events:none}
-.voy-hud>*{pointer-events:auto}
-.voy-top{position:absolute;top:env(safe-area-inset-top);left:14px;display:flex;align-items:center;gap:9px}
-.voy-ava{width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(120,230,255,.7);background:rgba(8,24,44,.6);display:flex;align-items:center;justify-content:center;font-size:20px}
-.voy-meta .nick{font-size:14px;font-weight:800;color:#eaf9ff;text-shadow:0 0 10px rgba(95,214,240,.6);letter-spacing:1px}
-.voy-meta .mis{font-size:11px;color:#7fe6ff;letter-spacing:1px}
-.voy-dest{position:absolute;top:calc(env(safe-area-inset-top) + 44px);left:14px;padding:5px 12px;border-radius:16px;font-size:12px;color:#bfeeff;border:1px solid rgba(120,230,255,.45);background:rgba(8,22,40,.55);cursor:pointer}
-.voy-pass{position:absolute;top:calc(env(safe-area-inset-top) + 80px);left:0;right:0;text-align:center}
-.voy-pass .lab{font-size:10px;color:#6fd0ee;letter-spacing:3px}
-.voy-pass .txt{font-size:13px;font-weight:700;color:#d8f6ff;text-shadow:0 0 10px rgba(95,214,240,.6);margin-top:2px}
-.voy-stat{position:absolute;bottom:calc(90px + env(safe-area-inset-bottom));pointer-events:none}
-.voy-stat .lab{font-size:10px;color:#6fd0ee;letter-spacing:2px}
-.voy-stat .val{font-size:18px;font-weight:800;color:#d8f6ff;text-shadow:0 0 12px rgba(95,214,240,.7)}
-.voy-stat.sl{left:16px;text-align:left}
-.voy-stat.sr{right:16px;text-align:right}
-.voy-stat.sc{left:0;right:0;text-align:center}
-.voy-ctrl{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:center;gap:14px}
-.voy-btn{min-width:76px;text-align:center;padding:11px 0;border-radius:26px;color:#bfeeff;font-size:14px;font-weight:700;letter-spacing:3px;border:1px solid rgba(120,230,255,.5);background:rgba(8,24,46,.5);cursor:pointer}
-.voy-btn.cr{min-width:92px;background:linear-gradient(180deg,#aef0ff,#4fc8ee);color:#051322;border-color:#aef0ff}
-.voy-exit{position:absolute;top:calc(env(safe-area-inset-top) + 6px);right:14px;width:32px;height:32px;border-radius:50%;border:1px solid rgba(120,230,255,.45);background:rgba(8,22,40,.5);color:#bfecff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.voy-destpicker{position:absolute;top:calc(env(safe-area-inset-top) + 52px);left:14px;padding:5px 12px;border-radius:16px;font-size:12px;color:#bfeeff;border:1px solid rgba(120,230,255,.45);background:rgba(8,22,40,.55);cursor:pointer}
-.voy-labels{position:absolute;inset:0;pointer-events:none}
-.voy-label{position:absolute;transform:translate(-50%,-150%);font-size:11px;color:#cdeeff;white-space:nowrap;padding:1px 6px;border-radius:8px;background:rgba(6,16,32,.5);border:1px solid rgba(120,230,255,.28)}
-/* 屏保模式：?scrsv=1 时隐藏 UI 装饰，只留地球表盘 */
-body.scrsv .topbar,body.scrsv .einfo,body.scrsv .bottombar,body.scrsv #tv-fab,body.scrsv #tv-assist,body.scrsv #guideOverlay,body.scrsv #guideCard{display:none!important}
-/* 手机竖屏：底部工具条换行显示，日期占首行，其余按钮自动换行，避免横向滚动 */
-@media(max-width:640px){
-  .bottombar{flex-wrap:wrap;overflow-x:hidden;gap:5px}
-  .bar-date{order:-1;flex-basis:100%;min-width:0}
-  .bar-sep{display:none}
-}
-/* 金色丝线皮肤：界面文字压成白色（画布里的表盘已直接改色，这里只处理 HTML 界面元素） */
-body.golden-skin > *:not(#cv):not(#gl){filter:grayscale(1) contrast(1.5)}
-</style>
-<link rel="stylesheet" href="intro.css?v=4.1.3">
-<link rel="stylesheet" href="mobile.css?v=4.1.3">
-</head>
-<body>
 <div id="introOverlay" data-view="earth" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-beijing-v421.mp4" data-mobile-src="textures/intro-beijing-v421-mobile.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
 <script>
 // Check for SW updates even when the app is opened directly.
@@ -154,23 +22,28 @@ if ('serviceWorker' in navigator) {
     .then(function (registration) { return registration.update(); }).catch(function () {});
 }
 </script>
-<script src="course-speech.js?v=4.1.3"></script>
-<script src="course-audio-client.js?v=4.1.3"></script>
-<script src="preload.js?v=4.1.3"></script>
-<script src="intro.js?v=4.1.3"></script>
+<script src="course-speech.js?v=4.2.6"></script>
+<script src="course-audio-client.js?v=4.2.6"></script>
+<script src="preload.js?v=4.2.6"></script>
+<script src="intro.js?v=4.2.6"></script>
 <script>if(/[?&]scrsv=1/.test(location.search))document.body.classList.add('scrsv');</script>
 
-<!-- 2D 画布（地球表盘） -->
+<main id="viewHost" aria-label="时间景观"></main>
+<div id="viewStatus" role="status" aria-live="polite" hidden></div>
+<template id="earthTemplate"><section class="view-root" data-view="earth" aria-label="地球视角">
 <canvas id="cv"></canvas>
 <canvas id="gl"></canvas>
 <div id="earthLoading" style="display:none;position:fixed;top:52px;right:12px;z-index:25;font-size:12px;color:#9ab8dc;padding:3px 10px;background:rgba(8,20,36,.65);border-radius:10px;pointer-events:none">地球界面正在加载中…</div>
 
 <!-- 顶部栏 -->
 <div class="topbar" id="topbar">
-  <span class="brand">时间景观</span>
+  <div class="brand-lockup">
+    <span class="brand">时间景观</span>
+    <span class="brand-tagline">观乎天文，以察时变</span>
+  </div>
   <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
     <button onclick="replayIntro()" style="font-size:11px;color:#5fd6f0;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px;background:transparent;cursor:pointer">🎬 开场</button>
-    <a href="solar-system.html" style="font-size:11px;color:#5fd6f0;text-decoration:none;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px">☀ 太阳系</a>
+    <a href="app?view=solar" data-view-target="solar" aria-label="切换到太阳系视角" style="font-size:11px;color:#5fd6f0;text-decoration:none;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px">☀ 太阳系</a>
   </div>
 </div>
 
@@ -181,7 +54,7 @@ if ('serviceWorker' in navigator) {
 
 <!-- 底部浮动操作栏 -->
 <div class="bottombar" id="bottombar">
-  <a href="solar-system.html?from=earth" class="bar-btn bar-earth">☀ 太阳系</a>
+  <a href="app?view=solar" data-view-target="solar" aria-label="切换到太阳系视角" class="bar-btn bar-earth">☀ 太阳系</a>
   <div class="bar-date" id="dateText"></div>
   <div class="bar-btn" id="tzBtn">🕓 UTC+8</div>
   <div class="bar-sep"></div>
@@ -228,14 +101,14 @@ if ('serviceWorker' in navigator) {
 <!-- 日期选择器弹窗 -->
 <div id="datePicker" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:30;background:rgba(8,20,36,.97);border:1px solid rgba(95,214,240,.5);border-radius:16px;padding:0;width:min(340px,92vw);box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden">
   <div style="display:flex;border-bottom:1px solid rgba(95,214,240,.15)">
-    <div id="tabSolar" class="dp-tab active" onclick="switchCalTab('solar')">公历</div>
-    <div id="tabLunar" class="dp-tab" onclick="switchCalTab('lunar')">农历</div>
+    <div id="tabSolar" class="dp-tab active">公历</div>
+    <div id="tabLunar" class="dp-tab">农历</div>
   </div>
   <div id="solarPanel" style="padding:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="dp-nav" onclick="dpNav(-1)">‹</div>
+      <div id="dpPrev" class="dp-nav">‹</div>
       <div style="display:flex;gap:6px;align-items:center"><input type="number" id="dpYear" style="font-size:13px;color:#eaf6ff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:3px 6px;width:96px" title="年份（公元前用负数，如 -500）"><span id="dpTitle" style="font-size:15px;font-weight:700;color:#eaf6ff"></span></div>
-      <div class="dp-nav" onclick="dpNav(1)">›</div>
+      <div id="dpNext" class="dp-nav">›</div>
     </div>
     <div id="dpGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center"></div>
     <div class="dp-legend"><span class="term">● 节气</span><span class="festival">● 节日</span><span>按北京时间日期</span></div>
@@ -262,7 +135,7 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <!-- 过场动画 -->
-<canvas id="transCanvas" style="position:fixed;inset:0;z-index:100;pointer-events:none;display:none"></canvas>
+
 
 <!-- 信息卡 -->
 <div class="card-mask" id="cardMask" style="display:none">
@@ -320,1217 +193,153 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <!-- 主应用 -->
+</section></template>
+<template id="solarTemplate"><section class="view-root" data-view="solar" aria-label="太阳系视角"><div id="scene"></div>
+<div id="sceneLoading" role="status" style="position:fixed;inset:0;display:none;place-items:center;color:#b3cddd;font:14px sans-serif;pointer-events:none">正在准备太阳系…</div>
+
+<!-- 顶栏 -->
+<div class="topbar" style="position:fixed;top:0;left:0;right:0;z-index:20;padding:env(safe-area-inset-top) 12px 0;display:flex;align-items:center;height:44px;background:linear-gradient(180deg,rgba(5,8,15,.92),transparent);pointer-events:none">
+  <div class="brand-lockup">
+    <span class="brand" style="font-size:16px;font-weight:800;color:#eaf6ff;text-shadow:0 0 12px rgba(95,214,240,.5)">时间景观 · 太阳系</span>
+    <span class="brand-tagline">观乎天文，以察时变</span>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:6px;align-items:center;pointer-events:auto">
+    <button onclick="replayIntro()" style="font-size:11px;color:#5fd6f0;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px;background:transparent;cursor:pointer">🎬 开场</button>
+    <a href="app?view=earth" data-view-target="earth" aria-label="切换到地球视角" style="font-size:11px;color:#5fd6f0;text-decoration:none;padding:4px 10px;border:1px solid rgba(95,214,240,.4);border-radius:12px">🌍 地球</a>
+  </div>
+</div>
+
+<!-- 底部工具条 -->
+<div class="bottombar">
+  <a href="app?view=earth" data-view-target="earth" aria-label="切换到地球视角" class="bar-btn" style="color:#5fd6f0;text-decoration:none">🌍 地球</a>
+  <div class="bar-date" id="dateText"></div>
+  <div class="bar-sep"></div>
+  <div class="bar-btn" id="pPrev">‹‹</div>
+  <div class="bar-btn" id="pSlow">◀◀</div>
+  <div class="bar-play" id="pPlay">❚❚</div>
+  <div class="bar-btn" id="pFast">▶▶</div>
+  <div class="bar-btn" id="pNext">››</div>
+  <div class="bar-btn" id="pNow" style="color:#f5c451">现在</div>
+  <button class="bar-btn" id="pReset" title="回到太阳系俯视全景">↺ 复位</button>
+  <button class="bar-btn" id="pGod" aria-pressed="false" title="保持当前视角，拖动行星改变日期；旋转、平移和缩放暂停">☝ 上帝之手</button>
+  <div class="bar-sep"></div>
+  <div class="bar-spd" id="spdBtn">⚡ 秒/秒 ▾</div>
+  <div class="bar-sep"></div>
+  <div class="bar-spd" id="layerBtn">☰ 图层 ▾</div>
+</div>
+
+<!-- 图层选择弹窗 -->
+<div id="layerPopup" style="display:none;position:fixed;z-index:25;background:rgba(10,20,38,.96);border:1px solid rgba(95,214,240,.5);border-radius:12px;padding:8px 10px;min-width:160px;max-width:90vw">
+  <div class="layer-opt" data-layer="orbits">◎ 轨道</div>
+  <div class="layer-opt" data-layer="labels">🏷 标签</div>
+  <div class="layer-opt" data-layer="axes">＋ 坐标轴</div>
+  <div class="layer-opt" data-layer="earthAxis">↗ 地轴</div>
+  <div class="layer-opt" data-layer="terms">📅 节气</div>
+  <div class="layer-opt" data-layer="zodiac">✦ 星座</div>
+  <div class="layer-opt" data-layer="xiusu">✧ 星宿</div>
+  <div class="layer-opt" data-layer="threeBody">🔴 三体星系</div>
+  <div class="layer-opt" data-layer="voyager">🛰 旅行者号</div>
+</div>
+
+<!-- 速度弹窗 -->
+<div class="spd-popup" id="spdPopup">
+  <div class="row">
+    <div class="spd-opt on" data-u="sec">秒/秒</div>
+    <div class="spd-opt" data-u="hour">时/秒</div>
+    <div class="spd-opt" data-u="day">日/秒</div>
+    <div class="spd-opt" data-u="month">月/秒</div>
+    <div class="spd-opt" data-u="year">年/秒</div>
+  </div>
+</div>
+
+<!-- 日期选择器 -->
+<div id="datePicker" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:30;background:rgba(8,20,36,.97);border:1px solid rgba(95,214,240,.5);border-radius:16px;padding:0;width:min(340px,92vw);box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden">
+  <div style="display:flex;border-bottom:1px solid rgba(95,214,240,.15)">
+    <div id="tabSolar" class="dp-tab active">公历</div>
+    <div id="tabLunar" class="dp-tab">农历</div>
+  </div>
+  <div id="solarPanel" style="padding:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="dp-nav" id="dpPrev">‹</div>
+      <div style="display:flex;gap:6px;align-items:center"><input type="number" id="dpYear" style="font-size:13px;color:#eaf6ff;background:rgba(10,24,42,.6);border:1px solid rgba(95,214,240,.3);border-radius:6px;padding:3px 6px;width:96px" title="年份（公元前用负数，如 -500）"><span id="dpTitle" style="font-size:15px;font-weight:700;color:#eaf6ff"></span></div>
+      <div class="dp-nav" id="dpNext">›</div>
+    </div>
+    <div id="dpGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center"></div>
+    <div class="dp-legend"><span class="term">● 节气</span><span class="festival">● 节日</span><span>按北京时间日期</span></div>
+    <div id="dpEvents" aria-live="polite"></div>
+    <div style="display:flex;gap:6px;margin-top:12px;align-items:center;justify-content:center">
+      <span style="font-size:12px;color:#5a7a94">时间</span>
+      <input type="time" id="dpTime" value="12:00" step="1" style="font-size:13px;color:#bfe4f5;border:1px solid rgba(95,214,240,.3);border-radius:8px;padding:5px 8px;background:rgba(10,24,42,.6);width:90px">
+    </div>
+  </div>
+  <div id="lunarPanel" style="display:none;padding:12px">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <select id="lunarYear" class="dp-select"></select>
+      <select id="lunarMonth" class="dp-select"></select>
+      <select id="lunarDay" class="dp-select"></select>
+      <select id="lunarHour" class="dp-select"></select>
+    </div>
+    <div id="lunarInfo" style="font-size:12px;color:#9fc6dd;text-align:center;min-height:40px"></div>
+  </div>
+  <div class="dp-actions">
+    <button type="button" id="dpCancel" class="dp-btn" style="color:#9cb3c4">取消</button>
+    <button type="button" id="dpToday" class="dp-btn" style="color:#5fd6f0">今天</button>
+    <button type="button" id="dpConfirm" class="dp-btn">确认</button>
+  </div>
+</div>
+
+<div id="planetCard">
+  <button class="card-close" id="cardClose">✕</button>
+  <div class="card-name" id="cardName"></div>
+  <div class="card-en" id="cardEn"></div>
+  <dl class="card-grid" id="cardGrid"></dl>
+  <div class="card-desc" id="cardDesc"></div>
+</div>
+
+<!-- 三体星系信息卡 -->
+<div id="threeBodyCard">
+  <button class="tb-close" id="tbClose">✕</button>
+  <div class="tb-title">三体星系</div>
+  <div class="tb-sub">Alpha Centauri · 半人马座α · 距太阳4.37光年</div>
+  <div class="tb-sub">轨道分别加速 · 双星10秒一周 · 比邻星45秒一周</div>
+  <div class="tb-grid">
+    <dt>恒星A</dt><dd>南门二A (α Cen A)</dd>
+    <dt>类型</dt><dd>G2V 主序星（类太阳）</dd>
+    <dt>质量</dt><dd>1.1 太阳质量</dd>
+    <dt>亮度</dt><dd>1.519 太阳光度</dd>
+    <dt>恒星B</dt><dd>南门二B (α Cen B)</dd>
+    <dt>类型</dt><dd>K1V 主序星</dd>
+    <dt>质量</dt><dd>0.9 太阳质量</dd>
+    <dt>亮度</dt><dd>0.5 太阳光度</dd>
+    <dt>恒星C</dt><dd>比邻星 (Proxima Cen)</dd>
+    <dt>类型</dt><dd>M5.5Ve 红矮星</dd>
+    <dt>距离</dt><dd>4.246 光年（最近恒星）</dd>
+    <dt>行星</dt><dd>比邻星b（宜居带行星）</dd>
+  </div>
+  <div class="tb-desc">南门二A、B围绕共同质心沿椭圆轨道运行，约80年一周，近处走得快、远处走得慢。比邻星在远处围绕双星运行，约55万年一周。<br><br>
+为了看清两种轨道，双星和比邻星分别加速展示，不能用画面中的快慢比较真实公转速度。外轨道距离经过压缩；轨道方向与起点用于教学，不对应日期栏中的实时位置。<br><br>
+小说《三体》设定了复杂的恒星运动与气候变化。真实的南门二系统具有相隔很远的内外轨道，不能把三颗恒星的运动简单画成随意摆动。</div>
+</div>
+
+<div id="labelsLayer"></div>
+<div id="skyLabelsLayer"></div>
+
+
+
+</section></template>
 <script src="lunar.js"></script>
+<script src="astro.js"></script>
 <script src="calendar-terms.js"></script>
 <script src="calendar-events.js"></script>
-<script>
-// ========== 平台层（浏览器适配） ==========
-const PLT = {
-  platform: 'web',
-  createImage() { return new Image(); },
-  downloadFile(url, cb) { cb(url); },
-  vibrate() { try { navigator.vibrate(15); } catch(e) {} },
-  storage: {
-    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch(e) {} }
-  }
-};
-
-// ========== 天文算法（移植自 shared/core/astro.js） ==========
-const RAD = Math.PI / 180;
-// ===== 地球视角可调参数（在这里统一配置）=====
-const EARTH_CFG = {
-  earthScale: 0.29,      // 地球半径 = min(W,H) × 此值
-  centerY: 0.50,         // 地球中心 Y 偏移（0.5=居中，越大越往下）
-  moonOrbitScale: 1.20,  // 月球公转半径 = R × 此值
-  moonSize: 28,          // 月球半径 px（竖屏；横屏 +2）
-  clockScale: 0.20,      // 中央表盘半径 = R × 此值（0=隐藏）
-  hourRingScale: 1.44,   // 时间数字距圆心 = R × 此值
-  hourDotScale: 1.38,    // 时间小圆点距圆心 = R × 此值
-  hourNumSize: 14,       // 时间数字字号 px
-  earthGlowInner: 1,  // 地球光晕内圈 = R × 此值
-  earthGlowOuter: 1,  // 地球光晕外圈 = R × 此值
-  earthBorderScale: 1.001,// 地球边框圆圈 = R × 此值
-  ptrTipScale: 1.05,     // 时区指针尖端距圆心 = R × 此值
-  sunY: -1.5,            // 太阳 Y 偏移 = R × 此值（负=上方，约在 12 点位置）
-  sunGlowScale: 0.42     // 太阳光晕半径 = R × 此值
-};
-const J2000 = Date.UTC(2000, 0, 1, 12, 0, 0);
-const SYN = 29.530588853;
-const dnum = ms => (ms - J2000) / 86400e3;
-const rev = x => { x %= 360; return x < 0 ? x + 360 : x; };
-
-function sunLon(d) {
-  d += 1.5;
-  const w = 282.9404 + 4.70935e-5 * d, e = 0.016709 - 1.151e-9 * d;
-  const M = rev(356.0470 + 0.9856002585 * d), Mr = M * RAD;
-  const E = M + (e / RAD) * Math.sin(Mr) * (1 + e * Math.cos(Mr));
-  const Er = E * RAD;
-  return rev(Math.atan2(Math.sqrt(1 - e * e) * Math.sin(Er), Math.cos(Er) - e) / RAD + w);
-}
-function moonLon(d) {
-  d += 1.5;
-  const N = rev(125.1228 - 0.0529538083 * d), i = 5.1454,
-    w = rev(318.0634 + 0.1643573223 * d), e = 0.0549, M = rev(115.3654 + 13.0649929509 * d);
-  const Mr = M * RAD;
-  let E = M + (e / RAD) * Math.sin(Mr) * (1 + e * Math.cos(Mr));
-  for (let k = 0; k < 4; k++) { const Er = E * RAD; E = E - (E - (e / RAD) * Math.sin(Er) - M) / (1 - e * Math.cos(Er)); }
-  const Er = E * RAD, xv = Math.cos(Er) - e, yv = Math.sqrt(1 - e * e) * Math.sin(Er),
-    v = Math.atan2(yv, xv) / RAD, r = Math.sqrt(xv * xv + yv * yv);
-  const Nr = N * RAD, vr = (v + w) * RAD, ir = i * RAD;
-  const xh = r * (Math.cos(Nr) * Math.cos(vr) - Math.sin(Nr) * Math.sin(vr) * Math.cos(ir));
-  const yh = r * (Math.sin(Nr) * Math.cos(vr) + Math.cos(Nr) * Math.sin(vr) * Math.cos(ir));
-  return rev(Math.atan2(yh, xh) / RAD);
-}
-function moonPhase(d, lunarDay) {
-  // 伸长：有农历日时按农历日线性映射（初一=0°在上方、十五=180°在正下方），
-  // 避免真实满月落在十六/十七导致十五时月球偏出正下方
-  const elAstro = rev(moonLon(d) - sunLon(d));
-  const el = lunarDay != null ? ((lunarDay - 1) / 14) * 180 : elAstro;
-  const illum = (1 - Math.cos(el * RAD)) / 2, age = SYN * el / 360;
-  // 月相名称按农历日判断，同一天内不变
-  var name;
-  if (lunarDay != null) {
-    name = lunarDay <= 1 ? '新月' : lunarDay <= 6 ? '峨眉月' : lunarDay <= 8 ? '上弦月' : lunarDay <= 14 ? '盈凸月' : lunarDay <= 16 ? '满月' : lunarDay <= 22 ? '亏凸月' : lunarDay <= 23 ? '下弦月' : '残月';
-  } else {
-    const day = age % SYN;
-    name = day < 1.5 || day >= 28 ? '新月' : day < 6.5 ? '峨眉月' : day < 8.5 ? '上弦月' : day < 13.5 ? '盈凸月' : day < 16.5 ? '满月' : day < 21.5 ? '亏凸月' : day < 23.5 ? '下弦月' : '残月';
-  }
-  return { el, illum, age, name };
-}
-function moonDistKm(d) {
-  d += 1.5; const M = rev(115.3654 + 13.0649929509 * d), Mr = M * RAD;
-  let E = M + (0.0549 / RAD) * Math.sin(Mr);
-  for (let k = 0; k < 3; k++) { const Er = E * RAD; E = E - (E - (0.0549 / RAD) * Math.sin(Er) - M) / (1 - 0.0549 * Math.cos(Er)); }
-  const Er = E * RAD, xv = Math.cos(Er) - 0.0549, yv = Math.sqrt(1 - 0.0549 * 0.0549) * Math.sin(Er);
-  return Math.round(60.2666 * Math.sqrt(xv * xv + yv * yv) * 6371);
-}
-const TERMS = ['春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至','小寒','大寒','立春','雨水','惊蛰'];
-function solarTerm(d) {
-  const SL = rev(sunLon(d)), i = Math.floor(SL / 15) % 24, within = SL - i * 15, perDay = 360 / 365.2422;
-  return { name: TERMS[i], toNext: Math.max(1, Math.round((15 - within) / perDay)), next: TERMS[(i + 1) % 24], idx: i };
-}
-const GAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-const ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-function gzYear(y) { return GAN[(y - 4) % 10] + ZHI[(y - 4) % 12]; }
-// ========== 状态 ==========
-let clockManuallyPaused = false;
-try { clockManuallyPaused = sessionStorage.getItem('tv-clock-paused') === '1'; } catch (_) {}
-const state = { t: Date.now(), playing: !clockManuallyPaused, spd: 1000, view: 'earth', hemi: 1 };
-document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
-let showCities = true;
-let dispT = Date.now(), anchorT = Date.now();
-let tlSpan = 100, tlDrag = false, inertia = 0;
-const SPD = { sec: 1000, hour: 3600e3, day: 86400e3, month: 86400e3 * 30, year: 86400e3 * 365.25 };
-let curUnit = 'day';
-const TIMEZONES = [['北京','Asia/Shanghai'],['伦敦','Europe/London'],['东京','Asia/Tokyo'],['印度','Asia/Kolkata'],['中欧','Europe/Berlin'],['纽约','America/New_York'],['洛杉矶','America/Los_Angeles']].map(([city,zone])=>({city,zone,min:0,label:'',formatter:new Intl.DateTimeFormat('en-GB',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'})}));
-// Cities are time-zone reading markers; their angles match the time pointers.
-function cityClock(cn,zone,star=false){return {cn,zone,star,min:0,formatter:new Intl.DateTimeFormat('en-GB',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'})};}
-const NORTH_CITIES=[cityClock('北京','Asia/Shanghai',true),cityClock('东京','Asia/Tokyo'),cityClock('纽约','America/New_York'),cityClock('莫斯科','Europe/Moscow'),cityClock('柏林','Europe/Berlin'),cityClock('巴黎','Europe/Paris'),cityClock('伦敦','Europe/London'),cityClock('旧金山','America/Los_Angeles'),cityClock('渥太华','America/Toronto'),cityClock('多伦多','America/Toronto'),cityClock('温哥华','America/Vancouver')];
-const SOUTH_CITIES=[cityClock('悉尼','Australia/Sydney'),cityClock('堪培拉','Australia/Sydney'),cityClock('开普敦','Africa/Johannesburg'),cityClock('布宜诺斯艾利斯','America/Argentina/Buenos_Aires'),cityClock('圣保罗','America/Sao_Paulo'),cityClock('惠灵顿','Pacific/Auckland'),cityClock('乌斯怀亚','America/Argentina/Ushuaia')];
-const mobileCityOrder=list=>list.slice().sort((a,b)=>Number(['北京','伦敦','纽约'].includes(b.cn))-Number(['北京','伦敦','纽约'].includes(a.cn)));
-const MOBILE_CITIES={north:mobileCityOrder(NORTH_CITIES),south:mobileCityOrder(SOUTH_CITIES)};
-function clockAngle(hour){return -((hour-12)/24)*2*Math.PI;}
-function zoneOffset(zone,ts){const parts=Object.fromEntries(zone.formatter.formatToParts(new Date(ts)).map(p=>[p.type,p.value]));return Math.round((Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute,+parts.second)-Math.floor(ts/1000)*1000)/60000);}
-let zoneMinute = null;
-function refreshZones(ts){const minute=Math.floor(ts/60000);if(minute===zoneMinute)return;zoneMinute=minute;[...TIMEZONES,...NORTH_CITIES,...SOUTH_CITIES].forEach(z=>{z.min=zoneOffset(z,ts);const n=Math.abs(z.min);z.label='UTC'+(z.min>=0?'+':'-')+Math.floor(n/60)+(n%60?':'+String(n%60).padStart(2,'0'):'')+' '+z.city;});}
-refreshZones(Date.now());
-let tzIdx = 0, tz = TIMEZONES[0];
-
-// ========== 图片加载（浏览器自动缓存，无需 Cache API）==========
-function loadImage(img, url) {
-  return window.TimeviewPreload.image(img,url,url.endsWith('.webp')?url.replace('.webp','.png'):null);
-}
-
-// Simplified Chang'e-1 icon and orbit, animated for teaching rather than telemetry.
-const changEIcon = new Image();
-loadImage(changEIcon, 'textures/change-orbiter.svg?v=3.57');
-let changEPhase = 0;
-function drawChangE(mx, my, mr, front) {
-  const orbit = mr + 8, depth = Math.sin(changEPhase);
-  // Project a tilted orbital plane. Draw its far half beneath the opaque Moon.
-  // Almost orthographic projection and a steady attitude avoid turning sharply at the ends.
-  const tilt = -Math.PI / 9;
-  const ox = Math.cos(changEPhase) * orbit;
-  const oy = depth * orbit * 0.42;
-  const x = mx + ox * Math.cos(tilt) - oy * Math.sin(tilt);
-  const y = my + ox * Math.sin(tilt) + oy * Math.cos(tilt);
-  const size = Math.max(16, Math.min(24, mr * 0.82)) * (1 + depth * 0.03);
-  if (front === (depth >= 0)) {
-    ctx.save(); ctx.globalAlpha = 1;
-    ctx.translate(x, y);
-    ctx.rotate(-Math.PI / 10 + depth * 0.06);
-    if (changEIcon.complete && changEIcon.naturalWidth) ctx.drawImage(changEIcon, -size/2, -size/3, size, size*2/3);
-    else {ctx.scale(size/24,size/24);ctx.fillStyle='#ccc7b5';ctx.fillRect(-12,-4,24,8);ctx.fillRect(-4,-6,8,12);}
-    ctx.restore();
-  }
-}
-
-// ========== Canvas 2D（地球表盘） ==========
-var renderer = null;
-const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
-let W = 0, H = 0, DPR = 1, stars2d = [], earthZoom = 1;
-function resize() {
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth; H = window.innerHeight;
-  cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  stars2d = [];
-  for (let i = 0; i < Math.round(W * H / 4500); i++) stars2d.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.4 + 0.2, a: 0.2 + Math.random() * 0.6 });
-  if (renderer) { renderer.setSize(W, H, false); }
-}
-window.addEventListener('resize', resize);
-resize();
-
-// ========== 渲染主循环 ==========
-let lastT = 0;
-function ensureRenderer() {
-  if (!renderer) {
-    const glCanvas = document.getElementById('gl');
-    renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true, alpha: false });
-    renderer.setPixelRatio(DPR); renderer.setSize(W, H, false);
-    renderer.outputEncoding = THREE.sRGBEncoding;
-  }
-}
-
-function frame(now) {
-  requestAnimationFrame(frame);
-  const dt = Math.min((now - lastT) / 1000, 0.05);
-  lastT = now;
-  // 开场视频完全覆盖页面时，暂停背景 Canvas / WebGL 绘制，给视频解码留出资源。
-
-  // 时间推进
-  if (!tlDrag) {
-    if (state.playing) state.t += state.spd * dt;
-    if (inertia) { state.t += inertia * dt; inertia *= Math.exp(-1.4 * dt); if (Math.abs(inertia) < 1000) inertia = 0; }
-  }
-  if (window.introActive && !window.introTransitioning) return;
-  if (state.playing) changEPhase = (changEPhase + dt * Math.PI * 2 / 10) % (Math.PI * 2);
-  dispT += (state.t - dispT) * (1 - Math.exp(-8 * dt));
-  refreshZones(dispT); document.getElementById('tzBtn').textContent='🕓 '+tz.label;
-  const d = dnum(dispT), date = new Date(dispT + tz.min * 60000);
-
-  // ===== 星空旅行模式 =====
-  if (state.view === 'voyage') {
-    updateVoyage(dt, now);
-    return;
-  }
-
-  // ===== 地球 2D =====
-  if (state.view === 'earth') {
-    drawEarth(d, date);
-    document.getElementById('einfo').style.display = '';
-    document.getElementById('voyHud').style.display = 'none';
-  }
-
-  // 日期读数
-  if (now - (frame._hudT || 0) > 200) {
-    frame._hudT = now;
-    updateHUD(d, date);
-  }
-}
-
-// ========== 地球 2D 绘制 ==========
-const TEXBASE = 'textures/';
-const EARTH_SKINS = ['satellite','admin','cartoon'];
-const SKIN_NAMES = { satellite:'卫星', admin:'行政', cartoon:'卡通', golden:'金色丝线', tellurian:'地球仪' };
-let curSkin = 'satellite';
-function updateEarthLoading() {
-  const el = document.getElementById('earthLoading');
-  if (el) el.style.display = isEarthReady() ? 'none' : 'block';
-}
-const earthImgCache = {}; // key: 'skin_hemi' → Image
-function earthCacheKey(skin, hemi) { return skin + '_' + (hemi > 0 ? 'n' : 's'); }
-function getEarthTexName(skin, hemi) {
-  const pole = hemi > 0 ? 'earth-north-pole' : 'earth-south-pole';
-  return skin === 'satellite' ? pole + '.webp' : pole + '-' + skin + '.png';
-}
-function getEarthImg() {
-  const key = earthCacheKey(curSkin, state.hemi);
-  return earthImgCache[key] || null;
-}
-function isEarthReady() {
-  const img = getEarthImg();
-  return img && img.complete && img.naturalWidth > 0;
-}
-function loadEarthPole() {
-  const key = earthCacheKey(curSkin, state.hemi);
-  if (earthImgCache[key]) return earthImgCache[key]._ready;
-  const img = new Image();
-  earthImgCache[key] = img;
-  img.onload = () => updateEarthLoading();
-  img._ready = loadImage(img, TEXBASE + getEarthTexName(curSkin, state.hemi));
-  img._ready.catch(() => {delete earthImgCache[key];updateEarthLoading();});
-  updateEarthLoading();
-  return img._ready;
-}
-loadEarthPole();
-
-const moonImg = new Image(); let moonReady = false;
-moonImg.onload = () => { moonReady = true; };
-loadImage(moonImg, TEXBASE + 'moon.jpg');
-
-function makeEarthTex() {
-  const s = 256, c = document.createElement('canvas'); c.width = c.height = s;
-  const x = c.getContext('2d');
-  x.fillStyle = '#1b4a7a'; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, 7); x.fill();
-  return c;
-}
-let earthTex = null;
-
-function drawMoonLit(mx, my, r, illum, rot) {
-  const tex = moonReady ? moonImg : null;
-  ctx.save(); ctx.translate(mx, my);
-  ctx.beginPath(); ctx.arc(0, 0, r + 1, 0, 7); ctx.fillStyle = '#0a0e18'; ctx.fill();
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.clip();
-  if (tex) {
-    ctx.drawImage(tex, -r, -r, 2 * r, 2 * r);
-  } else {
-    const g = ctx.createRadialGradient(-r * 0.15, -r * 0.1, r * 0.1, 0, 0, r);
-    g.addColorStop(0, '#cdd2dc'); g.addColorStop(0.5, '#b0b6c2'); g.addColorStop(0.85, '#8a90a0'); g.addColorStop(1, '#626878');
-    ctx.fillStyle = g; ctx.fillRect(-r, -r, 2 * r, 2 * r);
-    ctx.globalAlpha = 0.28;
-    [[0.1, -0.05, 0.22], [-0.15, 0.1, 0.18], [0.18, 0.2, 0.15], [-0.05, -0.2, 0.2]].forEach(m => {
-      const mg = ctx.createRadialGradient(m[0] * r, m[1] * r, 0, m[0] * r, m[1] * r, m[2] * r);
-      mg.addColorStop(0, '#5a6070'); mg.addColorStop(1, 'rgba(90,96,112,0)');
-      ctx.fillStyle = mg; ctx.fillRect(-r, -r, 2 * r, 2 * r);
-    });
-    ctx.globalAlpha = 1;
-  }
-  ctx.rotate(rot);
-  ctx.beginPath();
-  for (let i = 0; i <= 30; i++) { const v = -1 + 2 * i / 30, sq = Math.sqrt(Math.max(0, 1 - v * v)), x = -r * sq, y = v * r; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-  for (let i = 30; i >= 0; i--) { const v = -1 + 2 * i / 30, sq = Math.sqrt(Math.max(0, 1 - v * v)); ctx.lineTo((1 - 2 * illum) * r * sq, v * r); }
-  ctx.closePath(); ctx.fillStyle = '#0a0e18'; ctx.fill();
-  ctx.restore();
-}
-
-let introMapReleased=null;
-try{
-  const arrival=Number(sessionStorage.getItem('tv-intro-arrival'));
-  sessionStorage.removeItem('tv-intro-arrival');
-  if(arrival&&Date.now()-arrival<30000)introMapReleased=performance.now();
-}catch(_){}
-function drawEarth(d, date) {
-  const scrsv = document.body.classList.contains('scrsv');
-  const mobile=!scrsv&&window.TimeviewMobile?.sceneRect();
-  const cx = scrsv ? W * 0.68 : mobile?(mobile.left+mobile.right)/2:W / 2;
-  const cy = mobile?(mobile.top+mobile.bottom)/2:H * EARTH_CFG.centerY;
-  const R = (mobile?Math.min(mobile.right-mobile.left,mobile.bottom-mobile.top):Math.min(W,H))*EARTH_CFG.earthScale*earthZoom;
-  const G = curSkin === 'golden';  // 金色丝线皮肤：文字白、线条金黄、背景黑
-  const utcDate = new Date(dispT);  // 不加时区偏移，纯 UTC
-  const utch = utcDate.getUTCHours() + utcDate.getUTCMinutes() / 60;
-  const actualMerid = (90 - utch * 15) * RAD;
-  let merid=actualMerid;
-  if(window.introArrivalLock){introMapReleased=performance.now();merid=Math.PI;}
-  else if(introMapReleased!==null){
-    const p=Math.min(1,(performance.now()-introMapReleased)/1800),ease=p*p*(3-2*p);
-    merid=Math.PI+Math.atan2(Math.sin(actualMerid-Math.PI),Math.cos(actualMerid-Math.PI))*ease;
-    if(p===1)introMapReleased=null;
-  }
-  const _ld = new Date(dispT + tz.min * 60000);
-  const _ln = solarToLunar(_ld.getUTCFullYear(), _ld.getUTCMonth()+1, _ld.getUTCDate());
-  const ph = moonPhase(d, _ln ? _ln.day : null);
-  if (!earthTex) earthTex = makeEarthTex();
-
-  // 背景（金色丝线皮肤用纯黑，配合金色蒙版让外太空保持黑色）
-  if (curSkin === 'golden') {
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  } else {
-    let g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.8);
-    g.addColorStop(0, '#0c1a38'); g.addColorStop(0.6, '#081024'); g.addColorStop(1, '#050a18');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  for (const s of stars2d) { ctx.globalAlpha = s.a; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill(); }
-  ctx.globalAlpha = 1;
-
-  // 太阳
-  const sx = cx, sy = cy + R * EARTH_CFG.sunY;
-  g = ctx.createRadialGradient(sx, sy, 0, sx, sy, R * EARTH_CFG.sunGlowScale);
-  g.addColorStop(0, 'rgba(255,246,220,.95)'); g.addColorStop(0.4, 'rgba(248,200,110,.4)'); g.addColorStop(1, 'rgba(245,170,70,0)');
-  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, R * EARTH_CFG.sunGlowScale, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx, sy, 9, 0, 7); ctx.fill();
-
-  // 地球
-  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip(); ctx.translate(cx, cy);
-  const south = state.hemi < 0;
-  const eimg = getEarthImg();
-  // 地图底图统一逆时针校正15°；标记和刻度使用各自的绘制坐标。
-  const mapRotation = (south ? merid + 150 * RAD : merid) - 15 * RAD;
-  ctx.rotate(mapRotation);
-  const RR = R * 1.08;
-  if (isEarthReady()) { ctx.drawImage(eimg, -RR, -RR, 2 * RR, 2 * RR); }
-  else { ctx.drawImage(earthTex, -RR, -RR, 2 * RR, 2 * RR); }
-  ctx.restore();
-
-  // 地球光晕
-  let ag = ctx.createRadialGradient(cx, cy, R * EARTH_CFG.earthGlowInner, cx, cy, R * EARTH_CFG.earthGlowOuter);
-  ag.addColorStop(0, 'rgba(90,200,255,0)'); ag.addColorStop(0.5, G ? 'rgba(230,194,0,.20)' : 'rgba(90,200,255,.18)'); ag.addColorStop(1, 'rgba(90,200,255,0)');
-  ctx.fillStyle = ag; ctx.beginPath(); ctx.arc(cx, cy, R * EARTH_CFG.earthGlowOuter, 0, 7); ctx.fill();
-
-  // 地球边框
-  ctx.strokeStyle = G ? 'rgba(230,194,0,.55)' : 'rgba(95,214,240,.3)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx, cy, R * EARTH_CFG.earthBorderScale, 0, 7); ctx.stroke();
-
-  // 时间刻度环（和小程序完全一致：0点正下方，逆时针 1-6-12-18-23）
-  const hRing = EARTH_CFG.hourRingScale, hDot = EARTH_CFG.hourDotScale;
-  ctx.save(); ctx.translate(cx, cy); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (let h = 0; h < 24; h++) {
-    const a = clockAngle(h), nx = Math.sin(a), ny = -Math.cos(a);
-    // 小圆点
-    ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * R * hDot, ny * R * hDot, 1.4, 0, 7); ctx.fill();
-    // 双数=数字（不旋转，水平），单数=竖线（旋转朝向圆心）
-    if (h % (mobile&&R<70?4:2) === 0) {
-      ctx.fillStyle = G ? '#fff' : 'rgba(165,212,238,.92)'; ctx.font = EARTH_CFG.hourNumSize + 'px sans-serif';
-      ctx.fillText(String(h).padStart(2, '0'), nx * R * hRing, ny * R * hRing);
-    } else {
-      ctx.save(); ctx.translate(nx * R * hRing, ny * R * hRing); ctx.rotate(a);
-      ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(135,185,214,.78)'; ctx.font = 'bold ' + (EARTH_CFG.hourNumSize + 1) + 'px sans-serif';
-      ctx.fillText('|', 0, 0); ctx.restore();
-    }
-  }
-  // 时区指针（和小程序一致）
-  const ptr = (hh, col) => { const a = clockAngle(hh); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(Math.sin(a) * R * EARTH_CFG.ptrTipScale, -Math.cos(a) * R * EARTH_CFG.ptrTipScale); ctx.lineTo(Math.sin(a - 0.035) * R, -Math.cos(a - 0.035) * R); ctx.lineTo(Math.sin(a + 0.035) * R, -Math.cos(a + 0.035) * R); ctx.closePath(); ctx.fill(); };
-  ptr(utch, G ? '#e6c200' : '#5fd6f0'); ptr(utch + tz.min / 60, '#ffd24a');
-  ctx.restore();
-
-  // 城市标注
-  if (showCities) {
-  const list = mobile?MOBILE_CITIES[state.hemi<0?'south':'north']:state.hemi < 0 ? SOUTH_CITIES : NORTH_CITIES;
-  const occupied=mobile?[{left:cx-R*.25,right:cx+R*.25,top:cy-R*.25,bottom:cy+R*.25}]:[];
-  const sameZoneCount = new Map();
-  for (const c of list) {
-    const rank = sameZoneCount.get(c.min) || 0;
-    sameZoneCount.set(c.min, rank + 1);
-    const dotR = R * (0.90 - rank * 0.16);
-    const az = clockAngle(utch + c.min / 60);
-    const sinA = Math.sin(az), cosA = Math.cos(az);
-    const px = cx + sinA * dotR, py = cy - cosA * dotR;
-    ctx.globalAlpha = 1;
-    // 圆点
-    if (c.star) {
-      // 北京红星
-      ctx.fillStyle = '#ff3b30';
-      ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        const a = -Math.PI / 2 + i * 4 * Math.PI / 5;
-        const r = i % 2 === 0 ? 6 : 2.8;
-        i === 0 ? ctx.moveTo(px + Math.cos(a) * r, py + Math.sin(a) * r) : ctx.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r);
-      }
-      ctx.closePath(); ctx.fill();
-    } else {
-      ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(px, py, 2.8, 0, 7); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,210,74,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(px, py, 5, 0, 7); ctx.stroke();
-    }
-    // 同一时区沿径向错开；圆点和标签均保持时区角度。
-    ctx.font = (c.star ? 'bold ' : '') + '13px sans-serif';
-    const tw = ctx.measureText(c.cn).width;
-    let labelR = dotR - 14;
-    const maxR = R * 0.93 - tw / 2;
-    if (labelR > maxR) labelR = maxR;
-    if (labelR < R * 0.26) labelR = R * 0.26;
-    const lx = cx + sinA * labelR, ly = cy - cosA * labelR;
-    if(mobile){
-      const box={left:lx-tw/2-4,right:lx+tw/2+4,top:ly-9,bottom:ly+9};
-      if(occupied.some(b=>box.left<b.right&&box.right>b.left&&box.top<b.bottom&&box.bottom>b.top))continue;
-      occupied.push(box);
-    }
-    // 引线
-    if (Math.hypot(lx - px, ly - py) > 6) {
-      ctx.strokeStyle = 'rgba(255,210,74,.45)'; ctx.lineWidth = 0.7;
-      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lx, ly); ctx.stroke();
-    }
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(6,14,30,.72)'; ctx.fillRect(lx - tw / 2 - 3, ly - 6, tw + 6, 12);
-    ctx.fillStyle = G ? '#fff' : (c.star ? '#ffd7d3' : '#fff7e0');
-    ctx.fillText(c.cn, lx, ly);
-    ctx.globalAlpha = 1;
-  }
-  }
-
-  // 中央时钟表盘
-  const rc = R * EARTH_CFG.clockScale;
-  ctx.save(); ctx.translate(cx, cy);
-  ctx.beginPath(); ctx.arc(0, 0, rc, 0, 7); ctx.fillStyle = G ? '#000' : '#f7faff'; ctx.fill();
-  ctx.strokeStyle = G ? 'rgba(230,194,0,.6)' : 'rgba(60,90,120,.6)'; ctx.lineWidth = 1.2; ctx.stroke();
-  for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * Math.PI; ctx.strokeStyle = G ? 'rgba(230,194,0,.5)' : 'rgba(40,60,90,.5)'; ctx.lineWidth = i % 3 === 0 ? 1.5 : 0.7; ctx.beginPath(); ctx.moveTo(Math.sin(a) * rc * 0.82, -Math.cos(a) * rc * 0.82); ctx.lineTo(Math.sin(a) * rc * 0.95, -Math.cos(a) * rc * 0.95); ctx.stroke(); }
-  // 分钟刻度 0/10/20/30/40/50
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold ' + Math.max(6, Math.round(rc * 0.18)) + 'px sans-serif';
-  ctx.fillStyle = G ? '#fff' : 'rgba(28,43,68,.95)';
-  for (let m = 0; m < 60; m += 10) { const ma = (m / 60) * 2 * Math.PI; ctx.fillText(String(m), Math.sin(ma) * rc * 0.66, -Math.cos(ma) * rc * 0.66); }
-  ctx.fillStyle = G ? '#fff' : 'rgba(28,43,68,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold ' + Math.max(7, Math.round(rc * 0.24)) + 'px sans-serif';
-  ctx.fillText(p2(date.getUTCMonth() + 1) + '.' + p2(date.getUTCDate()), 0, rc * 0.45);
-  const minu = date.getUTCMinutes() + date.getUTCSeconds() / 60;
-  const sec = date.getUTCSeconds() + date.getUTCMilliseconds() / 1000;
-  let a = minu / 60 * 2 * Math.PI; ctx.strokeStyle = G ? '#e6c200' : '#1c2b44'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(a) * rc * 0.6, -Math.cos(a) * rc * 0.6); ctx.stroke();
-  a = sec / 60 * 2 * Math.PI; ctx.strokeStyle = G ? '#e6c200' : '#e0453a'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(-Math.sin(a) * rc * 0.12, Math.cos(a) * rc * 0.12); ctx.lineTo(Math.sin(a) * rc * 0.78, -Math.cos(a) * rc * 0.78); ctx.stroke();
-  ctx.fillStyle = G ? '#e6c200' : '#1c2b44'; ctx.beginPath(); ctx.arc(0, 0, rc * 0.07, 0, 7); ctx.fill();
-  ctx.restore();
-
-  // 月球
-  const Or = R * EARTH_CFG.moonOrbitScale, ma = ph.el * RAD, mx = cx - Math.sin(ma) * Or, my = cy - Math.cos(ma) * Or, mr = Math.min(EARTH_CFG.moonSize, R * 0.15);
-  const cAng = Math.atan2(cy - my, cx - mx), sAng = Math.atan2(sy - my, sx - mx);
-  const adist = (a, b) => { let dd = Math.abs((a - b) % (2 * Math.PI)); return dd > Math.PI ? 2 * Math.PI - dd : dd; };
-  const t1 = cAng - Math.PI / 2, t2 = cAng + Math.PI / 2;
-  const mrot = adist(t1, sAng) <= adist(t2, sAng) ? t1 : t2;
-  drawChangE(mx, my, mr, false);
-  drawMoonLit(mx, my, mr, ph.illum, mrot);
-  drawChangE(mx, my, mr, true);
-  window._moonXY = { x: mx, y: my, r: mr };
-}
-
-// ========== HUD 更新 ==========
-function updateHUD(d, date) {
-  const dateStr = date.getUTCFullYear() + '-' + p2(date.getUTCMonth() + 1) + '-' + p2(date.getUTCDate()) + ' ' + p2(date.getUTCHours()) + ':' + p2(date.getUTCMinutes()) + ':' + p2(date.getUTCSeconds()) + ' ' + tz.label;
-  var _dNow = new Date(dispT + tz.min * 60000);
-  var _lunar = solarToLunar(_dNow.getUTCFullYear(), _dNow.getUTCMonth()+1, _dNow.getUTCDate());
-  var _term = solarTerm(dnum(dispT));
-  document.getElementById('dateText').textContent = dateStr + (_lunar ? ' · ' + (_lunar.isLeap?'闰':'') + _lunar.monthName + _lunar.dayName : '') + ' · ' + _term.name;
-  const ph = moonPhase(d, _lunar ? _lunar.day : null), st = solarTerm(d);
-  document.getElementById('eiTerm').textContent = '节气 ' + st.name + ' · 距下一节气 ' + st.toNext + '天 ' + st.next;
-}
-
-// ========== 时间控制 ==========
-document.getElementById('pPlay').onclick = () => { state.playing = !state.playing; try { sessionStorage.setItem('tv-clock-paused', state.playing ? '0' : '1'); } catch (_) {} document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶'; };
-document.getElementById('pNow').onclick = () => { state.t = Date.now(); dispT = state.t; anchorT = state.t; curUnit = 'sec'; state.spd = SPD.sec; state.playing=true;try{sessionStorage.setItem('tv-clock-paused','0');}catch(_){} document.getElementById('pPlay').textContent = '❚❚'; };
-document.getElementById('pPrev').onclick = () => { state.t -= 30 * 86400e3; };
-document.getElementById('pNext').onclick = () => { state.t += 30 * 86400e3; };
-document.getElementById('pSlow').onclick = () => { const u = ['sec','hour','day','month','year']; const i = u.indexOf(curUnit); if (i > 0) { curUnit = u[i - 1]; state.spd = SPD[curUnit]; document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶'; } };
-document.getElementById('pFast').onclick = () => { const u = ['sec','hour','day','month','year']; const i = u.indexOf(curUnit); if (i < u.length - 1) { curUnit = u[i + 1]; state.spd = SPD[curUnit]; document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶'; } };
-
-// ===== 农历计算库 =====
-var lunarInfo=[0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b5a0,0x195a6,0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,0x0d520];
-function lunarLeap(y){return lunarInfo[y-1900]&0xf;}
-function lunarLeapDays(y){return lunarLeap(y)?((lunarInfo[y-1900]&0x10000)?30:29):0;}
-function lunarMonthDays(y,m){return(lunarInfo[y-1900]&(0x10000>>m))?30:29;}
-function lunarYearDays(y){var s=348;for(var i=0x8000;i>0x8;i>>=1)s+=(lunarInfo[y-1900]&i)?1:0;return s+lunarLeapDays(y);}
-function lunarMonths(y){var ms=[],leap=lunarLeap(y);for(var m=1;m<=12;m++){ms.push({m:m,isLeap:false,label:['\u6b63','\u4e8c','\u4e09','\u56db','\u4e94','\u516d','\u4e03','\u516b','\u4e5d','\u5341','\u51ac','\u814a'][m-1]+'\u6708'});if(m===leap)ms.push({m:m,isLeap:true,label:'\u95f0'+['\u6b63','\u4e8c','\u4e09','\u56db','\u4e94','\u516d','\u4e03','\u516b','\u4e5d','\u5341','\u51ac','\u814a'][m-1]+'\u6708'});}return ms;}
-// ===== 天文农历（覆盖 ±5000 年，用现代置闰规则推算；精度略低于 1900-2100 查表）=====
-function _astroNewMoonTime(d){let t=d;for(let i=0;i<15;i++){const el=rev(moonLon(t)-sunLon(t));const err=el>180?el-360:el;t-=(err/360)*SYN;if(Math.abs(err)<1e-7)break;}return t;}
-function _astroShuoDay(d){let t=_astroNewMoonTime(d);let sd=Math.round(t+8/24);if(sd>d){t-=SYN;sd=Math.round(t+8/24);}return sd;}
-function _astroNextShuoDay(d){let t=_astroNewMoonTime(d);let sd=Math.round(t+8/24);if(sd<=d){t+=SYN;sd=Math.round(t+8/24);}return sd;}
-function _astroSunLonDay(d,target){let t=d;for(let i=0;i<15;i++){const s=sunLon(t);let err=rev(s-target);if(err>180)err-=360;t-=err/0.9856;if(Math.abs(err)<1e-7)break;}return Math.round(t+8/24);}
-function solarToLunarAstro(y,m,d){
-  const day=Math.round(dnum(Date.UTC(y,m-1,d,12,0,0)));
-  const shuo=_astroShuoDay(day), nextShuo=_astroNextShuoDay(shuo);
-  let lunarDay=day-shuo+1;
-  let hasZQ=false;
-  for(let k=0;k<12;k++){const t=(k*30)%360;const zq=_astroSunLonDay(shuo+14,t);if(zq>=shuo&&zq<nextShuo){hasZQ=true;break;}}
-  let dongZhi=_astroSunLonDay(day,270); if(dongZhi>day) dongZhi=_astroSunLonDay(day-365,270);
-  const dongZhiShuo=_astroShuoDay(dongZhi);
-  const offset=Math.round((shuo-dongZhiShuo)/SYN);
-  const regMonth=off=>((11+off-1)%12+12)%12+1;
-  let month=regMonth(offset), isLeap=false;
-  if(!hasZQ&&month!==11){isLeap=true;month=regMonth(offset-1);}
-  const dongZhiYear=new Date(J2000+dongZhi*86400e3).getUTCFullYear();
-  const year=dongZhiYear+(offset>=2?1:0);
-  if(lunarDay<1)lunarDay=1; if(lunarDay>30)lunarDay=30;
-  const mStr=['正','二','三','四','五','六','七','八','九','十','冬','腊'];
-  const dStr=['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
-  return {year:year,month:month,day:lunarDay,isLeap:isLeap,monthName:mStr[month-1]+'月',dayName:dStr[lunarDay-1]||''};
-}
-function solarToLunar(y,m,d){
-  if (y < 1900 || y > 2100) return solarToLunarAstro(y, m, d);  // 超出查表范围，用天文推算
-  var off=Math.round((Date.UTC(y,m-1,d)-Date.UTC(1900,0,31))/86400000);
-  var year=1900,leap=0;
-  for(var i=1900;i<2101&&off>0;i++){var dy=lunarYearDays(i);off-=dy;}
-  if(off<0){off+=lunarYearDays(--i);}
-  year=i;leap=lunarLeap(year);
-  var isLeap=false,month=1;
-  for(var j=1;j<13&&off>0;j++){
-    var dm=lunarMonthDays(year,j);
-    if(j===leap){dm=lunarLeapDays(year);}
-    off-=dm;month=j;
-  }
-  if(off<0){off+=dm;}
-  var mStr=['\u6b63','\u4e8c','\u4e09','\u56db','\u4e94','\u516d','\u4e03','\u516b','\u4e5d','\u5341','\u51ac','\u814a'];
-  var dStr=['\u521d\u4e00','\u521d\u4e8c','\u521d\u4e09','\u521d\u56db','\u521d\u4e94','\u521d\u516d','\u521d\u4e03','\u521d\u516b','\u521d\u4e5d','\u521d\u5341','\u5341\u4e00','\u5341\u4e8c','\u5341\u4e09','\u5341\u56db','\u5341\u4e94','\u5341\u516d','\u5341\u4e03','\u5341\u516b','\u5341\u4e5d','\u4e8c\u5341','\u5eff\u4e00','\u5eff\u4e8c','\u5eff\u4e09','\u5eff\u56db','\u5eff\u4e94','\u5eff\u516d','\u5eff\u4e03','\u5eff\u516b','\u5eff\u4e5d','\u4e09\u5341'];
-  return {year:year,month:month,day:off+1,isLeap:isLeap,monthName:mStr[month-1]+'\u6708',dayName:dStr[off]};
-}
-
-const today = new Date(); const p2 = n => String(n).padStart(2, '0');
-
-// 时区选择（弹窗）
-document.getElementById('tzPopup').onclick = function(e) { if (e.target === this) this.style.display = 'none'; };
-
-// 速度选择（弹窗）
-document.getElementById('spdBtn').onclick = () => {
-  const popup = document.getElementById('spdPopup');
-  popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
-};
-document.querySelectorAll('.spd-opt').forEach(el => {
-  el.onclick = () => {
-    const u = el.dataset.u;
-    curUnit = u; state.spd = SPD[u];
-    document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
-    const labels = { sec: '秒/秒', hour: '时/秒', day: '日/秒', month: '月/秒', year: '年/秒' };
-    document.getElementById('spdBtn').textContent = '⚡ ' + labels[u] + ' ▾';
-    document.querySelectorAll('.spd-opt').forEach(o => o.classList.toggle('on', o.dataset.u === u));
-    document.getElementById('spdPopup').style.display = 'none';
-  };
-});
-// 点击空白关闭弹窗
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#spdPopup') && !e.target.closest('#spdBtn')) {
-    document.getElementById('spdPopup').style.display = 'none';
-  }
-  if (!e.target.closest('#skinPopup') && !e.target.closest('#btnSkin')) {
-    document.getElementById('skinPopup').style.display = 'none';
-  }
-  if (!e.target.closest('#datePicker') && !e.target.closest('#dateText') && !e.target.closest('#tzBtn')) {
-    document.getElementById('datePicker').style.display = 'none';
-  }
-});
-
-// 日期点击 → 打开跳转面板
-// ===== 日期选择器 =====
-var dpYear = today.getFullYear(), dpMonth = today.getMonth(), dpSelected = today.getDate();
-const syncLunarPicker=TimeviewCalendar.lunarPicker(()=>({y:dpYear,m:dpMonth+1,d:dpSelected}),(y,m,d)=>{dpYear=y;dpMonth=m-1;dpSelected=d;renderCalendar()});
-function setPickerDraft(ts){
-  const d=new Date(ts+zoneOffset(tz,ts)*60000);
-  dpYear=d.getUTCFullYear();dpMonth=d.getUTCMonth();dpSelected=d.getUTCDate();
-  document.getElementById('dpTime').value=[d.getUTCHours(),d.getUTCMinutes(),d.getUTCSeconds()].map(p2).join(':');
-  renderCalendar();syncLunarPicker();
-}
-
-function switchCalTab(tab) {
-  document.getElementById('tabSolar').className = 'dp-tab' + (tab === 'solar' ? ' active' : '');
-  document.getElementById('tabLunar').className = 'dp-tab' + (tab === 'lunar' ? ' active' : '');
-  document.getElementById('solarPanel').style.display = tab === 'solar' ? '' : 'none';
-  document.getElementById('lunarPanel').style.display = tab === 'lunar' ? '' : 'none';
-  if(tab==='lunar')syncLunarPicker();
-}
-
-function dpNav(dir) { dpMonth += dir; if (dpMonth < 0) { dpMonth = 11; dpYear--; } if (dpMonth > 11) { dpMonth = 0; dpYear++; } renderCalendar(); }
-
-function renderCalendar() {
-  dpSelected=Math.min(Math.max(1,dpSelected),new Date(dpYear,dpMonth+1,0).getDate());
-  document.getElementById('dpTitle').textContent = (dpMonth + 1) + '月';
-  var ySel = document.getElementById('dpYear');
-  if (ySel) {
-    ySel.min = new Date().getFullYear() - 5000;
-    ySel.max = new Date().getFullYear() + 5000;
-    if (!ySel.dataset.bound) { ySel.dataset.bound = '1'; ySel.onchange = function(){ dpYear = parseInt(this.value) || dpYear; renderCalendar(); }; }
-    ySel.value = dpYear;
-  }
-  var grid = document.getElementById('dpGrid');
-  grid.innerHTML = '';
-  ['日','一','二','三','四','五','六'].forEach(function(d) {
-    var el = document.createElement('div'); el.className = 'dp-cell head'; el.textContent = d; grid.appendChild(el);
-  });
-  var firstDay = new Date(dpYear, dpMonth, 1).getDay();
-  var daysInMonth = new Date(dpYear, dpMonth + 1, 0).getDate();
-  var daysInPrev = new Date(dpYear, dpMonth, 0).getDate();
-  var now = new Date();
-  for (var i = 0; i < firstDay; i++) {
-    var el = document.createElement('div'); el.className = 'dp-cell other';
-    el.textContent = daysInPrev - firstDay + 1 + i; grid.appendChild(el);
-  }
-  for (var d = 1; d <= daysInMonth; d++) {
-    var el = document.createElement('button'); el.type='button';el.className = 'dp-cell';
-    if (d === now.getDate() && dpMonth === now.getMonth() && dpYear === now.getFullYear()) el.classList.add('today');
-    if (d === dpSelected) el.classList.add('selected');
-    TimeviewCalendar.decorateCell(el,dpYear,dpMonth+1,d);
-    el.onclick = (function(dd) { return function(event) { event.stopPropagation();dpSelected = dd; renderCalendar(); }; })(d);
-    grid.appendChild(el);
-  }
-  var remaining = 42 - firstDay - daysInMonth;
-  for (var i = 1; i <= remaining; i++) {
-    var el = document.createElement('div'); el.className = 'dp-cell other'; el.textContent = i; grid.appendChild(el);
-  }
-  TimeviewCalendar.selection(dpYear,dpMonth+1,dpSelected);
-  // Update lunar info
-  var lunar = solarToLunar(dpYear, dpMonth + 1, dpSelected);
-  var _st = solarTerm(dnum(Date.UTC(dpYear, dpMonth, dpSelected) + 12*3600000));
-  var yearLabel = dpYear >= 0 ? dpYear + '年' : '公元前 ' + (-dpYear) + '年';
-  if (lunar) {
-    document.getElementById('lunarInfo').textContent = lunar.year + '年' + (lunar.isLeap ? '闰' : '') + lunar.monthName + lunar.dayName + ' · ' + _st.name;
-  } else {
-    document.getElementById('lunarInfo').textContent = yearLabel + ' · ' + _st.name;
-  }
-}
-
-document.getElementById('dateText').onclick = function() {
-  var picker = document.getElementById('datePicker');
-  if (picker.style.display === 'none') {
-    setPickerDraft(state.t);picker.style.display = 'block';
-  } else { picker.style.display = 'none'; }
-};
-document.getElementById('dpCancel').onclick = function() { document.getElementById('datePicker').style.display = 'none'; };
-document.getElementById('dpToday').onclick = function() {
-  setPickerDraft(Date.now());
-};
-// Only confirmation applies the draft; closing discards it on the next open.
-function jumpToDate() {
-  var ts = document.getElementById('dpTime').value || '12:00';
-  var hm = ts.split(':');
-  var civil=new Date(0);civil.setUTCFullYear(dpYear,dpMonth,dpSelected);civil.setUTCHours(+hm[0]||0,+hm[1]||0,+hm[2]||0,0);var local=civil.getTime();
-  var target=local-tz.min*60000;
-  for(var i=0;i<3;i++) target=local-zoneOffset(tz,target)*60000;
-  state.t=target; refreshZones(target);
-  inertia=0;tlDrag=false;
-  dispT = state.t; anchorT = state.t;
-  document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
-}
-document.getElementById('dpConfirm').onclick=function(){
-  const input=document.getElementById('dpTime');input.required=true;if(!input.reportValidity())return;
-  window.dispatchEvent(new Event('timeview:manual-view'));jumpToDate();document.getElementById('datePicker').style.display='none';
-};
-document.addEventListener('pointerdown', function(e) {
-  if (!e.target.closest('#datePicker') && !e.target.closest('#dateText')) {
-    document.getElementById('datePicker').style.display = 'none';
-  }
-});
-
-// 时区切换
-// 时区选择弹窗
-document.getElementById('tzBtn').onclick = function(e) {
-  e.stopPropagation();
-  var popup = document.getElementById('tzPopup');
-  var opts = document.getElementById('tzOptions');
-  if (popup.style.display !== 'none') { popup.style.display = 'none'; return; }
-
-  // 定位到按钮上方
-  var rect = this.getBoundingClientRect();
-  popup.style.left = Math.max(8, rect.left) + 'px';
-  popup.style.transform = 'none';
-  popup.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-
-  opts.innerHTML = '';
-  TIMEZONES.forEach(function(t, i) {
-    var el = document.createElement('div');
-    el.className = 'tz-opt' + (tz === t ? ' on' : '');
-    el.textContent = '🕓 ' + t.label;
-    el.onclick = function() { tz = t; document.getElementById('tzBtn').textContent = '🕓 ' + t.label; popup.style.display = 'none'; };
-    opts.appendChild(el);
-  });
-  popup.style.display = 'block';
-  // 防溢出：超出屏幕右边界时左移
-  var _pw = popup.offsetWidth, _ml = window.innerWidth - _pw - 8;
-  if (_pw && (parseFloat(popup.style.left) || 0) > _ml) popup.style.left = Math.max(8, _ml) + 'px';
-};
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#tzPopup') && !e.target.closest('#tzBtn')) {
-    document.getElementById('tzPopup').style.display = 'none';
-  }
-});
-
-// Lunar controls use the shared draft picker above.
-
-// 时间轴
-function setView(v) {
-  if (v === 'voyage') { enterVoyage(); return; }
-  ++voyageRequest;
-  if (state.view === 'voyage') exitVoyage();
-  state.view = v;
-  document.getElementById('gl').classList.toggle('show', v === 'voyage');
-  document.getElementById('cv').style.display = v === 'earth' ? '' : 'none';
-}
-
-// ========== 星空旅行 ==========
-const COS_DEST = [
-  { name: '火星', dist: 0.00001, host: '太阳系', kind: 'planet' },
-  { name: '木星', dist: 0.00008, host: '太阳系', kind: 'planet' },
-  { name: '土星', dist: 0.00016, host: '太阳系', kind: 'planet' },
-  { name: '比邻星', dist: 4.246, host: '半人马座α', kind: 'star' },
-  { name: '天狼星', dist: 8.6, host: '大犬座', kind: 'star' },
-  { name: '织女星', dist: 25.3, host: '天琴座', kind: 'star' },
-  { name: '北极星', dist: 433, host: '小熊座', kind: 'star' },
-  { name: '猎户座星云', dist: 1344, host: '猎户座', kind: 'nebula' },
-  { name: '昴宿星团', dist: 444, host: '金牛座', kind: 'cluster' },
-  { name: '银河系中心', dist: 26000, host: '人马座', kind: 'galaxy' },
-  { name: '仙女座星系', dist: 2537000, host: '仙女座', kind: 'galaxy' }
-];
-const AU_LY = 1 / 63241.1;
-
-let voyage = null, _voyState = 'orbit', _destDist = 0, _distLy = 0, _speedC = 0, _maxC = 0, _missionY = 0;
-let _destIdx = 3, _warpIdx = 0;
-const WLV = [2.635e-5, 1e-4, 5e-4, 0.002, 0.01, 0.05, 0.2, 0.5, 1, 2, 3, 5, 10, 30, 100, 300, 1000, 10000, 100000, 1000000];
-
-let voyageLibrary = null, voyageRequest = 0;
-function loadVoyageLibrary() {
-  if (window.THREE) return Promise.resolve();
-  if (!voyageLibrary) voyageLibrary = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js';
-    script.onload = () => window.THREE ? resolve() : reject(new Error('Three.js unavailable'));
-    script.onerror = () => { script.remove(); reject(new Error('Three.js download failed')); };
-    document.head.append(script);
-  }).catch(error => { voyageLibrary = null; throw error; });
-  return voyageLibrary;
-}
-async function enterVoyage() {
-  const request = ++voyageRequest;
-  // The Earth view and its opening use no WebGL library. Download it only
-  // when entering this view, leaving startup bandwidth for the movie.
-  try {
-    await loadVoyageLibrary();
-    if (request !== voyageRequest) return;
-    ensureRenderer();
-    if (!voyage) initVoyageScene();
-  } catch (error) {
-    console.warn('Voyage unavailable:', error);
-    if (request === voyageRequest) alert('星空旅行加载失败，请检查网络后重试。');
-    return;
-  }
-  state.view = 'voyage';
-  document.getElementById('gl').classList.add('show');
-  document.getElementById('cv').style.display = 'none';
-  document.getElementById('voyHud').style.display = '';
-  setupVoyRoute();
-}
-function exitVoyage() {
-  ++voyageRequest;
-  document.getElementById('voyHud').style.display = 'none';
-  document.getElementById('gl').classList.remove('show');
-  document.getElementById('cv').style.display = '';
-  state.view = 'earth';
-}
-
-function initVoyageScene() {
-  // 复用已有 renderer/scene/cam 但创建旅行专用场景
-  voyage = { scene: new THREE.Scene(), cam: new THREE.PerspectiveCamera(70, W / H, 0.1, 9000), waypoints: [] };
-  voyage.scene.background = new THREE.Color(0x03050c);
-  voyage.scene.add(new THREE.AmbientLight(0x96a4c0, 0.75));
-  const key = new THREE.PointLight(0xdfe9ff, 1.4, 0, 0.12); key.position.set(30, 20, 40); voyage.scene.add(key);
-  // 星空
-  const p = [], c = [];
-  for (let i = 0; i < 2400; i++) {
-    const u = Math.random() * 2 - 1, th = Math.random() * 6.283, s = Math.sqrt(1 - u * u), R = 3400;
-    p.push(s * Math.cos(th) * R, u * R, s * Math.sin(th) * R);
-    const t = Math.random(); const b = 0.45 + Math.random() * 0.55;
-    c.push((t < 0.25 ? 0.72 : t > 0.85 ? 1 : 1) * b, (t < 0.25 ? 0.8 : t > 0.85 ? 0.84 : 1) * b, (t < 0.25 ? 1 : t > 0.85 ? 0.64 : 1) * b);
-  }
-  const starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-  starGeo.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
-  voyage.scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending })));
-  // 目的地选择器
-  const destEl = document.getElementById('voyDest');
-  COS_DEST.forEach((d, i) => { const o = document.createElement('option'); o.value = i; o.textContent = d.name + ' · ' + (d.kind === 'planet' ? (d.dist / AU_LY < 1 ? (d.dist / AU_LY).toFixed(2) + ' AU' : d.dist + ' ly') : d.dist + ' ly'); destEl.appendChild(o); });
-  destEl.value = _destIdx;
-  destEl.onchange = () => { _destIdx = +destEl.value; setupVoyRoute(); };
-}
-
-function setupVoyRoute() {
-  const dest = COS_DEST[_destIdx];
-  _destDist = dest.dist;
-  _voyState = 'orbit'; _distLy = 0; _speedC = 0; _maxC = 0; _missionY = 0; _warpIdx = 0;
-  document.getElementById('voyMis').textContent = '⌖ 前往 ' + dest.name;
-  document.getElementById('voyGo').textContent = '出发';
-  document.getElementById('voyPass').textContent = '地球轨道 · 待命';
-  document.getElementById('voySpeed').textContent = '0 km/s';
-  document.getElementById('voyDist').textContent = '0 AU';
-  document.getElementById('voyEta').textContent = '—';
-}
-
-function updateVoyage(dt, now) {
-  if (_voyState === 'run') {
-    const target = WLV[_warpIdx] || 0;
-    _speedC += (target - _speedC) * Math.min(1, dt * 1.1);
-    const dMY = dt * 10 / 365.25;
-    _missionY += dMY;
-    _distLy += _speedC * dMY;
-    if (_speedC > _maxC) _maxC = _speedC;
-    if (_distLy >= _destDist) { _distLy = _destDist; _voyState = 'arrived'; }
-  }
-  // 渲染
-  renderer.render(voyage.scene, voyage.cam);
-  // HUD
-  if (now - (updateVoyage._hudT || 0) > 300) {
-    updateVoyage._hudT = now;
-    document.getElementById('voySpeed').textContent = _speedC < 0.01 ? (_speedC * 299792).toFixed(0) + ' km/s' : _speedC.toFixed(2) + ' c';
-    document.getElementById('voyDist').textContent = _distLy < 0.02 ? (_distLy / AU_LY).toFixed(2) + ' AU' : _distLy.toFixed(2) + ' ly';
-    document.getElementById('voyEta').textContent = _voyState === 'arrived' ? '已抵达' : _speedC > 1e-9 ? fmtTime(_destDist - _distLy, _speedC) : '—';
-    document.getElementById('voyPass').textContent = _voyState === 'arrived' ? '已抵达 ' + COS_DEST[_destIdx].name : '— 星际空间 —';
-    document.getElementById('voyGo').textContent = _voyState === 'orbit' ? '出发' : _voyState === 'run' ? '暂停' : _voyState === 'pause' ? '继续' : '已抵达';
-  }
-}
-function fmtTime(remLy, speedC) {
-  const y = remLy / speedC;
-  if (y < 1) return Math.round(y * 365) + ' 天';
-  if (y < 100) return y.toFixed(1) + ' 年';
-  return Math.round(y) + ' 年';
-}
-
-document.getElementById('voyGo').onclick = () => {
-  if (_voyState === 'orbit') { _voyState = 'run'; _speedC = WLV[0]; }
-  else if (_voyState === 'run') _voyState = 'pause';
-  else if (_voyState === 'pause') _voyState = 'run';
-};
-document.getElementById('voySlow').onclick = () => { _warpIdx = Math.max(0, _warpIdx - 1); };
-document.getElementById('voyFast').onclick = () => { _warpIdx = Math.min(WLV.length - 1, _warpIdx + 1); };
-document.getElementById('voyExit').onclick = () => exitVoyage();
-
-// ========== 触摸交互 ==========
-let drag = null, pinch = null;
-function isUI(t) {
-  if (t?.closest?.('#tv-course-visual')) return true;
-  return !!(t && t.closest && t.closest('button,a,input,select,textarea,[onclick],.topbar,.bottombar,.view-seg,#tv-fab,#tv-assist,#datePicker,#spdPopup,#skinPopup,#tzPopup,.fort-mask,.card-mask,.guide-card,.guide-overlay'));
-}
-function onTouchStart(e) {
-  if (isUI(e.target)) return;  // 点按交互元素不拦截，让按钮正常触发 click
-  e.preventDefault && e.preventDefault();
-  if (e.touches.length >= 2) {
-    const a = { x: e.touches[0].clientX, y: e.touches[0].clientY }, b = { x: e.touches[1].clientX, y: e.touches[1].clientY };
-    pinch = { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), zoom: earthZoom };
-    drag = null; return;
-  }
-  const t = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  drag = { x: t.x, y: t.y, moved: 0 };
-}
-function onTouchMove(e) {
-  if (pinch && e.touches.length >= 2) {
-    e.preventDefault && e.preventDefault();
-    const a = { x: e.touches[0].clientX, y: e.touches[0].clientY }, b = { x: e.touches[1].clientX, y: e.touches[1].clientY };
-    const dd = Math.hypot(a.x - b.x, a.y - b.y);
-    earthZoom = Math.max(0.5, Math.min(4, pinch.zoom * dd / pinch.d));
-    return;
-  }
-  if (!drag || !e.touches.length) return;
-  e.preventDefault && e.preventDefault();
-  const p = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  const dx = p.x - drag.x, dy = p.y - drag.y;
-  drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-
-  if (state.view === 'earth') { state.t -= dx * 1800000; drag.x = p.x; return; }
-  drag.x = p.x; drag.y = p.y;
-}
-function onTouchEnd(e) {
-  if (pinch && (!e.touches || e.touches.length < 2)) pinch = null;
-  drag = null;
-}
-
-// 鼠标事件适配器
-function mouseToTouch(e) { return { clientX: e.clientX, clientY: e.clientY }; }
-function onMouseDown(e) { if (!isUI(e.target)) onTouchStart({ touches: [mouseToTouch(e)] }); }
-function onMouseMove(e) { if (drag) { onTouchMove({ touches: [mouseToTouch(e)] }); e.preventDefault(); } }
-function onMouseUp(e) { onTouchEnd({ touches: [] }); }
-function onWheel(e) {
-  if (isUI(e.target)) return;
-  e.preventDefault();
-  earthZoom = Math.max(0.5, Math.min(4, earthZoom * (e.deltaY > 0 ? 0.92 : 1.08)));
-}
-document.addEventListener('touchstart', onTouchStart, { passive: false });
-document.addEventListener('touchmove', onTouchMove, { passive: false });
-document.addEventListener('touchend', onTouchEnd, { passive: true });
-document.addEventListener('touchcancel', () => { pinch = null; drag = null; }, { passive: true });
-document.addEventListener('mousedown', onMouseDown);
-document.addEventListener('mousemove', onMouseMove);
-document.addEventListener('mouseup', onMouseUp);
-document.addEventListener('wheel', onWheel, { passive: false });
-
-// ========== 信息卡 ==========
-document.getElementById('cardClose').onclick = () => { document.getElementById('cardMask').style.display = 'none'; };
-document.getElementById('cardMask').onclick = (e) => { if (e.target === document.getElementById('cardMask')) document.getElementById('cardMask').style.display = 'none'; };
-
-// 月亮信息卡
-document.addEventListener('click', (e) => {
-  if (state.view !== 'earth' || !window._moonXY) return;
-  if (isUI(e.target)) return;
-  if (Math.hypot(e.clientX - window._moonXY.x, e.clientY - window._moonXY.y) > window._moonXY.r + 20) return;
-  const d = dnum(dispT);
-  const _cd = new Date(dispT + tz.min * 60000);
-  const _cl = solarToLunar(_cd.getUTCFullYear(), _cd.getUTCMonth()+1, _cd.getUTCDate());
-  const ph = moonPhase(d, _cl ? _cl.day : null);
-  document.getElementById('cardTitle').textContent = '🌙 月球';
-  document.getElementById('cardBody').innerHTML =
-    '<div class="row"><span>月相</span><span class="val">' + ph.name + '</span></div>' +
-    '<div class="row"><span>月龄</span><span class="val">' + ph.age.toFixed(1) + ' 天</span></div>' +
-    '<div class="row"><span>照亮</span><span class="val">' + Math.round(ph.illum * 100) + '%</span></div>' +
-    '<div class="row"><span>月地距</span><span class="val">' + moonDistKm(d).toLocaleString() + ' km</span></div>' +
-    '<div class="row"><span>直径</span><span class="val">3,474 km</span></div>' +
-    '<div class="row"><span>黄经差</span><span class="val">' + ph.el.toFixed(1) + '°</span></div>' +
-    '<div class="row"><span>周期天数</span><span class="val">' + (ph.age % SYN).toFixed(1) + '</span></div>' +
-    '<div class="note">地球唯一的天然卫星，潮汐锁定，约 27.3 天绕地一周。</div>';
-  window.TimeviewCards.show(document.getElementById('cardMask'));
-});
-
-// ========== 命理/历法 ==========
-const API_URL = location.origin + location.pathname.replace(/[^/]*$/, '') + 'api/fortune';
-let _fortBuf = '', _fortFlushed = '', _fortTimer = null;
-
-function flushFort(force) {
-  if (_fortBuf === _fortFlushed && !force) return;
-  _fortFlushed = _fortBuf;
-  document.getElementById('fortText').textContent = _fortBuf;
-  document.getElementById('fortLoading').style.display = 'none';
-  const card = document.getElementById('fortMask');
-  if (card.style.display === 'none') window.TimeviewCards.show(card);
-}
-
-function startFortune() {
-  _fortBuf = ''; _fortFlushed = '';
-  document.getElementById('fortText').textContent = '';
-  document.getElementById('fortLoading').style.display = 'flex';
-  document.getElementById('fortMask').style.display = 'none';
-  if (_fortTimer) clearInterval(_fortTimer);
-  _fortTimer = setInterval(() => flushFort(), 90);
-
-  // 传 ts + tzMin 让服务端 computeAstro() 统一计算（含时辰、星座、行星黄经）
-  const data = {
-    ts: dispT, tzMin: tz.min, mode: 'almanac'
-  };
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data })
-  }).then(async r => {
-    if (!r.body || !r.body.getReader) { const t = await r.text(); _fortBuf = t; flushFort(true); return; }
-    const reader = r.body.getReader(), decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const text = decoder.decode(value, { stream: true });
-      text.split('\n').forEach(line => {
-        if (!line.startsWith('data:')) return;
-        const payload = line.slice(5).trim();
-        if (payload === '[DONE]') return;
-        try { const j = JSON.parse(payload); if (j.content) _fortBuf += j.content; } catch (e) {}
-      });
-    }
-    flushFort(true);
-    if (_fortTimer) { clearInterval(_fortTimer); _fortTimer = null; }
-  }).catch(e => { _fortBuf = '⚠️ ' + e.message; flushFort(true); });
-}
-document.getElementById('fortClose').onclick = () => { document.getElementById('fortMask').style.display = 'none'; };
-
-// ========== 底部栏功能按钮 ==========
-document.getElementById('btnHemi').onclick = () => {
-  state.hemi *= -1;
-  document.getElementById('btnHemi').textContent = state.hemi > 0 ? '🧭 北' : '🧭 南';
-  loadEarthPole();
-};
-document.getElementById('btnCities').onclick = () => {
-  showCities = !showCities;
-  document.getElementById('btnCities').style.color = showCities ? '#5fd6f0' : '#4d6a80';
-};
-document.getElementById('btnSkin').onclick = (e) => {
-  e.stopPropagation();
-  const popup = document.getElementById('skinPopup');
-  if (popup.style.display !== 'none') { popup.style.display = 'none'; return; }
-  const rect = e.currentTarget.getBoundingClientRect();
-  popup.style.left = Math.max(8, rect.left) + 'px';
-  popup.style.transform = 'none';
-  popup.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-  popup.style.display = 'block';
-  // 防溢出：超出屏幕右边界时左移
-  var _pw = popup.offsetWidth, _ml = window.innerWidth - _pw - 8;
-  if (_pw && (parseFloat(popup.style.left) || 0) > _ml) popup.style.left = Math.max(8, _ml) + 'px';
-  document.querySelectorAll('.skin-opt').forEach(o => o.classList.toggle('on', o.dataset.skin === curSkin));
-};
-document.querySelectorAll('.skin-opt').forEach(el => {
-  el.onclick = () => {
-    curSkin = el.dataset.skin;
-    document.body.classList.toggle('golden-skin', curSkin === 'golden');
-    document.getElementById('btnSkin').textContent = '🌐 ' + SKIN_NAMES[curSkin];
-    document.querySelectorAll('.skin-opt').forEach(o => o.classList.toggle('on', o.dataset.skin === curSkin));
-    loadEarthPole();
-    document.getElementById('skinPopup').style.display = 'none';
-  };
-});
-document.getElementById('btnFortune').onclick = () => { startFortune(); };
-document.getElementById('btnGuide').onclick = () => { showGuide(0); };
-
-// ========== 操作引导 ==========
-const guideSteps = [
-  { title: '地球表盘', desc: '左右拖动地球可拨转时间\n双指捏合缩放\n点月球查看详情' },
-  { title: '快捷功能', desc: '底部横条右侧图标：\n🧭 切换南/北半球\n🌐 切换卫星/行政/卡通\n✨ 历法 🔊 音效 ❓ 引导' },
-  { title: '时间控制台', desc: '底部面板控制时间快慢\n点击日期可跳转\n⚡ 调整时间速度' },
-  { title: '解读星空历法', desc: 'AI 实时解读天文历法\n月相 · 节气 · 行星 · 星空\n点击底部 ✨ 即可' }
-];
-let guideStep = 0;
-function showGuide(step) {
-  guideStep = step;
-  const s = guideSteps[step];
-  document.getElementById('guideTitle').textContent = (step + 1) + '. ' + s.title;
-  document.getElementById('guideDesc').textContent = s.desc;
-  let dots = '';
-  guideSteps.forEach((_, i) => { dots += '<span class="dot' + (i === step ? ' on' : '') + '"></span>'; });
-  document.getElementById('guideDots').innerHTML = dots;
-  document.getElementById('guidePrev').style.display = step > 0 ? '' : 'none';
-  document.getElementById('guideNext').textContent = step >= guideSteps.length - 1 ? '开始体验' : '下一步 ›';
-  document.getElementById('guideOverlay').style.display = 'block';
-  document.getElementById('guideCard').style.display = 'block';
-  setView('earth');
-}
-function closeGuide() {
-  document.getElementById('guideOverlay').style.display = 'none';
-  document.getElementById('guideCard').style.display = 'none';
-  localStorage.setItem('guideSeen', '1');
-  if (state.view !== 'earth') setView('earth');
-}
-document.getElementById('guideNext').onclick = () => { guideStep >= guideSteps.length - 1 ? closeGuide() : showGuide(guideStep + 1); };
-document.getElementById('guidePrev').onclick = () => { if (guideStep > 0) showGuide(guideStep - 1); };
-document.getElementById('guideSkip').onclick = closeGuide;
-document.getElementById('guideOverlay').onclick = closeGuide;
-
-// ========== 启动 ==========
-// 从太阳视角跳转过来时，带入日期/时间（URL ?t=<ms>）
-(function applyIncomingTime() {
-  const m = location.search.match(/[?&]t=(-?\d+)/);
-  if (!m) return;
-  const t = parseInt(m[1], 10);
-  if (isNaN(t)) return;
-  state.t = t;
-  dispT = t;
-  anchorT = t;
-  document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
-})();
-resize();
-// 默认进入地球视图
-setView('earth');
-// 首次引导（屏保模式下不弹）
-if (!localStorage.getItem('guideSeen') && !document.body.classList.contains('scrsv')) setTimeout(() => showGuide(0), 1500);
-requestAnimationFrame(frame);
-
-// ===== 过场动画：地球→太阳系 =====
-function transitionToSolar(href) {
-  const tc = document.getElementById('transCanvas');
-  if (!tc) { location.href = href; return; }
-  const tctx = tc.getContext('2d');
-  const DPR2 = Math.min(window.devicePixelRatio || 1, 2);
-  tc.width = W * DPR2; tc.height = H * DPR2;
-  tc.style.width = W + 'px'; tc.style.height = H + 'px';
-  tctx.setTransform(DPR2, 0, 0, DPR2, 0, 0);
-  tc.style.display = 'block';
-
-  const ex = W / 2, ey = H * EARTH_CFG.centerY;
-  const eR = Math.min(W, H) * EARTH_CFG.earthScale;
-  const targetX = W / 2, targetY = H / 2;
-  const south = state.hemi < 0;
-  const eimg = getEarthImg();
-  const imgOk = isEarthReady();
-
-  let startTime = null, duration = 900;
-
-  function animate(ts) {
-    if (!startTime) startTime = ts;
-    const progress = Math.min((ts - startTime) / duration, 1);
-    const ease = 1 - Math.pow(1 - progress, 3);
-
-    tctx.clearRect(0, 0, W, H);
-    tctx.fillStyle = 'rgba(3,5,12,' + ease + ')';
-    tctx.fillRect(0, 0, W, H);
-
-    const cx = ex + (targetX - ex) * ease;
-    const cy = ey + (targetY - ey) * ease;
-    const scale = 1 - ease * 0.93;
-    const r = eR * scale;
-
-    if (r > 1) {
-      // 画真实地球图片（从 Image 对象直接画，不经过 canvas 截图）
-      tctx.save();
-      tctx.beginPath(); tctx.arc(cx, cy, r, 0, Math.PI * 2); tctx.clip();
-      if (imgOk) {
-        tctx.drawImage(eimg, cx - r, cy - r, r * 2, r * 2);
-      } else {
-        tctx.fillStyle = '#1a4a7a'; tctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-      }
-      tctx.restore();
-      tctx.strokeStyle = 'rgba(95,214,240,.3)'; tctx.lineWidth = 1;
-      tctx.beginPath(); tctx.arc(cx, cy, r, 0, Math.PI * 2); tctx.stroke();
-    }
-
-    if (progress < 1) requestAnimationFrame(animate);
-    else location.href = href;
-  }
-  requestAnimationFrame(animate);
-}
-
-// 绑定跳转链接为动画触发
-document.querySelectorAll('a[href*="solar-system"]').forEach(el => {
-  el.addEventListener('click', function(e) {
-    e.preventDefault();
-    const sep = this.href.indexOf('?') >= 0 ? '&' : '?';
-    transitionToSolar(this.href + sep + 't=' + Math.round(dispT));
-  });
-});
-</script>
-
-<script>
-window.TIMEVIEW='earth';
-function resetScreensaverToNow() {
-  const restarting = new URLSearchParams(location.search).get('restart') === '1';
-  if (!document.body.classList.contains('scrsv') && !restarting) return;
-  if (restarting) { state.playing = true; try { sessionStorage.setItem('tv-clock-paused','0'); } catch (_) {} }
-  setView('earth'); state.hemi = 1; earthZoom = 1; showCities = true;
-  tzIdx = 0; tz = TIMEZONES[0]; inertia = 0; tlDrag = false;
-  document.getElementById('pNow').click();
-  document.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾';
-  document.querySelectorAll('.spd-opt').forEach(o => o.classList.toggle('on', o.dataset.u === 'sec'));
-  document.getElementById('tzBtn').textContent = '🕓 ' + tz.label;
-  document.getElementById('btnHemi').textContent = '🧭 北';
-  document.getElementById('btnCities').style.color = '#5fd6f0';
-  loadEarthPole();
-}
-window.addEventListener('timeview:intro-finished', resetScreensaverToNow);
-if (!window.introActive) resetScreensaverToNow();
-let courseMoonMonthStart = null;
-function showCourseMoon(value) {
-  const dayMs = 86400000;
-  const lunarAt = ts => {
-    const local = new Date(ts + 480 * 60000);
-    return solarToLunar(local.getUTCFullYear(), local.getUTCMonth() + 1, local.getUTCDate());
-  };
-  if (courseMoonMonthStart === null) {
-    const local = new Date(state.t + 480 * 60000);
-    const noon = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 4);
-    const lunar = lunarAt(noon);
-    courseMoonMonthStart = noon - (lunar.day - 1) * dayMs;
-  }
-  const monthStart = courseMoonMonthStart;
-  const index = Math.max(0, Math.min(7, Math.trunc(Number(value) || 0)));
-  let offset = [1, 3, 8, 11, 15, 18, 23, 26][index] - 1;
-  if (value === 'cycle') {
-    // Replaying this cue stays on the next month's first day.
-    offset = lunarAt(monthStart + 29 * dayMs).day === 1 ? 29 : 30;
-  }
-  const ts = monthStart + offset * dayMs;
-  window.TimeviewCourse.setTime(ts);
-  courseMoonMonthStart = monthStart;
-  setView('earth'); inertia = 0; tlDrag = false;
-  curUnit = 'sec'; state.spd = SPD.sec;
-  document.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾';
-  document.querySelectorAll('.spd-opt').forEach(o => o.classList.toggle('on', o.dataset.u === 'sec'));
-  const lunar = lunarAt(ts), phase = moonPhase(dnum(ts), lunar.day);
-  return {date: new Date(ts + 480 * 60000).toISOString().slice(0, 10),
-    lunar: lunar.monthName + lunar.dayName, el: phase.el};
-}
-window.TimeviewCourse = {
-  reset: () => { setView('earth'); earthZoom=1; inertia=0; tlDrag=false; },
-  time: () => state.t,
-  setTime: (ts) => {
-    if (!Number.isFinite(ts)) throw new Error('无效日期');
-    courseMoonMonthStart = null;
-    refreshZones(ts);
-    tzIdx = 0; tz = TIMEZONES[0];
-    document.getElementById('tzBtn').textContent = '🕓 ' + tz.label;
-    state.t = ts; dispT = ts; anchorT = ts;
-    document.getElementById('pPlay').textContent = state.playing ? '❚❚' : '▶';
-  },
-  moon: showCourseMoon,
-  now: () => { courseMoonMonthStart = null; document.getElementById('pNow').click(); }
-};
-window.prepareEarthScene = async function () {
-  await Promise.all([loadEarthPole(),loadImage(moonImg,TEXBASE+'moon.jpg'),loadImage(changEIcon,'textures/change-orbiter.svg?v=3.57')]);
-  moonReady=true;
-  const day=dnum(dispT),date=new Date(dispT+tz.min*60000);
-  refreshZones(dispT);drawEarth(day,date);updateHUD(day,date);
-  document.getElementById('einfo').style.display='';
-  // Let the browser commit the decoded Earth canvas behind the loading screen.
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  window.earthSceneReady=true;
-};
-</script>
-
+<script src="solar-gestures.js"></script>
+<script src="three-body-model.js"></script>
+<script src="city-labels.js"></script>
+<script src="earth-view.js"></script>
+<script src="solar-view.js"></script>
+<script src="view-transition.js"></script>
+<script src="views.js"></script>
 <script src="mobile.js"></script>
 <script src="card-layout.js"></script>
 <script src="course-visuals.js"></script>
 <script src="assistant.js"></script>
-</body>
-</html>
+</body></html>

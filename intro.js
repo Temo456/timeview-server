@@ -17,7 +17,7 @@
   credits.textContent='影像：NASA · EOX/Copernicus 2016（CC BY 4.0）\n道路：© OpenStreetMap contributors · 天安门近景为动画重建';
   overlay.append(credits);
   const sound=document.createElement('button');sound.id='introSound';sound.type='button';sound.hidden=true;sound.textContent='开启声音';overlay.append(sound);
-  let closing=false,hasStarted=false,playRequest=0,frameHandle=null,lastScale=NaN,resumeWhenVisible=false;
+  let closing=false,hasStarted=false,playRequest=0,frameHandle=null,lastScale=NaN,resumeWhenVisible=false,playTimer=null;
   window.introActive=false;window.introTransitioning=false;
   function alignArrival(){
     if(!isFlight||!video.videoHeight)return;
@@ -32,13 +32,18 @@
     }
   }
   video.addEventListener('timeupdate',trackArrival);addEventListener('resize',alignArrival);
+  function clearPlayTimer(){clearTimeout(playTimer);playTimer=null;}
   function finish(recordCompletion){
     if(!window.introActive||closing||!window.TimeviewPreload.ready)return;
     if(recordCompletion){try{sessionStorage.setItem(completedKey,'1');}catch(_){}}
-    closing=true;resumeWhenVisible=false;window.introTransitioning=true;++playRequest;video.pause();sound.hidden=true;overlay.style.opacity='0';overlay.dataset.phase='complete';
+    closing=true;resumeWhenVisible=false;window.introTransitioning=true;++playRequest;clearPlayTimer();video.pause();sound.hidden=true;overlay.style.opacity='0';overlay.dataset.phase='complete';
     if(frameHandle!==null){video.cancelVideoFrameCallback(frameHandle);frameHandle=null;}
     setTimeout(()=>{
       overlay.style.display='none';overlay.style.opacity='1';video.style.visibility='hidden';window.introActive=false;window.introTransitioning=false;window.introArrivalLock=false;
+      // Release decoder/frame buffers once the fade is finished. The complete
+      // movies remain in CacheStorage for the next opening, not in this scene.
+      video.removeAttribute('src');video.preload='none';video.load();
+      window.TimeviewPreload.releaseMovies();
       window.dispatchEvent(new Event('timeview:intro-finished'));
     },800);
   }
@@ -46,13 +51,38 @@
     if(closing||!window.TimeviewPreload.ready)return;
     if(document.hidden){resumeWhenVisible=true;return;}
     const request=++playRequest,current=()=>request===playRequest&&!closing;
+    const startTime=video.currentTime;
+    clearPlayTimer();playTimer=setTimeout(()=>{
+      if(current()&&!document.hidden&&(video.paused||video.currentTime<=startTime+.03))showMediaAction(!!video.error);
+    },10000);
     sound.classList.remove('intro-start-button');video.muted=false;video.volume=1;
-    video.play().then(()=>{if(current())sound.hidden=true;}).catch(error=>{
+    // Some embedded players return undefined, throw synchronously, or leave
+    // play() pending. Handle all three without losing the original tap.
+    const play=()=>{try{return Promise.resolve(video.play());}catch(error){return Promise.reject(error);}};
+    play().then(()=>{if(current())sound.hidden=true;}).catch(error=>{
       if(!current())return;
-      if(error.name!=='NotAllowedError'){loading.style.display='grid';window.TimeviewPreload.fail(new Error('开场播放失败，请重新加载。'));return;}
+      if(error.name!=='NotAllowedError'){showMediaAction(true);return;}
       sound.textContent='开启声音';sound.hidden=false;video.muted=true;
-      video.play().catch(()=>{if(current()){sound.textContent='点击播放（有声）';sound.classList.add('intro-start-button');}});
+      play().catch(error=>{if(current())showMediaAction(error.name!=='NotAllowedError');});
     });
+  }
+  function showMediaAction(failed=false){
+    ++playRequest;clearPlayTimer();video.pause();sound.hidden=true;loading.style.display='grid';
+    overlay.dataset.phase=failed?'video-error':'awaiting-play';
+    if(failed)window.TimeviewPreload.mediaFailure(video);
+    document.getElementById('introStage').textContent='资源已准备好';
+    document.getElementById('introNote').textContent=failed?'开场视频暂时无法播放。可以重试播放，或先进入地球。':'轻点开始旅程，播放有声开场。';
+    const retry=document.getElementById('introRetry');retry.textContent=failed?'重试播放':'开始旅程（有声）';retry.hidden=false;
+    retry.onclick=()=>beginPlayback(true);
+    const skip=document.getElementById('introSkip');skip.disabled=false;skip.textContent=failed?'进入地球':'跳过';
+  }
+  function beginPlayback(gesture=false){
+    if(closing||!window.TimeviewPreload.ready)return;
+    // load/play stay in the same tap handler when iOS requires activation.
+    if(gesture&&(video.error||video.readyState===0)){hasStarted=false;video.preload='auto';video.load();}
+    video.style.visibility='visible';loading.style.display='none';overlay.dataset.phase='playing';
+    document.getElementById('introSkip').disabled=false;document.getElementById('introSkip').textContent='跳过';
+    playWithSound();
   }
   async function start(playMovie){
     window.introActive=true;window.introTransitioning=false;window.introArrivalLock=isFlight&&playMovie;
@@ -62,24 +92,24 @@
     const movies=Object.values(cities).map(item=>{const [url,bytes]=item[mobile?'mobile':'desktop'];return {url,bytes,label:item.name+'开场'};});
     const source=city[mobile?'mobile':'desktop'][0];
     try{
-      await window.TimeviewPreload.prepare(video,source,playMovie,movies);
+      const preparation=await window.TimeviewPreload.prepare(video,source,playMovie,movies);
       if(!playMovie){finish(false);return;}
-      video.currentTime=0;video.style.visibility='visible';loading.style.display='none';overlay.dataset.phase='playing';document.getElementById('introSkip').disabled=false;
-      playWithSound();
+      if(preparation.needsGesture||preparation.videoError){showMediaAction(!!preparation.videoError);return;}
+      beginPlayback();
     }catch(error){window.TimeviewPreload.fail(error);}
   }
-  sound.addEventListener('click',playWithSound);
+  sound.addEventListener('click',()=>beginPlayback(true));
   video.addEventListener('playing',()=>{
     if(document.hidden){resumeWhenVisible=true;video.pause();return;}
     if(window.introActive&&!closing&&!video.seeking&&!video.paused){hasStarted=true;video.style.visibility='visible';loading.style.display='none';}
     trackArrival();
   });
   video.addEventListener('ended',()=>{if(hasStarted&&overlay.dataset.phase==='playing'&&video.currentTime>=video.duration-.1)finish(true);});
-  video.addEventListener('error',()=>{if(overlay.dataset.phase==='playing'){loading.style.display='grid';window.TimeviewPreload.fail(new Error('开场播放失败，请重新加载。'));}});
+  video.addEventListener('error',()=>{if(overlay.dataset.phase==='playing')showMediaAction(true);});
   document.getElementById('introSkip').addEventListener('click',()=>finish(true));
   document.addEventListener('visibilitychange',()=>{
     if(closing||overlay.dataset.phase!=='playing')return;
-    if(document.hidden){if(!video.paused){resumeWhenVisible=true;video.pause();}}
+    if(document.hidden){clearPlayTimer();if(!video.paused){resumeWhenVisible=true;video.pause();}}
     else if(resumeWhenVisible){resumeWhenVisible=false;playWithSound();}
   });
 

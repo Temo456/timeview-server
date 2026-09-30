@@ -10,6 +10,8 @@ COPY three-body-model.js ./
 COPY favicon.svg favicon.ico ./
 COPY intro.js preload.js intro.css ./
 COPY mobile.js mobile.css ./
+COPY views.js views.css view-transition.js earth-view.js earth-view.css solar-view.js solar-view.css ./
+COPY city-labels.js ./
 COPY solar-gestures.js ./
 COPY calendar-events.js calendar-terms.js ./
 COPY sounds/ sounds/

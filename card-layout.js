@@ -62,6 +62,7 @@
   }
   new MutationObserver(schedule).observe(document.body, {childList:true});
   window.addEventListener('resize', schedule);
+  window.addEventListener('timeview:view-changed', schedule);
   window.TimeviewCards = {show, hide, layout};
   schedule();
 })();

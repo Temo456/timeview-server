@@ -2,8 +2,9 @@
 (function(){
   'use strict';
   const query=matchMedia('(max-width:760px), (max-width:1024px) and (max-height:600px) and (pointer:coarse)');
-  const root=document.documentElement,bar=document.querySelector('.bottombar');
-  const original=bar?Array.from(bar.children):[],watched=new WeakSet(),keyboardControls=new WeakSet(),cards=new WeakMap();
+  const root=document.documentElement;
+  let bar=document.querySelector('.bottombar'),original=bar?Array.from(bar.children):[];
+  const watched=new WeakSet(),keyboardControls=new WeakSet(),cards=new WeakMap(),boundBars=new WeakSet();
   const popups=['datePicker','spdPopup','tzPopup','skinPopup','layerPopup'];
   let frame=0,mounted=false,more,tools,shade,sceneBounds=null,lastBounds='',panelReady=false;
   const active=()=>query.matches&&!document.body.classList.contains('scrsv');
@@ -45,6 +46,13 @@
   }
   function unmount(){
     if(!mounted)return;closeMore();bar.replaceChildren(...original);mounted=false;more=tools=null;
+  }
+  function bindBar(){
+    const next=document.querySelector('.bottombar');
+    if(next!==bar){unmount();bar=next;original=bar?Array.from(bar.children):[];sceneBounds=null;lastBounds='';}
+    if(bar&&!boundBars.has(bar)){
+      boundBars.add(bar);bar.addEventListener('click',e=>{if(e.target.closest('.tv-mobile-tools'))queueMicrotask(()=>{closeMore();schedule();});});
+    }
   }
   function initPanel(panel){
     if(!panel||panelReady)return;panelReady=true;
@@ -88,7 +96,7 @@
     return true;
   }
   function layout(){
-    frame=0;const enabled=active();root.classList.toggle('tv-mobile',enabled);
+    frame=0;bindBar();const enabled=active();root.classList.toggle('tv-mobile',enabled);
     if(!enabled){
       unmount();if(shade)shade.style.display='none';sceneBounds=null;
       for(const card of document.querySelectorAll('.tv-mobile-card'))card.classList.remove('tv-mobile-card');
@@ -124,10 +132,18 @@
     const next=Object.values(sceneBounds).map(Math.round).join(',');
     if(next!==lastBounds){lastBounds=next;window.dispatchEvent(new Event('timeview:mobile-layout'));}
   }
-  window.TimeviewMobile={active,layoutCards,sceneRect:()=>active()?sceneBounds:null,refresh:schedule};
+  window.TimeviewMobile={active,layoutCards,sceneRect:(view)=>{
+    if(!active()||!sceneBounds)return null;
+    if(!view||view===window.TIMEVIEW)return sceneBounds;
+    // The Earth header has one additional information line. Predict its scene
+    // area for the return camera without mounting a second set of controls.
+    const top=(document.querySelector('.topbar')?.getBoundingClientRect().bottom||50)+(view==='earth'?26:10);
+    return {...sceneBounds,top,bottom:Math.max(top+80,sceneBounds.bottom)};
+  },refresh:schedule,beforeViewChange(){closePopups();unmount();}};
+  window.addEventListener('timeview:view-changed',()=>{if(frame)cancelAnimationFrame(frame);layout();});
   query.addEventListener('change',()=>{closePopups();schedule();});
   addEventListener('resize',schedule);window.visualViewport?.addEventListener('resize',schedule);window.visualViewport?.addEventListener('scroll',schedule);
-  bar?.addEventListener('click',e=>{if(e.target.closest('.tv-mobile-tools'))queueMicrotask(()=>{closeMore();schedule();});});
+  bindBar();
   document.addEventListener('keydown',e=>{if(active()&&e.key==='Escape'){closeMore();closePopups();}});
   document.addEventListener('click',e=>{if(!active())return;if(!e.target.closest('.bottombar'))closeMore();schedule();});
   new MutationObserver(schedule).observe(document.body,{childList:true});
