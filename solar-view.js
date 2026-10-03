@@ -109,8 +109,7 @@ let scaleKey = 'sec', paused = clockManuallyPaused, labelsOn = false, axesOn = f
 
 // 拖拽行星状态
 dom.getElementById('pPlay').textContent = paused ? '▶' : '❚❚';
-let planetDrag = null; // { key, cumulative, lastAngle, lastTime, velocity, moved }
-let godMode = false;
+let planetDrag = null; // { key, lastAngle, velocity, moved }
 let planetInertia = null; // Initialized before async textures and gesture cleanup.
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -119,15 +118,57 @@ const sphereMap = new Map(); // sphere mesh → key
 /* ============ 指针交互 ============ */
 const canvasEl = renderer.domElement;
 
-// Observation moves the camera; God's hand locks the view and drags orbital time.
+// Planet scrubbing is explicit; ordinary drags always move the camera.
+let godMode=false,godPointer=null;
+const godButton=dom.getElementById('pGod');
+const godEffects=globalThis.createGodHandEffects(root);
+godEffects.setEnabled(false);
+dom.onDispose(()=>godEffects.dispose());
+function syncGodMode(){
+  godButton.setAttribute('aria-pressed',String(godMode));
+  godButton.title=godMode?'关闭上帝之手，恢复普通观察':'开启后拖动星球拨动时间';
+  canvasEl.classList.toggle('god-hand-active',godMode);
+  canvasEl.title=godMode?'拖动星球拨动时间，松手后惯性流转；拖动空白旋转；双指缩放和平移':'轻点星球查看介绍；拖动旋转视角；双指缩放和平移';
+  canvasEl.setAttribute('aria-label',canvasEl.title);
+  dom.getElementById('pPlay').textContent=paused||godMode?'▶':'❚❚';
+}
+function setGodMode(on){
+  gestures.cancel();godPointer=null;godMode=!!on;
+  godEffects.setEnabled(godMode);syncGodMode();
+}
+godButton.addEventListener('click',()=>{
+  window.dispatchEvent(new Event('timeview:manual-view'));
+  setGodMode(!godMode);
+});
+syncGodMode();
 let gesturePlaneZ=0,gestureMinDistance=.5,gestureMaxDistance=3000;
 const gestureWorld=new THREE.Vector3(),orbitPlane=new THREE.Plane(),orbitHit=new THREE.Vector3(),orbitNormal=new THREE.Vector3(0,0,1);
 function pickBody(point){
   scene.updateMatrixWorld(true);camera.updateMatrixWorld();
   pointer.set(point.x/innerWidth*2-1,1-point.y/innerHeight*2);
   raycaster.setFromCamera(pointer,camera);
-  const hit=raycaster.intersectObjects(Array.from(sphereMap.keys()),false)[0];
+  const hit=raycaster.intersectObjects(Array.from(sphereMap.keys()).filter(mesh=>{
+    for(let node=mesh;node;node=node.parent)if(!node.visible)return false;
+    return true;
+  }),false)[0];
   return hit?sphereMap.get(hit.object):null;
+}
+function pickOrbitBody(point){
+  const direct=pickBody(point);
+  if(direct)return PLANETS.some(body=>body.key===direct)?direct:null;
+  // Mouse picking is exact. A small, unambiguous touch halo helps tiny planets
+  // without taking over ordinary empty-space rotation or neighboring targets.
+  if(point.type!=='touch')return null;
+  const candidates=[];
+  for(const body of objs){
+    const v=body.planetGroup.getWorldPosition(gestureWorld).project(camera);
+    if(v.z < -1 || v.z > 1)continue;
+    const distance=Math.hypot((v.x*.5+.5)*innerWidth-point.x,(-v.y*.5+.5)*innerHeight-point.y);
+    if(distance<=14)candidates.push({key:body.p.key,distance});
+  }
+  candidates.sort((a,b)=>a.distance-b.distance);
+  if(!candidates.length||(candidates[1]&&candidates[1].distance-candidates[0].distance<6))return null;
+  return candidates[0].key;
 }
 function beginViewGesture(point){
   const focusBody=objs.find(body=>body.p.key===courseFocus);
@@ -135,33 +176,23 @@ function beginViewGesture(point){
   if(camera.position.z-gesturePlaneZ<=0)gesturePlaneZ=camera.position.z-Math.max(.5,Math.abs(camera.position.z));
   const distance=camera.position.z-gesturePlaneZ;
   gestureMinDistance=Math.min(.5,distance);gestureMaxDistance=Math.max(3000,distance);
-  courseCameraMove=null;spinXVel=spinZVel=0;planetInertia=null;planetDrag=null;
-  if(godMode&&point.type!=='wheel'){
-    let key=pickBody(point);
-    // Small planets retain their display size but get a usable touch target.
-    if(!PLANETS.some(body=>body.key===key)){
-      let nearest=point.type==='touch'?22:12;
-      for(const body of objs){
-        const v=body.planetGroup.getWorldPosition(gestureWorld).project(camera);
-        if(v.z < -1 || v.z > 1)continue;
-        const distance=Math.hypot((v.x*.5+.5)*innerWidth-point.x,(-v.y*.5+.5)*innerHeight-point.y);
-        if(distance<nearest){nearest=distance;key=body.p.key;}
-      }
-    }
-    if(PLANETS.some(body=>body.key===key)){
-      planetDrag={key,lastAngle:computeSunAngle(point.x,point.y),longitude:sunEclipticLon(),velocity:0,moved:false};
-      return 'orbit';
-    }
-  }
+  courseCameraMove=null;spinXVel=spinZVel=0;planetInertia=null;planetDrag=null;godPointer=null;godEffects.clear();
+  // Secondary buttons and wheels must never claim a planet/time gesture.
   if(point.type==='mouse'&&point.button!==0)return 'pan';
+  if(point.type==='wheel'||point.target?.closest?.('#skyLabelsLayer .plabel'))return 'rotate';
+  const key=godMode?pickOrbitBody(point):null;
+  const angle=key?computeSunAngle(point.x,point.y):null;
+  if(key&&angle!==null){
+    planetDrag={key,lastAngle:angle,velocity:0,moved:false};godPointer={x:point.x,y:point.y};
+    return 'orbit';
+  }
   return 'rotate';
 }
 const gestures=globalThis.createSolarGestures(canvasEl,{
   begin:beginViewGesture,
   interact:()=>window.dispatchEvent(new Event('timeview:manual-view')),
-  topology:count=>{spinXVel=spinZVel=0;planetInertia=null;if(count!==1)planetDrag=null;},
+  topology:count=>{spinXVel=spinZVel=0;planetInertia=null;if(count!==1){planetDrag=null;godPointer=null;godEffects.clear();}},
   zoom:(from,to,ratio)=>{
-    if(godMode)return;
     const distance=camera.position.z-gesturePlaneZ;
     const next=clamp(distance*ratio,gestureMinDistance,gestureMaxDistance);
     const unit=2*distance*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/innerHeight;
@@ -175,7 +206,6 @@ const gestures=globalThis.createSolarGestures(canvasEl,{
     if(camera.far<next+1000){camera.far=next+1000;camera.updateProjectionMatrix();}
   },
   rotate:(dx,dy,dt)=>{
-    if(godMode)return;
     const x=dy*ROT_SENS,z=dx*ROT_SENS;
     spinX=clamp(spinX+x,-Math.PI*.49,Math.PI*.49);spinZ+=z;
     const weight=1-Math.exp(-18*dt);
@@ -184,21 +214,24 @@ const gestures=globalThis.createSolarGestures(canvasEl,{
   },
   orbit:(point,dt)=>{
     if(!planetDrag)return;
+    godPointer={x:point.x,y:point.y};
     const angle=computeSunAngle(point.x,point.y);if(angle===null)return;
     const previous=planetDrag.lastAngle;planetDrag.lastAngle=angle;if(previous===null)return;
     const delta=Math.atan2(Math.sin(angle-previous),Math.cos(angle-previous));
-    const body=PLANETS.find(p=>p.key===planetDrag.key);
-    simElapsed+=delta/(Math.PI*2)*body.period*SEC_PER_DAY;
-    if(body.key==='earth'){
-      // Apparent solar longitude has a slightly variable angular speed.
-      const target=planetDrag.longitude+delta*180/Math.PI;
-      for(let i=0;i<4;i++){
-        const error=((target-sunEclipticLon()+540)%360)-180;
-        simElapsed+=error/360*body.period*SEC_PER_DAY;
-      }
+    if(Math.abs(delta)<1e-6)return;
+    if(!planetDrag.moved){
+      // Only an actual date drag pauses playback; a tap or pinch does not.
+      paused=true;
+      try{sessionStorage.setItem('tv-clock-paused','1');}catch(_){}
+      dom.getElementById('pPlay').textContent='▶';
     }
-    planetDrag.longitude=sunEclipticLon();
-    planetDrag.velocity=clamp(delta/dt,-3,3);planetDrag.moved=true;
+    advancePlanetOrbit(planetDrag.key,delta);
+    const velocity=clamp(delta/dt,-3,3);
+    // Smooth release velocity so the final pointer sample cannot cause a jerk.
+    planetDrag.velocity=planetDrag.moved
+      ? planetDrag.velocity+(velocity-planetDrag.velocity)*(1-Math.exp(-20*dt))
+      : velocity;
+    planetDrag.moved=true;
   },
   tap:point=>{
     const skyLabel=point.target?.closest?.('#skyLabelsLayer .plabel');
@@ -208,11 +241,12 @@ const gestures=globalThis.createSolarGestures(canvasEl,{
     if(key==='voyager1')vger1.distLabel.visible=!vger1.distLabel.visible;
     if(key==='voyager2')vger2.distLabel.visible=!vger2.distLabel.visible;
   },
-  end:(inertia,mode)=>{
-    if(!godMode&&inertia&&mode==='orbit'&&planetDrag?.moved)planetInertia={key:planetDrag.key,velocity:planetDrag.velocity,time:performance.now()};
+  end:(inertia,mode,cancelled)=>{
+    if(inertia&&mode==='orbit'&&planetDrag?.moved&&Math.abs(planetDrag.velocity)>=0.01)planetInertia={key:planetDrag.key,velocity:planetDrag.velocity};
     else planetInertia=null;
     if(!inertia||mode!=='rotate')spinXVel=spinZVel=0;
-    planetDrag=null;
+    planetDrag=null;godPointer=null;
+    if(cancelled)godEffects.clear();
   }
 },[dom.getElementById('skyLabelsLayer')]);
 dom.onDispose(()=>gestures.dispose());
@@ -224,6 +258,8 @@ function computeSunAngle(cx, cy) {
   // Intersect the actual tilted orbital plane, not the screen's z=0 plane.
   worldGroup.updateWorldMatrix(true,false);
   orbitPlane.set(orbitNormal,0).applyMatrix4(worldGroup.matrixWorld);
+  // Near an edge-on orbital plane, tiny screen motion can jump the date.
+  if(Math.abs(raycaster.ray.direction.dot(orbitPlane.normal))<0.08)return null;
   if(!raycaster.ray.intersectPlane(orbitPlane,orbitHit))return null;
   worldGroup.worldToLocal(orbitHit);
   if(orbitHit.lengthSq()<.0001)return null;
@@ -366,7 +402,7 @@ const SPD = { sec:1, hour:3600, day:86400, month:86400*30, year:86400*365.25 };
 const SPD_LABELS = { sec:'秒/秒', hour:'时/秒', day:'日/秒', month:'月/秒', year:'年/秒' };
 
 dom.getElementById('pPlay').addEventListener('click', () => { const wasGod=godMode;setGodMode(false);paused=wasGod?false:!paused; try { sessionStorage.setItem('tv-clock-paused', paused ? '1' : '0'); } catch (_) {} dom.getElementById('pPlay').textContent = paused ? '▶' : '❚❚'; });
-dom.getElementById('pNow').addEventListener('click', () => { setGodMode(false);gestures.cancel();simElapsed = (Date.now() - EPOCH_MS) / 1000;scaleKey = 'sec';paused=false;try{sessionStorage.setItem('tv-clock-paused','0');}catch(_){} dom.getElementById('pPlay').textContent = '❚❚'; dom.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾'; });
+dom.getElementById('pNow').addEventListener('click', () => { setGodMode(false);simElapsed = (Date.now() - EPOCH_MS) / 1000;scaleKey = 'sec';paused=false;try{sessionStorage.setItem('tv-clock-paused','0');}catch(_){} dom.getElementById('pPlay').textContent = '❚❚'; dom.getElementById('spdBtn').textContent = '⚡ 秒/秒 ▾'; });
 dom.getElementById('pPrev').addEventListener('click', () => { simElapsed -= 30 * 86400; });
 dom.getElementById('pNext').addEventListener('click', () => { simElapsed += 30 * 86400; });
 dom.getElementById('pSlow').addEventListener('click', () => { const u = ['sec','hour','day','month','year']; const i = u.indexOf(scaleKey); if (i > 0) { scaleKey = u[i-1]; dom.getElementById('spdBtn').textContent = '⚡ ' + SPD_LABELS[scaleKey] + ' ▾'; } });
@@ -399,10 +435,15 @@ function setEarthAxis(visible) {
   dom.querySelector('[data-layer="earthAxis"]')?.classList.toggle('on',!!visible);
 }
 const layerConfig = {
-  labels: { get: () => labelsOn, set: (v) => { labelsOn = v; labelsLayer.style.display = v ? '' : 'none'; [xLabel, yLabel, zLabel].forEach(s => s.visible = v); } },
+  labels: { get: () => labelsOn, set: (v) => { labelsOn = v; labelsLayer.style.display = v ? '' : 'none'; [[xLine,xLabel],[yLine,yLabel],[zLine,zLabel]].forEach(([line,label]) => label.visible = v && line.visible); } },
   terms: { get: () => termsOn, set: (v) => { termsOn = v; termLabelsLayer.style.display=v?'':'none'; } },
   orbits: { get: () => orbitsOn, set: (v) => { orbitsOn = v; for (const l of orbitLines) l.visible = v; } },
-  axes: { get: () => axesOn, set: (v) => { axesOn = v; axesGroup.visible = v; } },
+  axes: { get: () => axesOn, set: (v) => {
+    axesOn = !!v; axesGroup.visible = axesOn;
+    // Reset/lessons also hide the children; a manual toggle restores all axes.
+    [xLine,yLine,zLine].forEach(line => line.visible = axesOn);
+    [xLabel,yLabel,zLabel].forEach(label => label.visible = axesOn && labelsOn);
+  } },
   earthAxis: { get: () => earthGuides.visible, set: setEarthAxis },
   zodiac: { get: () => zodiacOn, set: (v) => setSkyLayer('zodiac', v) },
   xiusu: { get: () => xiusuOn, set: (v) => setSkyLayer('xiusu', v) },
@@ -1143,6 +1184,50 @@ function updateTermLabels() {
   }
 }
 
+// Drag and release use the same orbital-time mapping, including Earth's true longitude.
+function advancePlanetOrbit(key,delta) {
+  const body=PLANETS.find(p=>p.key===key);
+  if(!body)return;
+  const target=body.key==='earth'?sunEclipticLon()+delta*180/Math.PI:null;
+  simElapsed+=delta/(Math.PI*2)*body.period*SEC_PER_DAY;
+  if(target!==null){
+    for(let i=0;i<4;i++){
+      const error=((target-sunEclipticLon()+540)%360)-180;
+      simElapsed+=error/360*body.period*SEC_PER_DAY;
+    }
+  }
+}
+function updateOrbitalTime(dt) {
+  if(planetDrag)return;
+  if(planetInertia){
+    // Integrate exponential damping, independent of the display's frame rate.
+    // A manual date drag pauses playback; its release momentum still runs.
+    const decay=Math.exp(-3*dt);
+    advancePlanetOrbit(planetInertia.key,planetInertia.velocity*(1-decay)/3);
+    planetInertia.velocity*=decay;
+    if(Math.abs(planetInertia.velocity)<0.01)planetInertia=null;
+  }else if(!paused&&!godMode){
+    simElapsed+=SPD[scaleKey]*dt;
+  }
+}
+
+// Match the ring to the rendered sphere, including course scale and camera offsets.
+const godPosition=new THREE.Vector3(),godScale=new THREE.Vector3(),godCameraPosition=new THREE.Vector3();
+function updateGodEffects(){
+  if(!godMode)return;
+  const state=planetDrag||planetInertia;
+  const body=state&&objs.find(item=>item.p.key===state.key);
+  if(!body){godEffects.render(null);return;}
+  body.planetGroup.getWorldPosition(godPosition);
+  const depth=godCameraPosition.copy(godPosition).applyMatrix4(camera.matrixWorldInverse).z;
+  const radius=body.p.size*body.sphere.getWorldScale(godScale).x;
+  godPosition.project(camera);
+  if(depth>=-radius||godPosition.z < -1||godPosition.z > 1){godEffects.clear();return;}
+  const screenRadius=radius*camera.projectionMatrix.elements[5]*innerHeight/(2*Math.sqrt(depth*depth-radius*radius));
+  godEffects.render({key:state.key,name:body.p.name,x:(godPosition.x*.5+.5)*innerWidth,y:(.5-godPosition.y*.5)*innerHeight,radius:screenRadius,
+    phase:planetDrag?(planetDrag.moved?'drag':'hold'):'inertia',strength:Math.min(1,Math.abs(state.velocity)/3),pointer:godPointer});
+}
+
 /* ============ 动画循环 ============ */
 const clock = new THREE.Clock();
 let lastTermIndex = -1;
@@ -1155,7 +1240,7 @@ function animate() {
   // The opening fills the screen. Keep the clock advancing and leave the GPU
   // available for video decoding until the transition reveals this scene.
   if(window.introActive&&!window.introTransitioning){
-    if(!godMode&&!paused&&!planetDrag)simElapsed+=SPD[scaleKey]*dt;
+    if(!paused&&!godMode&&!planetDrag)simElapsed+=SPD[scaleKey]*dt;
     return;
   }
 
@@ -1166,20 +1251,7 @@ function animate() {
     spinZVel*=decay;spinXVel*=decay;
   }
   xGroup.rotation.x=spinX;worldGroup.rotation.z=spinZ;
-  // 时间推进
-  if (!godMode && !paused && !planetDrag) {
-    // 行星拖拽惯性
-    if (planetInertia) {
-      const elapsed = (performance.now() - planetInertia.time) / 1000;
-      const decay = Math.exp(-3 * elapsed);
-      const vel = planetInertia.velocity * decay;
-      const p = PLANETS.find(pp => pp.key === planetInertia.key);
-      if (p) simElapsed += (vel * dt / (Math.PI * 2)) * p.period * SEC_PER_DAY;
-      if (Math.abs(vel) < 0.01) planetInertia = null;
-    } else {
-      simElapsed += SPD[scaleKey] * dt;
-    }
-  }
+  updateOrbitalTime(dt);
 
   setPlanetPositions();
   // Advance the return camera before this frame is rendered. A separate RAF
@@ -1187,9 +1259,10 @@ function animate() {
   if(returnStep)returnStep(performance.now());
   updateCourseCamera();
   updateAxes();
-  updateThreeBody(godMode?0:dt);
+  updateThreeBody(dt);
   if (voyagerOn) updateVoyagers();
   scene.updateMatrixWorld(true);camera.updateMatrixWorld();
+  updateGodEffects();
 
   // 更新 HTML 标签位置
   if (labelsOn) {
@@ -1249,9 +1322,8 @@ function updateCourseCamera() {
   applyCameraFrame(new THREE.Vector2().lerpVectors(courseCameraMove.fromFrame,courseCameraMove.toFrame,eased));
   if (t === 1) courseCameraMove = null;
 }
-function focusCourse(key, immediate=false) {
-  setGodMode(false);
-  gestures.cancel();
+function focusCourse(key, immediate=false, preserveMode=false) {
+  if(preserveMode)gestures.cancel();else setGodMode(false);
   courseFocus = key;
   // The seasonal close-up preserves the XY top view. Tilt is measured from +Z.
   spinX = key==='earth'&&earthGuides.visible ? 0 : objs.some(body=>body.p.key===key) ? -1.1 : key==='planets'&&courseAxesStep>=3 ? -0.75 : 0;
@@ -1332,33 +1404,18 @@ function showCourseSeason(term){
   setEarthAxis(earthAxisPreference??true);
   setPlanetPositions();focusCourse('earth');
 }
-dom.onWindow('resize',()=>{if(courseFocus&&!godMode)focusCourse(courseFocus);});
-dom.onWindow('timeview:mobile-layout',()=>{if(window.TimeviewMobile?.active()&&courseFocus&&!godMode)focusCourse(courseFocus);});
+dom.onWindow('resize',()=>{if(courseFocus&&!gestures.active)focusCourse(courseFocus,false,true);});
+dom.onWindow('timeview:mobile-layout',()=>{if(window.TimeviewMobile?.active()&&courseFocus&&!gestures.active)focusCourse(courseFocus,false,true);});
 function resetSolarView() {
   window.dispatchEvent(new Event('timeview:manual-view'));
   window.TimeviewCards.hide();window.TimeviewCourseVisuals?.hide();
   gestures.cancel();courseCameraMove=null;
   planetDrag=null;planetInertia=null;
-  setCourseAxes(0,false);layerConfig.orbits.set(true);
+  // Restore the top-down view without changing the user's axis visibility.
+  courseAxesStep=0;layerConfig.orbits.set(true);
   focusCourse('planets',true);
 }
 dom.getElementById('pReset').addEventListener('click',resetSolarView);
-function setGodMode(on){
-  if(godMode===on)return;
-  gestures.cancel();planetInertia=null;spinXVel=spinZVel=0;courseCameraMove=null;
-  if(on){
-    window.dispatchEvent(new Event('timeview:manual-view'));
-    // Freeze the current camera and layer state, including an interrupted close-up.
-    // The drag ray intersects the transformed orbital plane in any viewing angle.
-  }
-  godMode=on;
-  const button=dom.getElementById('pGod');
-  button.setAttribute('aria-pressed',String(on));
-  button.textContent=on?'☝ 退出上帝之手':'☝ 上帝之手';
-  button.style.color=on?'#f5c451':'';
-  dom.getElementById('pPlay').textContent=on||paused?'▶':'❚❚';
-}
-dom.getElementById('pGod').addEventListener('click',()=>setGodMode(!godMode));
 const course = {
   keepAxes: (on) => {
     if(courseKeepXY===on)return;
@@ -1374,6 +1431,7 @@ const course = {
   time: () => EPOCH_MS + simElapsed * 1000,
   setTime: (ts) => {
     if (!Number.isFinite(ts)) throw new Error('无效日期');
+    setGodMode(false);
     window.courseBeijingTime = true;
     simElapsed = (ts - EPOCH_MS) / 1000;
     dom.getElementById('pPlay').textContent = paused ? '▶' : '❚❚';
@@ -1524,7 +1582,7 @@ return {
     // Copy in the same task as render: preserveDrawingBuffer can stay disabled.
     return window.TimeviewTransition.capture(renderer.domElement,anchor);
   },
-  snapshot:()=>({time:EPOCH_MS+simElapsed*1000,playing:!paused&&!godMode,unit:scaleKey}),
+  snapshot:()=>({time:EPOCH_MS+simElapsed*1000,playing:!paused,unit:scaleKey}),
   restore(value){
     simElapsed=(value.time-EPOCH_MS)/1000;paused=!value.playing;
     scaleKey=Object.hasOwn(SPD,value.unit)?value.unit:'sec';dateDisplaySecond=null;
@@ -1537,8 +1595,8 @@ return {
     if(active)return;active=true;clock.start();resizeScene();
     setPlanetPositions();updateCourseCamera();updateAxes();animate();
   },
-  suspend(){active=false;cancelAnimationFrame(animationFrame);clock.stop();gestures.cancel();planetDrag=planetInertia=null;spinXVel=spinZVel=0;setGodMode(false);restoreReturnCamera();},
-  diagnostics:()=>({active,frame:animationFrame,camera:camera.position.toArray(),spin:[spinX,spinZ],godMode,labelsOn,axesOn,termsOn,orbitsOn,earth:earthProjection()})
+  suspend(){active=false;cancelAnimationFrame(animationFrame);clock.stop();setGodMode(false);planetDrag=planetInertia=null;spinXVel=spinZVel=0;restoreReturnCamera();},
+  diagnostics:()=>({active,frame:animationFrame,camera:camera.position.toArray(),spin:[spinX,spinZ],interaction:godMode?'god-hand':'view',godMode,labelsOn,axesOn,termsOn,orbitsOn,earth:earthProjection()})
 };
 
 };

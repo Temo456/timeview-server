@@ -5,11 +5,11 @@
     const points=new Map(),listeners=new AbortController();
     const listen=(target,type,handler,options)=>target.addEventListener(type,handler,{...(typeof options==='boolean'?{capture:options}:options),signal:listeners.signal});
     let previous=[],mode='rotate',moved=false,multi=false,announced=false;
-    let origin=null,lastAt=0,lastMove=0,blockClickUntil=0,wheel=null;
+    let origin=null,lastAt=0,lastMove=0,blockClickUntil=0,wheel=null,startedAt=0;
     const snapshot=()=>Array.from(points.values(),p=>({...p}));
     const rebase=()=>{previous=snapshot();lastAt=performance.now();};
     const announce=()=>{if(!announced){announced=true;actions.interact();}};
-    function update(now=performance.now()){
+    function update(now=performance.now(),release=false){
       if(wheel){const w=wheel;wheel=null;actions.zoom(w,w,Math.exp(Math.max(-1,Math.min(1,w.delta))));}
       const current=snapshot();if(!current.length||current.length!==previous.length)return;
       const a=current[0],p=previous[0];
@@ -21,7 +21,14 @@
             Math.max(16,Math.hypot(p.x-q.x,p.y-q.y))/Math.max(16,Math.hypot(a.x-b.x,a.y-b.y)));
         }
       }else if(a.x!==p.x||a.y!==p.y){
-        if(!moved&&Math.hypot(a.x-origin.x,a.y-origin.y)<5)return;
+        // Wait for all fingers to lift after a pinch. A leftover finger is not
+        // a new rotation or a continuation of the old planet drag.
+        if(mode==='blocked')return;
+        const threshold=a.type==='touch'?10:5;
+        if(!moved&&Math.hypot(a.x-origin.x,a.y-origin.y)<threshold)return;
+        // Briefly reserve touch planet drags for a second finger. On release,
+        // a deliberate short flick can still finish without becoming a tap.
+        if(!moved&&mode==='orbit'&&a.type==='touch'&&!release&&now-startedAt<100)return;
         announce();moved=true;lastMove=now;
         const dt=Math.max(1/240,Math.min(.1,(now-lastAt)/1000));
         if(mode==='pan')actions.zoom(p,a,1);
@@ -32,10 +39,12 @@
     }
     function start(e){
       if(e.pointerType==='mouse'&&![0,1,2].includes(e.button))return;
-      e.preventDefault();update();
+      e.preventDefault();
+      // Do not flush a queued one-finger date change when finger two arrives.
+      if(!points.size)update();
       const p={id:e.pointerId,x:e.clientX,y:e.clientY,type:e.pointerType,button:e.button,target:e.target};
       if(!points.size){
-        moved=multi=announced=false;origin={...p};lastMove=0;wheel=null;mode=actions.begin(p)||'rotate';
+        moved=multi=announced=false;origin={...p};startedAt=performance.now();lastMove=0;wheel=null;mode=actions.begin(p)||'rotate';
       }
       points.set(p.id,p);
       if(points.size>1){multi=true;moved=true;announce();}
@@ -50,22 +59,22 @@
     function finish(e,cancelled){
       if(!points.has(e.pointerId))return;
       if(cancelled){cancel();return;}
-      const p=points.get(e.pointerId);p.x=e.clientX;p.y=e.clientY;update();
+      const p=points.get(e.pointerId);p.x=e.clientX;p.y=e.clientY;update(performance.now(),true);
       points.delete(e.pointerId);
       if(moved||multi)blockClickUntil=performance.now()+400;
       if(points.size){
         // Never resume an old planet/date drag after a multi-pointer gesture.
-        mode='rotate';origin={...points.values().next().value};actions.topology(points.size);rebase();
+        mode='blocked';origin={...points.values().next().value};actions.topology(points.size);rebase();
       }else{
         if(!moved&&!multi&&mode!=='pan')actions.tap(p);
-        actions.end(!multi&&moved&&performance.now()-lastMove<80,mode);
+        actions.end(!multi&&moved&&performance.now()-lastMove<80,mode,false);
         previous=[];
       }
       try{if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch(_){}
     }
     function cancel(){
       const ids=Array.from(points.keys());points.clear();previous=[];wheel=null;
-      blockClickUntil=performance.now()+400;actions.end(false,mode);
+      blockClickUntil=performance.now()+400;actions.end(false,mode,true);
       for(const id of ids)try{if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);}catch(_){}
     }
     listen(document,'pointerup',e=>finish(e,false),true);

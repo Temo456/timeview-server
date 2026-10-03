@@ -12,7 +12,7 @@ COPY intro.js preload.js intro.css ./
 COPY mobile.js mobile.css ./
 COPY views.js views.css view-transition.js earth-view.js earth-view.css solar-view.js solar-view.css ./
 COPY city-labels.js ./
-COPY solar-gestures.js ./
+COPY solar-gestures.js god-hand-effects.js ./
 COPY calendar-events.js calendar-terms.js ./
 COPY sounds/ sounds/
 ENV PORT=3000 DATA_DIR=/data

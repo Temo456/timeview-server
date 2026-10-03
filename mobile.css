@@ -20,9 +20,13 @@
   html.tv-mobile .einfo .ei2{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   html.tv-mobile #earthLoading{top:calc(70px + var(--tv-safe-top))!important}
   html.tv-mobile .bottombar{left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));bottom:calc(8px + var(--tv-safe-bottom) + var(--tv-keyboard,0px));padding:5px 8px 7px;border-radius:20px;display:flex;flex-direction:column;gap:4px;overflow:visible;backdrop-filter:blur(10px)}
+  /* Raise the toolbar's entire stacking context above narration, below submenus. */
+  html.tv-mobile .bottombar.tv-tools-open{z-index:31}
   html.tv-mobile .tv-mobile-date{display:flex;width:100%;min-width:0}
   html.tv-mobile .bar-date{display:flex;align-items:center;min-height:38px;flex:1;order:0;white-space:nowrap;min-width:0;font-size:12px;padding:6px 8px;border-radius:12px;overflow:hidden}
   html.tv-mobile .tv-mobile-transport{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;gap:4px;width:100%}
+  html.tv-mobile .tv-mobile-transport.tv-has-god-hand{grid-template-columns:repeat(6,minmax(0,1fr))}
+  html.tv-mobile .tv-mobile-transport #pGod{font-size:10px;padding:3px 0;white-space:normal;line-height:1.25}
   html.tv-mobile .tv-mobile-transport>*{display:flex;align-items:center;justify-content:center;min-height:44px;min-width:0;margin:0;padding:4px;font-size:14px;line-height:1.2;white-space:nowrap;cursor:pointer;border-radius:14px}
   html.tv-mobile .tv-mobile-transport .bar-play{width:44px;height:44px;justify-self:center;border-radius:50%}
   html.tv-mobile #tvMobileMore{border:1px solid #5fd6f030;background:#14303b66;color:#9dc9d6;font-family:inherit;font-size:12px;line-height:1.2}
@@ -124,6 +128,7 @@
   html.tv-mobile .bottombar{left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));flex-direction:row;gap:8px;padding:5px 8px}
   html.tv-mobile .tv-mobile-date{flex:1;width:auto;min-width:0}
   html.tv-mobile .tv-mobile-transport{width:270px;flex-shrink:0}
+  html.tv-mobile .tv-mobile-transport.tv-has-god-hand{width:320px}
   html.tv-mobile .tv-mobile-tools{left:auto;width:min(430px,90vw)}
   html.tv-mobile #tv-assist{left:auto;right:max(8px,env(safe-area-inset-right));top:calc(54px + var(--tv-safe-top));bottom:var(--tv-panel-bottom)!important;width:320px;height:auto;max-height:none}
   html.tv-mobile #tv-assist.tv-panel-expanded,html.tv-mobile #tv-assist.replying{top:calc(8px + var(--tv-safe-top));height:auto;width:min(420px,calc(100vw - 100px))}

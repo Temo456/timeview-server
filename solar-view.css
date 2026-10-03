@@ -126,3 +126,13 @@
     .bar-date{order:-1;flex-basis:100%;min-width:0}
     .bar-sep{display:none}
   }
+
+/* God-hand decoration stays below controls and never captures a gesture. */
+.god-hand-fx{position:fixed;inset:0;width:100%;height:100%;z-index:6;pointer-events:none}
+.god-hand-status{position:fixed;top:calc(64px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:8;max-width:calc(100% - 28px);padding:8px 14px;border:1px solid #e9c87859;border-radius:22px;background:linear-gradient(110deg,#12313bea,#26251eea);box-shadow:0 0 24px #47e3df12;color:#f3dfaa;font-size:12px;letter-spacing:.5px;text-align:center;pointer-events:none;white-space:nowrap}
+.god-hand-fx[hidden],.god-hand-status[hidden]{display:none}
+#scene canvas.god-hand-active{cursor:grab}
+#scene canvas.god-hand-active:active{cursor:grabbing}
+#pGod[aria-pressed="true"]{color:#ffe4a1;border-color:#eac675a6;background:linear-gradient(120deg,#684d294d,#2b7c7e55);box-shadow:0 0 14px #d6b25e26,inset 0 0 10px #63e3dd12}
+#pGod:focus-visible{outline:2px solid #f5d796;outline-offset:2px}
+@media(max-width:400px){.god-hand-status{font-size:11px;padding:7px 10px}}

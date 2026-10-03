@@ -25,7 +25,7 @@
     el.setAttribute('role','button');el.tabIndex=0;
     el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}});
   }
-  function closeMore(){if(tools){tools.hidden=true;more.setAttribute('aria-expanded','false');}}
+  function closeMore(){if(tools){tools.hidden=true;bar.classList.remove('tv-tools-open');more.setAttribute('aria-expanded','false');}}
   function closePopups(){for(const id of popups){const el=document.getElementById(id);if(el)el.style.display='none';}schedule();}
   function mount(){
     if(mounted||!bar)return;mounted=true;
@@ -33,8 +33,9 @@
     date.className='tv-mobile-date';transport.className='tv-mobile-transport';
     tools=document.createElement('div');tools.id='tvMobileTools';tools.className='tv-mobile-tools';tools.hidden=true;tools.setAttribute('aria-label','更多观察工具');
     more=button('更多 ···','tvMobileMore');more.setAttribute('aria-expanded','false');more.setAttribute('aria-controls',tools.id);
-    more.onclick=()=>{const opening=tools.hidden;closePopups();tools.hidden=!opening;more.setAttribute('aria-expanded',String(opening));schedule();};
+    more.onclick=()=>{const opening=tools.hidden;closePopups();tools.hidden=!opening;bar.classList.toggle('tv-tools-open',opening);more.setAttribute('aria-expanded',String(opening));schedule();};
     const main=['pSlow','pPlay','pFast','pNow'];
+    if(document.getElementById('pGod')){main.push('pGod');transport.classList.add('tv-has-god-hand');}
     for(const el of original){
       if(el.id==='dateText')date.append(el);
       else if(!main.includes(el.id))tools.append(el);
@@ -106,10 +107,10 @@
     variable('--tv-vh',vh+'px');variable('--tv-vtop',vt+'px');variable('--tv-keyboard',Math.max(0,innerHeight-vh-vt)+'px');
     mount();const panel=document.getElementById('tv-assist');initPanel(panel);
     for(const id of popups)watch(document.getElementById(id));watch(bar);watch(document.querySelector('.topbar'));
-    if(!shade&&bar){shade=button('','tvMobileShade');shade.className='tv-mobile-only';label(shade,'关闭弹窗');shade.onclick=closePopups;document.body.append(shade);}
+    if(!shade&&bar){shade=button('','tvMobileShade');shade.className='tv-mobile-only';label(shade,'关闭弹窗');shade.onclick=()=>{closeMore();closePopups();};document.body.append(shade);}
     const popupOpen=popups.some(id=>visible(document.getElementById(id)));
     if(popupOpen)closeMore();
-    if(shade)set(shade,'display',popupOpen?'block':'none');
+    if(shade)set(shade,'display',popupOpen||(tools&&!tools.hidden)?'block':'none');
     const toolbar=bar?.getBoundingClientRect();
     if(toolbar){variable('--tv-bar-height',toolbar.height+'px');variable('--tv-panel-bottom',(innerHeight-toolbar.top+8)+'px');}
     if(panel){
@@ -118,7 +119,6 @@
       expand.textContent=expanded?'收起讲解':'展开讲解';expand.setAttribute('aria-expanded',String(expanded));
       minimize.textContent=mini?'显示讲解':'看画面';minimize.setAttribute('aria-expanded',String(!mini));
       document.getElementById('tvMobileChapters').setAttribute('aria-expanded',String(panel.classList.contains('tv-show-chapters')));
-      if(panel.classList.contains('replying'))closeMore();
     }
     layoutCards('#planetCard,#threeBodyCard,#tv-course-visual,#cardMask,#fortMask');
     if(!bar)return;

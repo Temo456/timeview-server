@@ -7,11 +7,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05080f">
 <title>时间景观</title>
-<link id="earthViewStyle" rel="stylesheet" href="earth-view.css?v=4.2.6">
-<link id="solarViewStyle" rel="stylesheet" href="solar-view.css?v=4.2.6" media="not all">
-<link rel="stylesheet" href="intro.css?v=4.2.6">
-<link rel="stylesheet" href="mobile.css?v=4.2.6">
-<link rel="stylesheet" href="views.css?v=4.2.6">
+<link id="earthViewStyle" rel="stylesheet" href="earth-view.css?v=4.2.12">
+<link id="solarViewStyle" rel="stylesheet" href="solar-view.css?v=4.2.12" media="not all">
+<link rel="stylesheet" href="intro.css?v=4.2.12">
+<link rel="stylesheet" href="mobile.css?v=4.2.12">
+<link rel="stylesheet" href="views.css?v=4.2.12">
 </head><body>
 
 <div id="introOverlay" data-view="earth" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-beijing-v421.mp4" data-mobile-src="textures/intro-beijing-v421-mobile.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
@@ -22,10 +22,10 @@ if ('serviceWorker' in navigator) {
     .then(function (registration) { return registration.update(); }).catch(function () {});
 }
 </script>
-<script src="course-speech.js?v=4.2.6"></script>
-<script src="course-audio-client.js?v=4.2.6"></script>
-<script src="preload.js?v=4.2.6"></script>
-<script src="intro.js?v=4.2.6"></script>
+<script src="course-speech.js?v=4.2.12"></script>
+<script src="course-audio-client.js?v=4.2.12"></script>
+<script src="preload.js?v=4.2.12"></script>
+<script src="intro.js?v=4.2.12"></script>
 <script>if(/[?&]scrsv=1/.test(location.search))document.body.classList.add('scrsv');</script>
 
 <main id="viewHost" aria-label="时间景观"></main>
@@ -221,7 +221,7 @@ if ('serviceWorker' in navigator) {
   <div class="bar-btn" id="pNext">››</div>
   <div class="bar-btn" id="pNow" style="color:#f5c451">现在</div>
   <button class="bar-btn" id="pReset" title="回到太阳系俯视全景">↺ 复位</button>
-  <button class="bar-btn" id="pGod" aria-pressed="false" title="保持当前视角，拖动行星改变日期；旋转、平移和缩放暂停">☝ 上帝之手</button>
+  <button class="bar-btn" id="pGod" aria-pressed="false" title="开启后拖动星球拨动时间">☝ 上帝之手</button>
   <div class="bar-sep"></div>
   <div class="bar-spd" id="spdBtn">⚡ 秒/秒 ▾</div>
   <div class="bar-sep"></div>
@@ -332,6 +332,7 @@ if ('serviceWorker' in navigator) {
 <script src="calendar-terms.js"></script>
 <script src="calendar-events.js"></script>
 <script src="solar-gestures.js"></script>
+<script src="god-hand-effects.js"></script>
 <script src="three-body-model.js"></script>
 <script src="city-labels.js"></script>
 <script src="earth-view.js"></script>
