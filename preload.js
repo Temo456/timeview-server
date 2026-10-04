@@ -12,7 +12,7 @@
     ['textures/moon.jpg', 206902, '月球'],
     ['textures/change-orbiter.svg?v=3.57', 496, '嫦娥卫星'],
     ['textures/intro-beijing-v421-poster.jpg',42005,'北京开场画面'],
-    ['textures/intro-shanghai-v420-poster.jpg',36758,'上海开场画面'],
+    ['textures/intro-shanghai-v4213-poster.jpg',51296,'上海开场画面'],
     ...[['sun.jpg',108866],['mercury.jpg',107360],['venus.jpg',104849],['earth.jpg',64056],['mars.jpg',84864],['jupiter.jpg',67818],['saturn.jpg',27571],['saturn_ring.png',5506],['uranus.jpg',7711],['neptune.jpg',14591],['pluto.jpg',143826]].map(([file,size])=>['textures/'+file,size,'行星画面'])
   ];
   const threeURL='vendor/three-0.160.0.module.min.js';

@@ -1,0 +1,134 @@
+[
+  {
+    "file": "satellite-0.8.jpg",
+    "widthKm": 0.8,
+    "bbox": [
+      13542248.705931805,
+      3651265.3794262307,
+      13543048.705931805,
+      3652065.3794262307
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=s2cloudless_3857&styles=&srs=EPSG%3A3857&bbox=13542248.705931805%2C3651265.3794262307%2C13543048.705931805%2C3652065.3794262307&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "satellite-2.4.jpg",
+    "widthKm": 2.4,
+    "bbox": [
+      13541448.705931805,
+      3650465.3794262307,
+      13543848.705931805,
+      3652865.3794262307
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=s2cloudless_3857&styles=&srs=EPSG%3A3857&bbox=13541448.705931805%2C3650465.3794262307%2C13543848.705931805%2C3652865.3794262307&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "satellite-8.jpg",
+    "widthKm": 8,
+    "bbox": [
+      13538648.705931805,
+      3647665.3794262307,
+      13546648.705931805,
+      3655665.3794262307
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=s2cloudless_3857&styles=&srs=EPSG%3A3857&bbox=13538648.705931805%2C3647665.3794262307%2C13546648.705931805%2C3655665.3794262307&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "satellite-24.jpg",
+    "widthKm": 24,
+    "bbox": [
+      13530648.705931805,
+      3639665.3794262307,
+      13554648.705931805,
+      3663665.3794262307
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=s2cloudless_3857&styles=&srs=EPSG%3A3857&bbox=13530648.705931805%2C3639665.3794262307%2C13554648.705931805%2C3663665.3794262307&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "satellite-80.jpg",
+    "widthKm": 80,
+    "bbox": [
+      13502648.705931805,
+      3611665.3794262307,
+      13582648.705931805,
+      3691665.3794262307
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=s2cloudless_3857&styles=&srs=EPSG%3A3857&bbox=13502648.705931805%2C3611665.3794262307%2C13582648.705931805%2C3691665.3794262307&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "bluemarble-240.jpg",
+    "widthKm": 240,
+    "bbox": [
+      13422648.705931805,
+      3531665.3794262307,
+      13662648.705931805,
+      3771665.3794262307
+    ],
+    "bounds4326": [
+      120.57770485905655,
+      30.218487309652314,
+      122.73366154094342,
+      32.06362562156819
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=bluemarble&styles=&srs=EPSG%3A4326&bbox=120.57770485905655%2C30.218487309652314%2C122.73366154094342%2C32.06362562156819&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "bluemarble-800.jpg",
+    "widthKm": 800,
+    "bbox": [
+      13142648.705931805,
+      3251665.3794262307,
+      13942648.705931805,
+      4051665.3794262307
+    ],
+    "bounds4326": [
+      118.06242206352191,
+      28.021346641450645,
+      125.24894433647808,
+      34.17010108773935
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=bluemarble&styles=&srs=EPSG%3A4326&bbox=118.06242206352191%2C28.021346641450645%2C125.24894433647808%2C34.17010108773935&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "bluemarble-2400.jpg",
+    "widthKm": 2400,
+    "bbox": [
+      12342648.705931805,
+      2451665.3794262307,
+      14742648.705931805,
+      4851665.379426231
+    ],
+    "bounds4326": [
+      110.87589979056574,
+      21.500554073401783,
+      132.43546660943423,
+      39.90168292796842
+    ],
+    "source": "https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=bluemarble&styles=&srs=EPSG%3A4326&bbox=110.87589979056574%2C21.500554073401783%2C132.43546660943423%2C39.90168292796842&width=1536&height=1536&format=image%2Fjpeg"
+  },
+  {
+    "file": "../beijing-flight/bluemarble-8000.jpg",
+    "bbox": [
+      7688546.533293726,
+      163881.14406429417,
+      15688546.533293726,
+      8163881.144064294
+    ],
+    "widthKm": 8000,
+    "bounds4326": [
+      69.06738863521916,
+      1.472007405899088,
+      140.93261136478088,
+      58.923548710154435
+    ]
+  },
+  {
+    "file": "../beijing-flight/world-blue-marble.jpg",
+    "bbox": [
+      -180,
+      -90,
+      180,
+      90
+    ],
+    "world": true
+  }
+]

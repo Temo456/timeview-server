@@ -3,18 +3,18 @@
   'use strict';
   const overlay=document.getElementById('introOverlay'),video=document.getElementById('introVid'),loading=document.getElementById('introLoading');
   const scope=new URL('./',document.baseURI),params=new URLSearchParams(location.search);
-  const completedKey='timeview:intro:4.1.0:'+scope.pathname,cityKey='timeview:intro-city:'+scope.pathname;
+  const completedKey='timeview:intro:4.1.0:'+scope.pathname;
   const cities={
-    beijing:{name:'北京',place:'天安门',poster:'textures/intro-beijing-v421-poster.jpg',desktop:['textures/intro-beijing-v421.mp4',4490766],mobile:['textures/intro-beijing-v421-mobile.mp4',1838271]},
-    shanghai:{name:'上海',place:'迪士尼',poster:'textures/intro-shanghai-v420-poster.jpg',desktop:['textures/intro-shanghai-v420.mp4',2594365],mobile:['textures/intro-shanghai-v420-mobile.mp4',1687342]}
+    beijing:{arrival:true,name:'北京',place:'天安门',poster:'textures/intro-beijing-v421-poster.jpg',desktop:['textures/intro-beijing-v421.mp4',4490766],mobile:['textures/intro-beijing-v421-mobile.mp4',1838271]},
+    shanghai:{arrival:true,name:'上海',place:'迪士尼',poster:'textures/intro-shanghai-v4213-poster.jpg',desktop:['textures/intro-shanghai-v4213.mp4',4345444],mobile:['textures/intro-shanghai-v4213-mobile.mp4',1816032]}
   };
-  let savedCity,completed=false;
-  try{savedCity=localStorage.getItem(cityKey);completed=sessionStorage.getItem(completedKey)==='1';}catch(_){}
-  const cityId=Object.hasOwn(cities,params.get('intro'))?params.get('intro'):Object.hasOwn(cities,savedCity)?savedCity:'beijing';
-  const city=cities[cityId],isFlight=cityId==='beijing';
+  let completed=false;
+  try{completed=sessionStorage.getItem(completedKey)==='1';}catch(_){}
+  const cityId=Object.hasOwn(cities,params.get('intro'))?params.get('intro'):'beijing';
+  const city=cities[cityId],isFlight=city.arrival===true;
   video.dataset.city=cityId;video.dataset.src=city.desktop[0];video.dataset.mobileSrc=city.mobile[0];
   const credits=document.createElement('div');credits.id='introCredits';credits.hidden=!isFlight;
-  credits.textContent='影像：NASA · EOX/Copernicus 2016（CC BY 4.0）\n道路：© OpenStreetMap contributors · 天安门近景为动画重建';
+  credits.textContent=cityId==='shanghai'?'影像：NASA · EOX/Copernicus 2016（CC BY 4.0）\n迪士尼近景为动画重建':'影像：NASA · EOX/Copernicus 2016（CC BY 4.0）\n道路：© OpenStreetMap contributors · 天安门近景为动画重建';
   overlay.append(credits);
   const sound=document.createElement('button');sound.id='introSound';sound.type='button';sound.hidden=true;sound.textContent='开启声音';overlay.append(sound);
   let closing=false,hasStarted=false,playRequest=0,frameHandle=null,lastScale=NaN,resumeWhenVisible=false,playTimer=null;
@@ -124,7 +124,7 @@
     restarting=true;const selected=button.dataset.city;
     window.courseRestarting=true;window.dispatchEvent(new Event('timeview:course-restart'));
     try{
-      localStorage.setItem(cityKey,selected);sessionStorage.removeItem(completedKey);sessionStorage.setItem('tv-clock-paused','0');
+      sessionStorage.removeItem(completedKey);sessionStorage.setItem('tv-clock-paused','0');
       sessionStorage.setItem('tv-course-v2-'+(window.TimeviewActiveCourseId||'cosmos-basics'),JSON.stringify({cursor:0,muted:false,closed:true,resume:false}));
     }catch(_){}
     const target=new URL(scope),query=new URLSearchParams({restart:'1',intro:selected});
