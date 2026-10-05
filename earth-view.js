@@ -292,6 +292,7 @@ try{
   sessionStorage.removeItem('tv-intro-arrival');
   if(arrival&&Date.now()-arrival<30000)introMapReleased=performance.now();
 }catch(_){}
+function earthClockRadius(r,mobile){return mobile?Math.max(r*EARTH_CFG.clockScale,Math.min(18,r*.32)):r*EARTH_CFG.clockScale;}
 function earthGeometry(){
   const scrsv = document.body.classList.contains('scrsv');
   const scene=!scrsv&&window.TimeviewMobile?.sceneRect('earth');
@@ -344,7 +345,7 @@ function drawEarth(d, date) {
   const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, R * EARTH_CFG.sunGlowScale);
   g.addColorStop(0, 'rgba(255,246,220,.95)'); g.addColorStop(0.4, 'rgba(248,200,110,.4)'); g.addColorStop(1, 'rgba(245,170,70,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, R * EARTH_CFG.sunGlowScale, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx, sy, 9, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx, sy, mobile?Math.max(4,Math.min(8,R*.075)):9, 0, 7); ctx.fill();
 
   // 地球
   ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip(); ctx.translate(cx, cy);
@@ -369,22 +370,31 @@ function drawEarth(d, date) {
 
   // 时间刻度环：0 点正下方；12 点由太阳表示。
   const hRing=R*EARTH_CFG.hourRingScale;
+  const hourFont=mobile?Math.max(10,Math.min(13,R*.14)):EARTH_CFG.hourNumSize;
+  const tickLength=mobile?Math.max(3,Math.min(7,R*.055)):0;
+  const dotSize=mobile?Math.max(.9,Math.min(1.25,R*.014)):1.4;
   // Keep the dots clear of the glyphs even on narrow screens or when zoomed out.
-  const hDot=Math.max(0,hRing-Math.max(EARTH_CFG.hourNumSize+2,R*(EARTH_CFG.hourRingScale-EARTH_CFG.hourDotScale)));
+  const hDot=Math.max(0,hRing-Math.max(hourFont+(mobile?3:2),R*(EARTH_CFG.hourRingScale-EARTH_CFG.hourDotScale)));
   ctx.save(); ctx.translate(cx, cy); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let h = 0; h < 24; h++) {
     if(h===12)continue;
     const a = clockAngle(h), nx = Math.sin(a), ny = -Math.cos(a);
     // 小圆点
-    ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * hDot, ny * hDot, 1.4, 0, 7); ctx.fill();
+    ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * hDot, ny * hDot, dotSize, 0, 7); ctx.fill();
     // 双数=数字（不旋转，水平），单数=竖线（旋转朝向圆心）
-    if (h % (mobile&&R<70?4:2) === 0) {
-      ctx.fillStyle = G ? '#fff' : 'rgba(165,212,238,.92)'; ctx.font = EARTH_CFG.hourNumSize + 'px sans-serif';
+    if (h % (mobile&&R<54?4:2) === 0) {
+      ctx.fillStyle = G ? '#fff' : 'rgba(165,212,238,.92)'; ctx.font = hourFont + 'px sans-serif';
       ctx.fillText(String(h).padStart(2, '0'), nx * hRing, ny * hRing);
     } else {
       ctx.save(); ctx.translate(nx * hRing, ny * hRing); ctx.rotate(a);
-      ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(135,185,214,.78)'; ctx.font = 'bold ' + (EARTH_CFG.hourNumSize + 1) + 'px sans-serif';
-      ctx.fillText('|', 0, 0); ctx.restore();
+      if(mobile){
+        ctx.strokeStyle=G?'rgba(230,194,0,.8)':'rgba(135,185,214,.78)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(0,-tickLength/2);ctx.lineTo(0,tickLength/2);ctx.stroke();
+      }else{
+        ctx.fillStyle=G?'rgba(230,194,0,.8)':'rgba(135,185,214,.78)';ctx.font='bold '+(hourFont+1)+'px sans-serif';
+        ctx.fillText('|',0,0);
+      }
+      ctx.restore();
     }
   }
   // 时区指针（和小程序一致）
@@ -396,6 +406,7 @@ function drawEarth(d, date) {
   if (showCities) {
   const list = state.hemi < 0 ? SOUTH_CITIES : NORTH_CITIES;
   const cityPoints=[];
+  const markerScale=mobile?Math.max(.65,Math.min(1,R/100)):1;
   const sameZoneCount = new Map();
   for (const c of list) {
     const rank = sameZoneCount.get(c.min) || 0;
@@ -413,13 +424,13 @@ function drawEarth(d, date) {
       ctx.beginPath();
       for (let i = 0; i < 5; i++) {
         const a = -Math.PI / 2 + i * 4 * Math.PI / 5;
-        const r = i % 2 === 0 ? 6 : 2.8;
+        const r = (i % 2 === 0 ? 6 : 2.8)*markerScale;
         i === 0 ? ctx.moveTo(px + Math.cos(a) * r, py + Math.sin(a) * r) : ctx.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r);
       }
       ctx.closePath(); ctx.fill();
     } else {
-      ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(px, py, 2.8, 0, 7); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,210,74,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(px, py, 5, 0, 7); ctx.stroke();
+      ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(px, py, 2.8*markerScale, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,210,74,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(px, py, 5*markerScale, 0, 7); ctx.stroke();
     }
     if(mobile)continue;
     // 桌面保留原有字号与径向标注。
@@ -444,7 +455,7 @@ function drawEarth(d, date) {
   if(mobile){
     const key=[cx,cy,R,state.hemi,utch,...Object.values(mobile),...list.map(c=>c.min)].join('|');
     if(mobileCityLayout.key!==key){
-      mobileCityLayout={key,...TimeviewCityLabels.layout({cities:cityPoints,cx,cy,r:R,bounds:mobile,measure(name,font,star){
+      mobileCityLayout={key,...TimeviewCityLabels.layout({cities:cityPoints,cx,cy,r:R,clockRadius:earthClockRadius(R,mobile),bounds:mobile,measure(name,font,star){
         ctx.font=(star?'bold ':'')+font+'px sans-serif';return ctx.measureText(name).width;
       }})};
     }
@@ -465,19 +476,20 @@ function drawEarth(d, date) {
   }
 
   // 中央时钟表盘
-  const rc = R * EARTH_CFG.clockScale;
+  const rc = earthClockRadius(R,mobile);
   ctx.save(); ctx.translate(cx, cy);
   ctx.beginPath(); ctx.arc(0, 0, rc, 0, 7); ctx.fillStyle = G ? '#000' : '#f7faff'; ctx.fill();
   ctx.strokeStyle = G ? 'rgba(230,194,0,.6)' : 'rgba(60,90,120,.6)'; ctx.lineWidth = 1.2; ctx.stroke();
   for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * Math.PI; ctx.strokeStyle = G ? 'rgba(230,194,0,.5)' : 'rgba(40,60,90,.5)'; ctx.lineWidth = i % 3 === 0 ? 1.5 : 0.7; ctx.beginPath(); ctx.moveTo(Math.sin(a) * rc * 0.82, -Math.cos(a) * rc * 0.82); ctx.lineTo(Math.sin(a) * rc * 0.95, -Math.cos(a) * rc * 0.95); ctx.stroke(); }
   // 分钟刻度 0/10/20/30/40/50
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold ' + Math.max(6, Math.round(rc * 0.18)) + 'px sans-serif';
+  ctx.font = 'bold ' + (mobile?Math.max(5,Math.min(7,Math.round(rc*.32))):Math.max(6,Math.round(rc*.18))) + 'px sans-serif';
   ctx.fillStyle = G ? '#fff' : 'rgba(28,43,68,.95)';
-  for (let m = 0; m < 60; m += 10) { const ma = (m / 60) * 2 * Math.PI; ctx.fillText(String(m), Math.sin(ma) * rc * 0.66, -Math.cos(ma) * rc * 0.66); }
+  if(!mobile||rc>=12)for (let m = 0; m < 60; m += mobile&&rc<16?15:10) { const ma = (m / 60) * 2 * Math.PI; ctx.fillText(String(m), Math.sin(ma) * rc * 0.66, -Math.cos(ma) * rc * 0.66); }
   ctx.fillStyle = G ? '#fff' : 'rgba(28,43,68,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold ' + Math.max(7, Math.round(rc * 0.24)) + 'px sans-serif';
-  ctx.fillText(p2(date.getUTCMonth() + 1) + '.' + p2(date.getUTCDate()), 0, rc * 0.45);
+  // The mobile toolbar already shows the date; leave the small clock for minutes.
+  if(!mobile)ctx.fillText(p2(date.getUTCMonth() + 1) + '.' + p2(date.getUTCDate()), 0, rc * 0.45);
   const minu = date.getUTCMinutes() + date.getUTCSeconds() / 60;
   const sec = date.getUTCSeconds() + date.getUTCMilliseconds() / 1000;
   let a = minu / 60 * 2 * Math.PI; ctx.strokeStyle = G ? '#e6c200' : '#1c2b44'; ctx.lineWidth = 2; ctx.lineCap = 'round';

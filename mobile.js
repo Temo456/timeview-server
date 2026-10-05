@@ -99,11 +99,12 @@
   function layout(){
     frame=0;bindBar();const enabled=active();root.classList.toggle('tv-mobile',enabled);
     if(!enabled){
-      unmount();if(shade)shade.style.display='none';sceneBounds=null;
+      unmount();if(shade)shade.style.display='none';sceneBounds=null;root.classList.remove('tv-compact');
       for(const card of document.querySelectorAll('.tv-mobile-card'))card.classList.remove('tv-mobile-card');
       window.TimeviewCards?.layout();return;
     }
     const viewport=window.visualViewport,vh=viewport?.height||innerHeight,vt=viewport?.offsetTop||0;
+    root.classList.toggle('tv-compact',innerWidth<=600&&innerWidth<innerHeight&&vh<700);
     variable('--tv-vh',vh+'px');variable('--tv-vtop',vt+'px');variable('--tv-keyboard',Math.max(0,innerHeight-vh-vt)+'px');
     mount();const panel=document.getElementById('tv-assist');initPanel(panel);
     for(const id of popups)watch(document.getElementById(id));watch(bar);watch(document.querySelector('.topbar'));
@@ -123,10 +124,11 @@
     layoutCards('#planetCard,#threeBodyCard,#tv-course-visual,#cardMask,#fortMask');
     if(!bar)return;
     const top=(document.querySelector('.topbar')?.getBoundingClientRect().bottom||50)+(document.getElementById('einfo')?26:10);
-    let left=12,right=innerWidth-12,bottom=toolbar.top-12;
+    const sceneGap=root.classList.contains('tv-compact')?8:12;
+    let left=12,right=innerWidth-12,bottom=toolbar.top-sceneGap;
     if(panel?.classList.contains('on')){
       const p=panel.getBoundingClientRect();
-      if(innerWidth>innerHeight&&innerHeight<=600)right=p.left-12;else bottom=p.top-12;
+      if(innerWidth>innerHeight&&innerHeight<=600)right=p.left-12;else bottom=p.top-sceneGap;
     }
     sceneBounds={left,right:Math.max(left+80,right),top,bottom:Math.max(top+80,bottom)};
     const next=Object.values(sceneBounds).map(Math.round).join(',');

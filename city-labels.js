@@ -8,7 +8,7 @@
     const dx=Math.max(box.left-x,0,x-box.right),dy=Math.max(box.top-y,0,y-box.bottom);
     return dx*dx+dy*dy<r*r;
   }
-  function layout({cities,cx,cy,r,bounds,measure}){
+  function layout({cities,cx,cy,r,clockRadius=r*.2,bounds,measure}){
     const safe={left:bounds.left+3,right:bounds.right-3,top:bounds.top+2,bottom:bounds.bottom-2};
     const points=[];
     const step=Math.max(6,Math.min(r/12,14));
@@ -26,7 +26,7 @@
             const b=box(p.x,p.y,item.width,item.height);
             if(b.left<safe.left||b.right>safe.right||b.top<safe.top||b.bottom>safe.bottom)continue;
             if(Math.hypot(Math.abs(p.x-cx)+item.width/2,Math.abs(p.y-cy)+item.height/2)>r*.97)continue;
-            if(touches(b,cx,cy,r*.2+4)||placed.some(q=>overlap(b,q.box)))continue;
+            if(touches(b,cx,cy,clockRadius+4)||placed.some(q=>overlap(b,q.box)))continue;
             if(cities.some(c=>touches(b,c.px,c.py,c.star?5:3.5)))continue;
             const distance=(p.x-item.px)**2+(p.y-item.py)**2;
             // Prefer short leaders and the same side of the city dot.
