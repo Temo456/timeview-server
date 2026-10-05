@@ -294,10 +294,20 @@ try{
 }catch(_){}
 function earthGeometry(){
   const scrsv = document.body.classList.contains('scrsv');
-  const mobile=!scrsv&&window.TimeviewMobile?.sceneRect('earth');
+  const scene=!scrsv&&window.TimeviewMobile?.sceneRect('earth');
+  // Use a little more of the phone gutter while keeping clear of controls/panels.
+  const mobile=scene?{...scene,left:Math.max(6,scene.left-6),right:Math.min(innerWidth-6,scene.right+6)}:null;
+  let radius=Math.min(innerWidth,innerHeight)*EARTH_CFG.earthScale;
+  if(mobile){
+    const halfWidth=(mobile.right-mobile.left)/2,halfHeight=(mobile.bottom-mobile.top)/2;
+    const labelPad=EARTH_CFG.hourNumSize*.75;
+    // Fit the whole dial, including its labels and the sun, into the scene.
+    radius=Math.max(1,Math.min((Math.min(halfWidth,halfHeight)-labelPad)/EARTH_CFG.hourRingScale,
+      (halfHeight-12)/Math.abs(EARTH_CFG.sunY)));
+  }
   return {x:scrsv?innerWidth*.68:mobile?(mobile.left+mobile.right)/2:innerWidth/2,
     y:mobile?(mobile.top+mobile.bottom)/2:innerHeight*EARTH_CFG.centerY,
-    r:(mobile?Math.min(mobile.right-mobile.left,mobile.bottom-mobile.top):Math.min(innerWidth,innerHeight))*EARTH_CFG.earthScale*earthZoom,mobile};
+    r:radius*earthZoom,mobile};
 }
 function drawEarth(d, date) {
   const {x:cx,y:cy,r:R,mobile}=earthGeometry();
@@ -357,19 +367,22 @@ function drawEarth(d, date) {
   // 地球边框
   ctx.strokeStyle = G ? 'rgba(230,194,0,.55)' : 'rgba(95,214,240,.3)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx, cy, R * EARTH_CFG.earthBorderScale, 0, 7); ctx.stroke();
 
-  // 时间刻度环（和小程序完全一致：0点正下方，逆时针 1-6-12-18-23）
-  const hRing = EARTH_CFG.hourRingScale, hDot = EARTH_CFG.hourDotScale;
+  // 时间刻度环：0 点正下方；12 点由太阳表示。
+  const hRing=R*EARTH_CFG.hourRingScale;
+  // Keep the dots clear of the glyphs even on narrow screens or when zoomed out.
+  const hDot=Math.max(0,hRing-Math.max(EARTH_CFG.hourNumSize+2,R*(EARTH_CFG.hourRingScale-EARTH_CFG.hourDotScale)));
   ctx.save(); ctx.translate(cx, cy); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let h = 0; h < 24; h++) {
+    if(h===12)continue;
     const a = clockAngle(h), nx = Math.sin(a), ny = -Math.cos(a);
     // 小圆点
-    ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * R * hDot, ny * R * hDot, 1.4, 0, 7); ctx.fill();
+    ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(150,200,230,.72)'; ctx.beginPath(); ctx.arc(nx * hDot, ny * hDot, 1.4, 0, 7); ctx.fill();
     // 双数=数字（不旋转，水平），单数=竖线（旋转朝向圆心）
     if (h % (mobile&&R<70?4:2) === 0) {
       ctx.fillStyle = G ? '#fff' : 'rgba(165,212,238,.92)'; ctx.font = EARTH_CFG.hourNumSize + 'px sans-serif';
-      ctx.fillText(String(h).padStart(2, '0'), nx * R * hRing, ny * R * hRing);
+      ctx.fillText(String(h).padStart(2, '0'), nx * hRing, ny * hRing);
     } else {
-      ctx.save(); ctx.translate(nx * R * hRing, ny * R * hRing); ctx.rotate(a);
+      ctx.save(); ctx.translate(nx * hRing, ny * hRing); ctx.rotate(a);
       ctx.fillStyle = G ? 'rgba(230,194,0,.8)' : 'rgba(135,185,214,.78)'; ctx.font = 'bold ' + (EARTH_CFG.hourNumSize + 1) + 'px sans-serif';
       ctx.fillText('|', 0, 0); ctx.restore();
     }

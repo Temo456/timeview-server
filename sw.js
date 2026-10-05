@@ -1,6 +1,6 @@
 // 缓存键：与 server.js 的 VERSION 同步 bump，否则老用户会被 SW 缓存挡住看不到新页面
 const CACHE_PREFIX = "timeview:" + self.registration.scope + ":v";
-const C = CACHE_PREFIX + "4.2.13";
+const C = CACHE_PREFIX + "4.2.14";
 // The loading coordinator owns complete movies in this disk cache. Serve them
 // through an ordinary URL so Safari's media process need not decode Blob URLs.
 const MOVIE_CACHE='timeview-preload:'+self.registration.scope+':4.0.19';

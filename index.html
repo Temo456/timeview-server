@@ -7,11 +7,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05080f">
 <title>时间景观</title>
-<link id="earthViewStyle" rel="stylesheet" href="earth-view.css?v=4.2.13">
-<link id="solarViewStyle" rel="stylesheet" href="solar-view.css?v=4.2.13" media="not all">
-<link rel="stylesheet" href="intro.css?v=4.2.13">
-<link rel="stylesheet" href="mobile.css?v=4.2.13">
-<link rel="stylesheet" href="views.css?v=4.2.13">
+<link id="earthViewStyle" rel="stylesheet" href="earth-view.css?v=4.2.14">
+<link id="solarViewStyle" rel="stylesheet" href="solar-view.css?v=4.2.14" media="not all">
+<link rel="stylesheet" href="intro.css?v=4.2.14">
+<link rel="stylesheet" href="mobile.css?v=4.2.14">
+<link rel="stylesheet" href="views.css?v=4.2.14">
 </head><body>
 
 <div id="introOverlay" data-view="earth" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;opacity:1;transition:opacity .8s ease"><video id="introVid" data-src="textures/intro-beijing-v421.mp4" data-mobile-src="textures/intro-beijing-v421-mobile.mp4" preload="none" muted playsinline style="width:100%;height:100%;object-fit:contain;visibility:hidden"></video><span id="introLoading" role="status" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none">&#24320;&#22330;&#35270;&#39057;&#21152;&#36733;&#20013;&#8230;</span><button id="introSkip" style="position:fixed;top:16px;right:16px;z-index:10000;padding:8px 18px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.45);border-radius:18px;cursor:pointer">跳过</button></div>
@@ -22,10 +22,10 @@ if ('serviceWorker' in navigator) {
     .then(function (registration) { return registration.update(); }).catch(function () {});
 }
 </script>
-<script src="course-speech.js?v=4.2.13"></script>
-<script src="course-audio-client.js?v=4.2.13"></script>
-<script src="preload.js?v=4.2.13"></script>
-<script src="intro.js?v=4.2.13"></script>
+<script src="course-speech.js?v=4.2.14"></script>
+<script src="course-audio-client.js?v=4.2.14"></script>
+<script src="preload.js?v=4.2.14"></script>
+<script src="intro.js?v=4.2.14"></script>
 <script>if(/[?&]scrsv=1/.test(location.search))document.body.classList.add('scrsv');</script>
 
 <main id="viewHost" aria-label="时间景观"></main>
